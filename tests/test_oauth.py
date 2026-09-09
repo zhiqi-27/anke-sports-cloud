@@ -34,12 +34,14 @@ def register(client, scopes="calendar:read calendar:write", redirect=REDIRECT):
     return response.json()["client_id"]
 
 
-def authorize(client, client_id, scopes="calendar:read calendar:write", audience=None, approved=True):
+def authorize(
+    client, client_id, scopes="calendar:read calendar:write", audience=None, approved=True, redirect=REDIRECT
+):
     response = client.get(
         "/authorize",
         params={
             "client_id": client_id,
-            "redirect_uri": REDIRECT,
+            "redirect_uri": redirect,
             "response_type": "code",
             "code_challenge": CHALLENGE,
             "code_challenge_method": "S256",
@@ -256,3 +258,62 @@ def test_owner_deletion_and_expired_record_cleanup(stack):
         assert db.scalar(select(OAuthTokenRecord)) is None
         assert db.scalar(select(OAuthRequest)) is None
         assert verify_access(db, tokens["access_token"], resource()) is None
+
+
+def test_chrome_origin_is_bound_to_registered_callback_and_owner(stack):
+    from tests.test_calendar_flow import insert_event
+
+    client, sessions = stack
+    ident = insert_event(sessions)
+    extension_id = "a" * 32
+    redirect = f"https://{extension_id}.chromiumapp.org/callback"
+    cid = register(client, redirect=redirect)
+    query, _ = authorize(client, cid, audience=resource("extension"), redirect=redirect)
+    response = exchange(client, cid, query["code"][0], resource("extension"), redirect_uri=redirect)
+    response.raise_for_status()
+    bearer = "Bearer " + response.json()["access_token"]
+    headers = {
+        "Origin": f"chrome-extension://{extension_id}",
+        "Authorization": bearer,
+        "Idempotency-Key": "chrome-fixture-save",
+    }
+    payload = {
+        "url": "https://www.youtube.com/watch?v=abcdefghijk",
+        "title": "隔离扩展合成测试",
+        "kind": "preview",
+    }
+    path = f"/api/v1/events/{ident}/links"
+    wrong = client.post(path, headers={**headers, "Origin": "chrome-extension://" + "b" * 32}, json=payload)
+    assert wrong.status_code == 403 and wrong.json()["error"]["code"] == "ORIGIN_REJECTED"
+    client.cookies.clear()  # Extension fetch uses credentials: omit; only bearer owns the write.
+    first = client.post(path, headers=headers, json=payload)
+    first.raise_for_status()
+    repeated = client.post(path, headers=headers, json=payload)
+    assert repeated.json() == first.json()
+    assert first.json()["event"]["included"] is True
+    assert first.json()["id"] in [link["id"] for link in first.json()["event"]["links"]]
+    block_path = f"/api/v1/me/links/{first.json()['id']}/block"
+    assert client.post(block_path, headers=headers).status_code == 409
+    blocked = client.post(block_path, headers={**headers, "Idempotency-Key": "chrome-fixture-block"})
+    blocked.raise_for_status()
+    readded = client.post(path, headers={**headers, "Idempotency-Key": "chrome-fixture-readd"}, json=payload)
+    readded.raise_for_status()
+    assert readded.json()["event"]["links"] == []
+    assert client.get("/api/v1/me/feed/address", headers=headers).status_code == 403
+    client.post(
+        "/revoke", data={"client_id": cid, "token": response.json()["refresh_token"]}
+    ).raise_for_status()
+    assert client.get("/api/v1/me/calendar", headers=headers).status_code == 401
+
+
+def test_web_callback_client_cannot_claim_a_chrome_origin(stack):
+    client, _ = stack
+    cid = register(client)
+    query, _ = authorize(client, cid, audience=resource("extension"))
+    token = exchange(client, cid, query["code"][0], resource("extension")).json()["access_token"]
+    response = client.put(
+        "/api/v1/me/follows",
+        headers={"Origin": "chrome-extension://" + "a" * 32, "Authorization": "Bearer " + token},
+        json={"expected_revision": 0, "follows": []},
+    )
+    assert response.status_code == 403 and response.json()["error"]["code"] == "ORIGIN_REJECTED"

@@ -15,3 +15,5 @@
 用户决定先完成本地；随后授权托管 Chrome 创建配置独立云资源，用户负责登录。没有 push、云部署、远端迁移或修改 FormaLM 资源。
 
 MCP 与应用授权已接入：匿名3工具、私人11工具，共用 actions 服务、scope/issuer/resource检查、PKCE/刷新/撤销、24小时幂等回执。网页本地授权→官方SDK真实HTTP查询→网页撤销→401已验证，未对原关注/Feed做写入。新增迁移721f5dc7b8c2，本地备份后原有14表逐行一致。详见 docs/mcp-and-connections.md；外部平台验收仍未通过。
+
+Chrome配套验收新增2项隔离协议测试：回调注册约束扩展Origin、Bearer独立身份、幂等/屏蔽/撤销。47项pytest与ruff通过，2项原有弃用警告。仅测试与文档变化，无迁移或主库写入。客户端已生成MV3本地包；实际Chrome安装因浏览器URL策略被拒绝，未绕过；合成界面不替代真实授权/activeTab证据。详见../anke-sports/extension/evidence.md。
