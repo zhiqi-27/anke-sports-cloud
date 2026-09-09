@@ -1,0 +1,22 @@
+{
+  "checked_at": "2026-09-09T23:33:53.613360+00:00",
+  "project_id": "anke-sports-dev",
+  "real_google_provider": true,
+  "local_authoritative_user_matches_firebase": true,
+  "firebase_email_matches_selected_account": true,
+  "personal_user_count": 1,
+  "subject_sha256": "4a011ff7d410e3de312682eda0a228eb6518c1447e0dcc9cd1a9ec727c221041",
+  "local_preview_enabled": false,
+  "authenticated_preference_write": true,
+  "new_page_retains_google_session": true,
+  "new_page_retains_saved_preference": true,
+  "preferences_restored": true,
+  "final_user_revision": 2,
+  "isolated_job_states": {
+    "done": 2
+  },
+  "logout_ui_returns_guest": true,
+  "logout_personal_controls_disabled": true,
+  "production_deployed": false,
+  "azure_runtime_verified": false
+}

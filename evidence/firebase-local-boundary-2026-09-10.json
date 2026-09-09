@@ -1,0 +1,9 @@
+{
+  "status_http": 200,
+  "firebase_configured": true,
+  "local_preview": false,
+  "local_login_http": 404,
+  "local_login_code": "NOT_FOUND",
+  "guest_personal_calendar_http": 401,
+  "previous_probe_expected_403_but_contract_is_404": true
+}

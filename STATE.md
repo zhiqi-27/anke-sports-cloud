@@ -161,3 +161,14 @@ HTTP/MCP/后台 Data API 请求在独立 SQL 短事务预留额度，按项目�
 主SQLite备份data/before-mysql-compat-20260909-232308.db（UTC，0600）并迁移f809a45c2d71；25张业务表逐行哈希一致，163场保留。主API session27072/PID37845、worker session29987/PID37859，保留原四个显式本地参数。状态与赛程200；首次读回脚本使用错误start/end参数得到422，改为契约from/to后通过。证据evidence/mysql-main-2026-09-10.json。
 
 用户切换Google账号后已创建独立Firebase项目anke-sports-dev（Anke Sports Dev），Spark免费方案，Analytics/Gemini关闭；注册Web应用Anke Sports Web Dev，启用Google登录，localhost与127.0.0.1授权域名读回通过。仅Web配置保存本机data/firebase-dev-web.json（0600、Git忽略）。服务端凭据及真实登录仍在接入，主预览未切换到Firebase。此前“未创建云资源”仅为历史状态。用户再次确认后端使用Azure Functions；Azure资源仍未创建/部署，YouTube真实配置尚未完成。
+
+
+## 2026-09-10 · Firebase真实登录已验证
+
+独立项目anke-sports-dev启用Google登录、localhost/127.0.0.1授权，专用Anke Sports Auth Dev服务账号使用Authentication Admin角色。本机0600凭据放在Git忽略的data目录，下载原件已移除。真实Google登录后，后端Firebase验签所得UID与Admin读回同一用户相符；UI保存防剧透、新页面保留登录及偏好、恢复原配置和退出均通过。新账号个人revision=2，2个发布任务done。真实删除/撤销和多账号/多设备尚未验证。
+
+身份验收使用独立空库，不改主3000预览：Web http://localhost:3003/calendar（session91087/PID38482），API8788（session85403/PID38459），worker（session73541/PID38782）。源码副本data/firebase-dev-webapp，本机启动器data/run-firebase-dev.py，运行参数data/firebase-dev-runtime.json。最后页面为游客，用户可自行Google登录继续检查。主API8787仍session27072/PID37845，主worker29987/PID37859；原数据/关注草稿保留。MySQL临时进程已通过mysqladmin正常关闭，session31795退出0，缓存留在本机。
+
+用户明确确认Azure Functions后端；Azure账号已登录，查看过Azure subscription 1与speech资源组，仅只读。独立Anke Sports Functions/MySQL/Storage、区域/规格/费用与HTTPS域名尚未配置或部署。安装的Azure Prepare已更新1.2.44，限定显式azd/已有azure.yaml，本项目尚未选择azd，因此不套用其流程。资源分工和接入顺序已写docs/cloud-development.md。任务T07仍in_progress，缺失云权限/设备只影响对应验收。完整产品目标未完成；当前goal工具状态为usageLimited，未擅自修改。
+
+MySQL后端本地提交5ef0118；客户端状态提交b70ef07。Firebase本批为本地配置与真实外部验收，无客户端业务源码变化；后端/客户端相关文档另行本地提交。没有push或Azure部署。

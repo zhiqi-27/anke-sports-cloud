@@ -1,14 +1,14 @@
 # Anke Sports · 当前架构决策
 
-2026-09-09。用户最新决策优先于原 v1 文档中的建议技术栈。
+更新于2026-09-10。用户最新决策优先于原 v1 文档中的建议技术栈。
 
 | 边界 | 决策 | 状态 |
 | --- | --- | --- |
 | 产品 | Anke Sports；桌面 Web、Chrome 扩展、外部 MCP | 已确认 |
 | UI | Apple Sports 的克制色彩、紧凑卡片和文字层级；桌面月/周/日程及事件抽屉 | Web 本地实现 |
-| 身份 | Firebase Auth 客户端 ID Token，Admin 验证签名、发行方、有效期与撤销 | 入口已写，真实账号待验 |
+| 身份 | Firebase Auth 客户端 ID Token，Admin 验证签名、发行方、有效期与撤销 | 独立开发项目真实Google登录、验签与偏好读写通过；云部署待验 |
 | 权威业务 | Python/FastAPI，HTTP/Queue/MCP 共用服务层 | HTTP、任务处理与MCP本地实现；真实目标客户端待验 |
-| 数据 | Azure MySQL；SQLite 为显式本地适配 | SQLite 验证；MySQL 迁移与 TLS 待云实测 |
+| 数据 | Azure MySQL；SQLite 为显式本地适配 | SQLite及本机MySQL 8.4.11测试/迁移通过；Azure TLS与运行待验 |
 | 后台任务 | SQL outbox 与业务变更同一事务；Azure Storage Queue/timer，重试/租约 | 本地验证；Azure 触发器待实测 |
 | 日历交付 | 发布时计算投影、保存 ICS；读取只返回稳定内容与条件请求响应 | 本地验证 |
 
@@ -35,7 +35,7 @@ flowchart LR
 - 历史投影保留近 90 天；默认发布未来 180 天。取消关注后的近期历史记录继续接收内容；明确排除比赛生成取消投影。
 - 私人链接和公共来源分离，用户 block 覆盖自动发现。自动发现、匹配与待确认已通过隔离本地测试；手工添加不获得官方认证。
 - 公共接口返回已接入来源，未承诺全运动、全赛季覆盖。时间以赛事官方发布为准。
-- 列表当前针对早期数据规模；游标分页、批量读取、20k 赛事压测仍需完成，不能据此宣布规模验收通过。
+- 列表已有游标分页、批量读取与本机20k赛事压测；容量范围见 schedule-queries.md 与 content-capacity.md，不能据此宣布云容量验收通过。
 
 ## 交付顺序
 
@@ -55,7 +55,7 @@ M5：恢复演练、完整 QA、支持范围、许可与开源发布。M6：Goog
 
 ## 云环境准备
 
-用户已确认尚未创建独立资源，先完成本地实现；之后授权使用托管 Chrome 创建和配置，账户登录由用户完成。需独立 Anke Sports Firebase 项目、Azure 订阅/资源组/区域、Web 与 API HTTPS 地址、MySQL 与 Storage。部署前明确目标和费用边界，验证 MySQL 备份恢复与迁移回滚；无需改动现有 FormaLM。
+用户授权使用托管Chrome创建配置独立云资源，并再次确认后端使用Azure Functions。Firebase开发项目anke-sports-dev已创建，真实Google登录通过。Azure账号已登录；独立资源组/Functions/MySQL/Storage以及Web/API HTTPS目标尚待配置。已知资源与验收边界见 cloud-development.md。部署前明确目标和费用边界，验证 MySQL 备份恢复与迁移回滚；无需改动现有 FormaLM。
 
 Firebase projectId 与加密 key 在非 local 模式强制要求，数据库连接验证 TLS。Feed 私密路径还需要验证 Azure 平台请求遥测与反向代理日志脱敏；目前仅关闭本机访问日志和降低 Functions 主机日志级别，尚不能声明云端秘密不落日志的验收通过。
 

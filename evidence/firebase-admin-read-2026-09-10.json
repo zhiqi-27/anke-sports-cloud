@@ -1,0 +1,10 @@
+{
+  "checked_at": "2026-09-09T23:30:24.395297+00:00",
+  "project_id": "anke-sports-dev",
+  "admin_user_read": true,
+  "user_sample_count": 0,
+  "iam_ui_readback_roles": [
+    "roles/firebaseauth.admin"
+  ],
+  "dedicated_service_account": "anke-sports-auth-dev"
+}
