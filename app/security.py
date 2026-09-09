@@ -30,6 +30,24 @@ def local_allowed(request: Request) -> bool:
     )
 
 
+def firebase_app():
+    import firebase_admin
+
+    project = settings().firebase_project_id
+    if not project:
+        raise ValueError("FIREBASE_PROJECT_REQUIRED")
+    try:
+        app = firebase_admin.get_app("anke-sports-auth")
+    except ValueError:
+        try:
+            app = firebase_admin.initialize_app(options={"projectId": project}, name="anke-sports-auth")
+        except ValueError:
+            app = firebase_admin.get_app("anke-sports-auth")
+    if app.project_id != project:
+        raise ValueError("IDENTITY_TARGET_MISMATCH")
+    return app
+
+
 def actor(request: Request, db, required=True) -> str | None:
     bearer = request.headers.get("Authorization", "")
     token = request.cookies.get("anke_sports_session", "")
@@ -58,18 +76,13 @@ def actor(request: Request, db, required=True) -> str | None:
             problem("INSUFFICIENT_SCOPE", "此连接未获得所需权限", 403)
         return principal.subject
     if bearer.startswith("Bearer "):
-        import firebase_admin
         from firebase_admin import auth
 
         cfg = settings()
         if not cfg.firebase_project_id:
             problem("AUTH_UNCONFIGURED", "Firebase 登录尚未配置", 503)
         try:
-            try:
-                app = firebase_admin.get_app()
-            except ValueError:
-                app = firebase_admin.initialize_app(options={"projectId": cfg.firebase_project_id})
-            claims = auth.verify_id_token(bearer[7:], app=app, check_revoked=True)
+            claims = auth.verify_id_token(bearer[7:], app=firebase_app(), check_revoked=True)
             user_id = claims["uid"]
             user = db.get(User, user_id)
             if user and user.deleted:

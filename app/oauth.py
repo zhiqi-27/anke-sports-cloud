@@ -67,6 +67,15 @@ def valid_grant(db, grant):
     )
 
 
+def lock_owner(db, owner_id):
+    from app.service import lock_user
+
+    user = lock_user(db, owner_id) if owner_id else None
+    if not user or user.deleted:
+        raise TokenError("invalid_grant", "Account is unavailable")
+    return user
+
+
 def token_info(db, raw, kind):
     if not raw.startswith("as_at_" if kind == "access" else "as_rt_") or len(raw) > 200:
         return None, None
@@ -237,12 +246,16 @@ class SportsOAuthProvider:
 
     async def exchange_authorization_code(self, client, authorization_code):
         with SessionLocal() as db:
+            owner_id = db.scalar(
+                select(OAuthRequest.owner_id).where(OAuthRequest.code_hash == digest(authorization_code.code))
+            )
+            user = lock_owner(db, owner_id)
             row = db.scalar(
                 select(OAuthRequest)
                 .where(OAuthRequest.code_hash == digest(authorization_code.code))
                 .with_for_update()
+                .execution_options(populate_existing=True)
             )
-            user = db.get(User, row.owner_id) if row else None
             if (
                 not row
                 or row.consumed
@@ -293,12 +306,28 @@ class SportsOAuthProvider:
 
     async def exchange_refresh_token(self, client, refresh_token, scopes):
         with SessionLocal() as db:
+            owner_id = db.scalar(
+                select(OAuthGrant.owner_id)
+                .join(OAuthTokenRecord, OAuthTokenRecord.grant_id == OAuthGrant.id)
+                .where(OAuthTokenRecord.token_hash == digest(refresh_token.token))
+            )
+            lock_owner(db, owner_id)
             row = db.scalar(
                 select(OAuthTokenRecord)
                 .where(OAuthTokenRecord.token_hash == digest(refresh_token.token))
                 .with_for_update()
+                .execution_options(populate_existing=True)
             )
-            grant = db.get(OAuthGrant, row.grant_id) if row else None
+            grant = (
+                db.scalar(
+                    select(OAuthGrant)
+                    .where(OAuthGrant.id == row.grant_id)
+                    .with_for_update()
+                    .execution_options(populate_existing=True)
+                )
+                if row
+                else None
+            )
             if (
                 not row
                 or not valid_grant(db, grant)
@@ -356,6 +385,9 @@ def consent_preview(db, pending):
 
 
 def consent_decide(db, user, pending, approved, scopes):
+    from app.service import active_user
+
+    user = active_user(db, user.id)
     row, _ = consent_preview(db, pending)
     chosen = sorted(set(scopes))
     if approved and (not chosen or not set(chosen).issubset(row.params["scopes"])):

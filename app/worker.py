@@ -14,6 +14,11 @@ from app.service import enqueue
 
 def execute_claim(db, claim):
     kind, payload = claim.kind, claim.payload
+    if kind == "identity_cleanup":
+        from app.privacy import cleanup_identity
+
+        cleanup_identity(db, payload)
+        return
     if payload.get("user_id") and kind != "projection":
         user = db.get(User, payload["user_id"])
         if not user or user.deleted:

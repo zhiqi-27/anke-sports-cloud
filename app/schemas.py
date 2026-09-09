@@ -140,6 +140,12 @@ class FeedAction(StrictModel):
     confirmed: bool
 
 
+class AccountDeletionView(BaseModel):
+    deleted: bool
+    identity_cleanup: Literal["queued", "not_applicable"]
+    external_cache: str
+
+
 class ErrorDetail(BaseModel):
     code: str
     message: str

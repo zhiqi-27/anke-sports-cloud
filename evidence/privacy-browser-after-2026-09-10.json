@@ -1,0 +1,21 @@
+{
+  "fixture": "synthetic identity; temporary SQLite; no Firebase calls",
+  "deleted": true,
+  "config_empty": true,
+  "feed_revoked": true,
+  "feed_body_empty": true,
+  "feed_secret_erased": true,
+  "personal_projections": 0,
+  "personal_links": 0,
+  "personal_sessions": 0,
+  "personal_jobs": 0,
+  "other_owner_preserved": true,
+  "anonymous_calendar_status": 401,
+  "cancel_kept_before_state": true,
+  "browser_console_errors": 0,
+  "dialog_viewports": [
+    "1440x1000",
+    "1280x800",
+    "1024x800"
+  ]
+}

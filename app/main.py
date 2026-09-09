@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+import logging
 from uuid import uuid4
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request, Response
@@ -19,10 +20,6 @@ from app.db import (
     Base,
     Creator,
     Feed,
-    Job,
-    Link,
-    Projection,
-    VideoMatch,
     Session,
     User,
     engine,
@@ -31,6 +28,7 @@ from app.db import (
 from app.providers import provider_statuses, resolve_creator
 from app.schemas import (
     CalendarUserView,
+    AccountDeletionView,
     EventList,
     EventView,
     ImportPreviewView,
@@ -59,7 +57,7 @@ from app.schemas import (
 )
 from app.security import actor, check_origin, digest, local_allowed, local_session, problem
 from app.seed import seed_demo
-from app.service import enqueue, ensure_user, save_config, user_view
+from app.service import active_user, enqueue, ensure_user, save_config, user_view
 
 
 @asynccontextmanager
@@ -103,6 +101,21 @@ async def boundary(request, call_next):
     except HTTPException as exc:
         response = JSONResponse(
             {"error": {**exc.detail, "request_id": request.state.request_id}}, status_code=exc.status_code
+        )
+    except Exception as exc:
+        from app.jobs import error_code
+
+        logging.warning("REQUEST_FAILED request_id=%s code=%s", request.state.request_id, error_code(exc))
+        response = JSONResponse(
+            {
+                "error": {
+                    "code": "SERVICE_UNAVAILABLE",
+                    "message": "请求未完成，请稍后重试",
+                    "retryable": True,
+                    "request_id": request.state.request_id,
+                }
+            },
+            status_code=503,
         )
     response.headers["X-Request-ID"] = request.state.request_id
     response.headers["X-Content-Type-Options"] = "nosniff"
@@ -148,6 +161,10 @@ def me(request: Request, db=Depends(get_db)):
     user = ensure_user(db, actor(request, db))
     db.commit()
     return user
+
+
+def me_write(user=Depends(me), db=Depends(get_db)):
+    return active_user(db, user.id)
 
 
 def find_event(db, event_id):
@@ -228,7 +245,7 @@ def calendar(user=Depends(me), db=Depends(get_db)):
 
 
 @app.post("/api/v1/me/follows/preview", response_model=FollowPreviewView)
-def follows_preview(data: SaveFollows, user=Depends(me), db=Depends(get_db)):
+def follows_preview(data: SaveFollows, user=Depends(me_write), db=Depends(get_db)):
     from app.follow_changes import preview_follows
 
     return preview_follows(db, user, data)
@@ -236,7 +253,7 @@ def follows_preview(data: SaveFollows, user=Depends(me), db=Depends(get_db)):
 
 @app.put("/api/v1/me/follows", response_model=CalendarUserView)
 def follows(
-    data: SaveFollows, idempotency_key: str | None = Header(None), user=Depends(me), db=Depends(get_db)
+    data: SaveFollows, idempotency_key: str | None = Header(None), user=Depends(me_write), db=Depends(get_db)
 ):
     result = actions.command(
         db,
@@ -251,7 +268,7 @@ def follows(
 
 
 @app.patch("/api/v1/me/preferences", response_model=CalendarUserView)
-def preferences(data: SavePreferences, user=Depends(me), db=Depends(get_db)):
+def preferences(data: SavePreferences, user=Depends(me_write), db=Depends(get_db)):
     save_config(
         db, user, {**user.config, "preferences": data.preferences.model_dump()}, data.expected_revision
     )
@@ -260,7 +277,7 @@ def preferences(data: SavePreferences, user=Depends(me), db=Depends(get_db)):
 
 
 @app.put("/api/v1/events/{event_id}/selection", response_model=EventView)
-def selection(event_id: str, data: OverrideInput, user=Depends(me), db=Depends(get_db)):
+def selection(event_id: str, data: OverrideInput, user=Depends(me_write), db=Depends(get_db)):
     event = find_event(db, event_id)
     overrides = [x for x in user.config["event_overrides"] if x["event_key"] != event.source_key]
     if data.state != "reset":
@@ -275,7 +292,7 @@ def add_link(
     event_id: str,
     data: AddLink,
     idempotency_key: str | None = Header(None),
-    user=Depends(me),
+    user=Depends(me_write),
     db=Depends(get_db),
 ):
     result = actions.command(
@@ -291,7 +308,9 @@ def add_link(
 
 
 @app.post("/api/v1/me/links/{link_id}/block")
-def block(link_id: str, idempotency_key: str | None = Header(None), user=Depends(me), db=Depends(get_db)):
+def block(
+    link_id: str, idempotency_key: str | None = Header(None), user=Depends(me_write), db=Depends(get_db)
+):
     result = actions.command(
         db,
         user,
@@ -305,7 +324,7 @@ def block(link_id: str, idempotency_key: str | None = Header(None), user=Depends
 
 
 @app.post("/api/v1/me/creators/resolve", response_model=CreatorIdentity)
-def creator_resolve(data: ResolveCreator, user=Depends(me)):
+def creator_resolve(data: ResolveCreator, user=Depends(me_write)):
     details = resolve_creator(data.url.strip())
     return {
         "channel_id": details["channel_id"],
@@ -316,7 +335,7 @@ def creator_resolve(data: ResolveCreator, user=Depends(me)):
 
 @app.post("/api/v1/me/creators", response_model=CalendarUserView)
 def creator_add(
-    data: AddCreator, idempotency_key: str | None = Header(None), user=Depends(me), db=Depends(get_db)
+    data: AddCreator, idempotency_key: str | None = Header(None), user=Depends(me_write), db=Depends(get_db)
 ):
     result = actions.command(
         db,
@@ -338,7 +357,7 @@ def followed_creator(db, user, channel_id):
 
 
 @app.patch("/api/v1/me/creators/{channel_id}", response_model=CalendarUserView)
-def creator_update(channel_id: str, data: UpdateCreator, user=Depends(me), db=Depends(get_db)):
+def creator_update(channel_id: str, data: UpdateCreator, user=Depends(me_write), db=Depends(get_db)):
     from app.content import save_creator
 
     creator = followed_creator(db, user, channel_id)
@@ -368,7 +387,11 @@ def creator_impact(channel_id: str, user=Depends(me), db=Depends(get_db)):
 
 @app.delete("/api/v1/me/creators/{channel_id}", response_model=CalendarUserView)
 def creator_delete(
-    channel_id: str, expected_revision: int, confirmed: bool = False, user=Depends(me), db=Depends(get_db)
+    channel_id: str,
+    expected_revision: int,
+    confirmed: bool = False,
+    user=Depends(me_write),
+    db=Depends(get_db),
 ):
     from app.content import remove_creator
 
@@ -381,7 +404,7 @@ def creator_delete(
 
 
 @app.post("/api/v1/me/creators/{channel_id}/refresh")
-def creator_refresh(channel_id: str, user=Depends(me), db=Depends(get_db)):
+def creator_refresh(channel_id: str, user=Depends(me_write), db=Depends(get_db)):
     from app.content import enqueue_channel
 
     followed_creator(db, user, channel_id)
@@ -401,7 +424,7 @@ def reviews(user=Depends(me), db=Depends(get_db)):
 
 
 @app.post("/api/v1/me/reviews/{match_id}")
-def review_decide(match_id: str, data: ReviewDecision, user=Depends(me), db=Depends(get_db)):
+def review_decide(match_id: str, data: ReviewDecision, user=Depends(me_write), db=Depends(get_db)):
     from app.content import decide_review
 
     decide_review(db, user, match_id, data.decision, data.kind, data.expected_updated_at)
@@ -410,7 +433,7 @@ def review_decide(match_id: str, data: ReviewDecision, user=Depends(me), db=Depe
 
 
 @app.post("/api/v1/me/links/{link_id}/pin")
-def link_pin(link_id: str, user=Depends(me), db=Depends(get_db)):
+def link_pin(link_id: str, user=Depends(me_write), db=Depends(get_db)):
     from app.content import pin_link
 
     pin_link(db, user, link_id)
@@ -448,7 +471,7 @@ def export_config(user=Depends(me)):
 
 @app.post("/api/v1/me/config/import", response_model=ImportPreviewView)
 def import_config(
-    data: ImportInput, idempotency_key: str | None = Header(None), user=Depends(me), db=Depends(get_db)
+    data: ImportInput, idempotency_key: str | None = Header(None), user=Depends(me_write), db=Depends(get_db)
 ):
     result = actions.command(
         db,
@@ -468,7 +491,7 @@ def address(user=Depends(me), db=Depends(get_db)):
 
 
 @app.post("/api/v1/me/feed/rotate")
-def rotate(data: FeedAction, user=Depends(me), db=Depends(get_db)):
+def rotate(data: FeedAction, user=Depends(me_write), db=Depends(get_db)):
     import secrets
 
     if not data.confirmed:
@@ -482,7 +505,7 @@ def rotate(data: FeedAction, user=Depends(me), db=Depends(get_db)):
 
 
 @app.post("/api/v1/me/feed/pause")
-def pause(data: FeedAction, user=Depends(me), db=Depends(get_db)):
+def pause(data: FeedAction, user=Depends(me_write), db=Depends(get_db)):
     feed = db.scalar(select(Feed).where(Feed.owner_id == user.id))
     feed.paused = data.confirmed
     if not feed.paused:
@@ -512,7 +535,7 @@ def get_feed(token: str, request: Request, db=Depends(get_db)):
 
 
 @app.post("/api/v1/local/providers/{provider}/sync")
-def trigger_sync(provider: str, request: Request, user=Depends(me), db=Depends(get_db)):
+def trigger_sync(provider: str, request: Request, user=Depends(me_write), db=Depends(get_db)):
     if not local_allowed(request):
         problem("NOT_FOUND", "未找到", 404)
     if provider not in {"balldontlie", "football-data", "jolpica"}:
@@ -524,25 +547,25 @@ def trigger_sync(provider: str, request: Request, user=Depends(me), db=Depends(g
     return {"queued": True}
 
 
-@app.delete("/api/v1/me")
-def delete_account(data: FeedAction, user=Depends(me), db=Depends(get_db)):
+@app.delete("/api/v1/me", response_model=AccountDeletionView)
+def delete_account(
+    data: FeedAction, request: Request, response: Response, user=Depends(me_write), db=Depends(get_db)
+):
     if not data.confirmed:
         problem("CONFIRM_REQUIRED", "请确认删除账号数据")
-    from app.db import CommandReceipt
-    from app.oauth import delete_owner_connections
+    from app.privacy import delete_account_data
 
-    delete_owner_connections(db, user.id)
-    db.execute(delete(CommandReceipt).where(CommandReceipt.owner_id == user.id))
-    feed = db.scalar(select(Feed).where(Feed.owner_id == user.id))
-    db.execute(delete(Projection).where(Projection.feed_id == feed.id))
-    db.execute(delete(Link).where(Link.owner_id == user.id))
-    db.execute(delete(VideoMatch).where(VideoMatch.owner_id == user.id))
-    db.execute(delete(Session).where(Session.user_id == user.id))
-    db.execute(delete(Job).where(Job.payload["user_id"].as_string() == user.id))
-    feed.revoked, feed.body, feed.token_ciphertext = True, "", ""
-    user.deleted, user.config, user.display_name = True, {}, "Deleted account"
+    # me_write has already verified the bearer. Downstream MCP/extension tokens
+    # cannot authorize this endpoint; a local cookie has no Firebase identity.
+    firebase_project = (
+        settings().firebase_project_id
+        if request.headers.get("Authorization", "").startswith("Bearer ")
+        else None
+    )
+    result = delete_account_data(db, user.id, firebase_project=firebase_project)
     db.commit()
-    return {"deleted": True, "external_cache": "请在系统日历中删除旧订阅以清除缓存"}
+    response.delete_cookie("anke_sports_session")
+    return result
 
 
 @app.get("/api/v1/me/connections/requests/{pending}", response_model=ConsentRequestView)
@@ -553,7 +576,7 @@ def connection_preview(pending: str, user=Depends(me), db=Depends(get_db)):
 
 
 @app.post("/api/v1/me/connections/requests/{pending}", response_model=ConsentRedirectView)
-def connection_consent(pending: str, data: ConsentDecision, user=Depends(me), db=Depends(get_db)):
+def connection_consent(pending: str, data: ConsentDecision, user=Depends(me_write), db=Depends(get_db)):
     from app.oauth import consent_decide
 
     url = consent_decide(db, user, pending, data.approved, data.scopes)
@@ -569,7 +592,7 @@ def connections(user=Depends(me), db=Depends(get_db)):
 
 
 @app.delete("/api/v1/me/connections/{grant_id}")
-def connection_revoke(grant_id: str, user=Depends(me), db=Depends(get_db)):
+def connection_revoke(grant_id: str, user=Depends(me_write), db=Depends(get_db)):
     from app.oauth import revoke_connection
 
     revoke_connection(db, user, grant_id)

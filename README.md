@@ -64,3 +64,5 @@ MCP 已提供匿名与私人 Streamable HTTP、网页授权、短期令牌和撤
 赛程查询和Feed发布按日期缩小候选、批量读取可见链接。20,000场活动数据的本机HTTP查询、时区排序与账号隔离已验证；复现命令和完整容量限制见 [docs/schedule-queries.md](docs/schedule-queries.md)。
 
 定时截止、手动/自动去重、直播分批到期与巡检、迁移和复现命令见 [持续更新调度](docs/scheduling.md)。
+
+账号删除会撤销私人订阅与授权，防止删除前请求恢复个人数据；Firebase 身份清理由可重试任务执行。保留字段、失败重放与外部缓存边界见 [账号删除](docs/account-deletion.md)，真实云身份清理尚未验收。

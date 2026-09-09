@@ -111,3 +111,16 @@ Provider启动即检查持久截止时间，之后每分钟检查；成功/执�
 浏览器19实际显示本地账号、湖人关注和48场月历，console error0，检查后关闭；原关注草稿16、公共订阅12、旧合成维护10保留。Web3000 session43940、production预览3002 session12042、旧直播夹具3001 session29715、扩展预览18792 session25462保持原状态，3001不代表本批新服务。
 
 说明anke-sports-cloud/docs/scheduling.md；证据evidence/scheduling-2026-09-10.md、scheduler-capacity-final-2026-09-10.json及主库迁移/读回JSON。所有本批任务保持in_progress。继续项目级YouTube配额、通知到发布/积压规模、隐私删除与脱敏、真实MCP业务调用、Chrome和云/设备验收；托管Chrome创建独立云资源、用户负责登录的授权仍有效。本批无云资源、push、部署或真实上游请求。完整产品目标继续。
+
+
+## 最新批次：账号删除与隐私竞态（T07 / T31 / T33）
+
+账号删除锁定当前用户，清除个人配置、授权/会话、链接/匹配、投影、命令回执、个人任务与重放记录，撤销Feed并擦除正文与密文。旧配置、授权交换、命令和Worker不能恢复删除账号。Firebase清理固定项目并入outbox，失败可重放；只用合成适配器验证，真实云身份清理尚未验收。HTTP异常仅记录请求ID/错误类别，SQL隐藏参数。最小撤销记录与共享元数据保留，详情见anke-sports-cloud/docs/account-deletion.md。
+
+后端154项pytest/ruff通过，新增13项包含独立SQLite连接及真实HTTP竞态；两条既有Starlette/AnyIO弃用警告。Web/扩展typecheck、production build通过，OpenAPI和生成客户端更新。独立IPv6合成账号网页验证取消不变、键盘确认、完整退出到游客及外部缓存提示；1440×1000、1280×800、1024×800确认弹窗无溢出，console error0。隐私夹具3004已正常停止、临时库清理，20/21临时标签关闭。主体验账号删除按钮仍禁用，原关注草稿16/公共订阅12/旧维护10保留。
+
+无迁移。0600备份data/before-privacy-20260909-200145.db（UTC文件名）；重启与临时会话登出后全部25表行哈希不变，163场与原账号/关注/Feed保留。证据evidence/privacy-2026-09-10.md及privacy-browser-before/after、privacy-main-readback JSON。现有自动调度于本地03:43成功获取真实Jolpica，重启未提前再次抓取；合成删除测试没有Firebase/上游调用。
+
+当前主API8787 session58923/PID31467，worker session41622/PID31478；四个显式local/preview/public/web参数与关闭访问日志保持。主Web3000 session43940/PID53698；production Web3002 session73957/PID31177已更新最终构建。旧合成维护API3001 session29715/PID92350、扩展预览18792 session25462/PID86801仍保留。旧主API29651/worker29664/production17719已正常结束。
+
+T07/T31/T33保持in_progress。后续继续项目级YouTube配额、通知到Feed/积压规模及新增个人锁的容量影响、Codex实际业务调用，真实Firebase/MySQL/Azure、Chrome安装和设备验收；备份恢复保留删除决定与云日志/告警仍待验收。主页面 http://127.0.0.1:3000/calendar 可继续检查。托管Chrome创建并配置独立云资源、用户负责登录的授权保留。本批无push、部署或云资源变更，完整目标继续。

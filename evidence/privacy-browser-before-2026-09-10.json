@@ -1,0 +1,13 @@
+{
+  "fixture": "synthetic identity; temporary SQLite; no Firebase calls",
+  "deleted": false,
+  "config_empty": false,
+  "feed_revoked": false,
+  "feed_body_empty": false,
+  "feed_secret_erased": false,
+  "personal_projections": 0,
+  "personal_links": 0,
+  "personal_sessions": 1,
+  "personal_jobs": 1,
+  "other_owner_preserved": true
+}

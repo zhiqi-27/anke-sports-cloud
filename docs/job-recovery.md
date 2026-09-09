@@ -38,7 +38,7 @@ uv run python -m scripts.recover_jobs --environment local --job-id FAILED_JOB_ID
 uv run python -m scripts.recover_jobs --environment local --job-id FAILED_JOB_ID --expected-attempts 5 --reason '已修复依赖，重新生成订阅' --apply
 ```
 
-默认 dry-run；`--apply` 创建新的关联任务，原失败记录保留。一个原任务只有一个重放后继，重复运行读回同一个 ID；并发冲突需重新读取，不重置原任务尝试次数。已删除账号的任务拒绝重放。新任务仍遵守 Provider 冷却时间，重放不绕过限流。环境参数必须与配置一致；staging/production 运行前仍需明确目标授权和恢复方案。
+默认 dry-run；`--apply` 创建新的关联任务，原失败记录保留。一个原任务只有一个重放后继，重复运行读回同一个 ID；并发冲突需重新读取，不重置原任务尝试次数。已删除账号的普通个人任务拒绝重放；唯一例外是固定原 Firebase 项目的 `identity_cleanup`，见 [账号删除](account-deletion.md)。新任务仍遵守 Provider 冷却时间，重放不绕过限流。环境参数必须与配置一致；staging/production 运行前仍需明确目标授权和恢复方案。
 
 ## 本机恢复实验
 

@@ -10,10 +10,10 @@ from sqlalchemy import and_, or_, select
 
 from app.calendar import event_view, inclusion_filter, load_links
 from app.config import settings
-from app.db import CommandReceipt, Event, Feed, Link, Source, User
+from app.db import CommandReceipt, Event, Feed, Link, Source
 from app.schemas import Config
 from app.security import digest, problem
-from app.service import attach_link, import_preview, save_config, user_view
+from app.service import active_user, attach_link, import_preview, save_config, user_view
 
 
 def find_event(db, event_id):
@@ -167,11 +167,11 @@ def command(db, user, operation, key, payload, perform):
     MySQL serializes per-owner commands. Config CAS remains active for all
     transports. Clients retain a key after uncertain responses, for 24 hours.
     """
+    active_user(db, user.id)
     if key is None:
         return perform()
     if not re.fullmatch(r"[A-Za-z0-9._:-]{8,128}", key):
         problem("INVALID_IDEMPOTENCY_KEY", "幂等键需要 8 至 128 个字母、数字或 ._:-")
-    db.execute(select(User.id).where(User.id == user.id).with_for_update())
     receipt_id = digest(user.id + ":" + key)
     fingerprint = digest(json.dumps(payload, sort_keys=True, ensure_ascii=False))
     prior = db.get(CommandReceipt, receipt_id)

@@ -11,6 +11,8 @@ from app.security import canonical_url, digest, problem
 
 def ensure_user(db, user_id: str) -> User:
     user = db.get(User, user_id)
+    if user and user.deleted:
+        problem("ACCOUNT_DELETED", "账号已删除", 403)
     if user is None:
         user = User(
             id=user_id,
@@ -39,15 +41,27 @@ def lock_user(db, user_id):
     )
 
 
+def active_user(db, user_id):
+    user = lock_user(db, user_id)
+    if not user or user.deleted:
+        problem("ACCOUNT_DELETED", "账号已删除", 403)
+    return user
+
+
 def enqueue(db, kind: str, payload: dict):
+    if owner_id := payload.get("user_id"):
+        user = lock_user(db, owner_id)
+        if not user or user.deleted:
+            return False
     db.add(Job(kind=kind, payload=payload))
+    return True
 
 
 def save_config(db, user: User, config: dict, revision: int):
     clean = Config.model_validate(config).model_dump()
     result = db.execute(
         update(User)
-        .where(User.id == user.id, User.revision == revision)
+        .where(User.id == user.id, User.revision == revision, User.deleted.is_(False))
         .values(config=clean, revision=revision + 1)
     )
     if not result.rowcount:

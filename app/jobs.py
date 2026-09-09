@@ -9,7 +9,7 @@ import httpx
 from fastapi import HTTPException
 from sqlalchemy import or_, select, update
 
-from app.db import ChannelSync, ChannelWork, Creator, Job, JobReplay, ProviderState, User, now
+from app.db import ChannelSync, ChannelWork, Creator, Job, JobReplay, ProviderState, now
 
 MAX_ATTEMPTS = 5
 LEASE_SECONDS = 300
@@ -355,8 +355,10 @@ def replay_job(db, job_id, expected_attempts, reason, apply=False):
         raise ValueError("REPLAY_REASON_REQUIRED")
     owner_id = original.payload.get("user_id")
     if owner_id:
-        owner = db.get(User, owner_id)
-        if not owner or owner.deleted:
+        from app.service import lock_user
+
+        owner = lock_user(db, owner_id)
+        if not owner or owner.deleted != (original.kind == "identity_cleanup"):
             raise ValueError("OWNER_UNAVAILABLE")
     previous = db.get(JobReplay, job_id)
     if previous:

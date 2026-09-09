@@ -1,0 +1,136 @@
+{
+  "health": {
+    "status": "ok",
+    "product": "Anke Sports",
+    "environment": "local"
+  },
+  "local_preview": true,
+  "firebase_configured": false,
+  "original_config_unchanged": true,
+  "temporary_session_logged_out": true,
+  "tables": {
+    "alembic_version": {
+      "count": 1,
+      "unchanged": true
+    },
+    "broadcast_audit": {
+      "count": 0,
+      "unchanged": true
+    },
+    "broadcast_records": {
+      "count": 0,
+      "unchanged": true
+    },
+    "channel_sync": {
+      "count": 0,
+      "unchanged": true
+    },
+    "channel_work": {
+      "count": 0,
+      "unchanged": true
+    },
+    "command_receipts": {
+      "count": 0,
+      "unchanged": true
+    },
+    "creators": {
+      "count": 0,
+      "unchanged": true
+    },
+    "events": {
+      "count": 163,
+      "unchanged": true
+    },
+    "feeds": {
+      "count": 1,
+      "unchanged": true
+    },
+    "job_replays": {
+      "count": 0,
+      "unchanged": true
+    },
+    "links": {
+      "count": 0,
+      "unchanged": true
+    },
+    "notification_receipts": {
+      "count": 0,
+      "unchanged": true
+    },
+    "oauth_clients": {
+      "count": 2,
+      "unchanged": true
+    },
+    "oauth_grants": {
+      "count": 0,
+      "unchanged": true
+    },
+    "oauth_requests": {
+      "count": 0,
+      "unchanged": true
+    },
+    "oauth_tokens": {
+      "count": 0,
+      "unchanged": true
+    },
+    "outbox": {
+      "count": 21,
+      "unchanged": true
+    },
+    "projections": {
+      "count": 217,
+      "unchanged": true
+    },
+    "provider_states": {
+      "count": 4,
+      "unchanged": true
+    },
+    "public_feeds": {
+      "count": 14,
+      "unchanged": true
+    },
+    "sessions": {
+      "count": 3,
+      "unchanged": true
+    },
+    "sources": {
+      "count": 14,
+      "unchanged": true
+    },
+    "users": {
+      "count": 1,
+      "unchanged": true
+    },
+    "video_matches": {
+      "count": 0,
+      "unchanged": true
+    },
+    "videos": {
+      "count": 0,
+      "unchanged": true
+    }
+  },
+  "provider_last_success_before_restart": [
+    {
+      "id": "balldontlie",
+      "last_success": null,
+      "last_attempt_at": "2026-09-09T16:55:45.655899+00:00"
+    },
+    {
+      "id": "football-data",
+      "last_success": null,
+      "last_attempt_at": "2026-09-09T17:01:04.488820+00:00"
+    },
+    {
+      "id": "jolpica",
+      "last_success": "2026-09-09T19:43:01.840469+00:00",
+      "last_attempt_at": "2026-09-09T19:43:00.637665+00:00"
+    },
+    {
+      "id": "youtube",
+      "last_success": null,
+      "last_attempt_at": null
+    }
+  ],
+  "migration_required": false
+}

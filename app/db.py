@@ -340,7 +340,7 @@ connection_args = (
     if url.startswith("sqlite")
     else ({"ssl": ssl.create_default_context()} if settings().env != "local" else {})
 )
-engine = create_engine(url, pool_pre_ping=True, connect_args=connection_args)
+engine = create_engine(url, pool_pre_ping=True, hide_parameters=True, connect_args=connection_args)
 if url.startswith("sqlite"):
 
     @event.listens_for(engine, "connect")

@@ -34,6 +34,25 @@ def channel_users(db, channel_id, active_only=True):
             yield user, config
 
 
+def channel_interest(db, channel_id, *, retained=False):
+    """Read current column values, without retaining account locks during HTTP.
+
+    Already-started upstream work may finish. Owner locks at mutation/enqueue
+    boundaries keep its result from reviving an erased private account.
+    """
+    retained_owners = (
+        set(db.scalars(select(Link.owner_id).where(Link.channel_id == channel_id, Link.owner_id != "public")))
+        if retained
+        else set()
+    )
+    for ident, config in db.execute(select(User.id, User.config).where(User.deleted.is_(False))):
+        if ident in retained_owners or any(
+            c["channel_id"] == channel_id and c["enabled"] for c in config.get("creators", [])
+        ):
+            return True
+    return False
+
+
 def enqueue_channel(db, channel_id, kind="youtube_poll"):
     if not db.get(ChannelSync, channel_id):
         db.add(ChannelSync(channel_id=channel_id))
@@ -227,6 +246,8 @@ def refresh_videos(db, channel_id, video_ids):
         return
     if len(ids) > 50:
         raise ValueError("VIDEO_BATCH_TOO_LARGE")
+    if not channel_interest(db, channel_id, retained=True):
+        return
     payload = youtube_request("videos", {"id": ",".join(ids), "part": "snippet,status"})
     rows = payload.get("items")
     if not isinstance(rows, list):
@@ -292,7 +313,7 @@ def refresh_videos(db, channel_id, video_ids):
 def poll_channel(db, payload):
     channel_id = payload["channel_id"]
     creator = db.get(Creator, channel_id)
-    if not creator or not list(channel_users(db, channel_id)):
+    if not creator or not channel_interest(db, channel_id):
         return
     sync = db.get(ChannelSync, channel_id)
     if not sync:
@@ -346,7 +367,7 @@ def poll_channel(db, payload):
 
 def refresh_channel_metadata(db, channel_id):
     creator = db.get(Creator, channel_id)
-    if not creator:
+    if not creator or not channel_interest(db, channel_id, retained=True):
         return
     items = youtube_request("channels", {"id": channel_id, "part": "snippet,contentDetails"})["items"]
     if len(items) != 1 or items[0]["id"] != channel_id:
