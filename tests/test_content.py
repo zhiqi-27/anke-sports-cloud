@@ -418,7 +418,15 @@ def test_hub_intent_is_committed_before_verification_request(stack, monkeypatch)
             return SimpleNamespace(status_code=202)
 
     monkeypatch.setattr(websub.httpx, "Client", HubClient)
-    websub.request_subscription(CHANNEL)
+    from app.jobs import claim_job
+
+    with sessions() as db:
+        job = Job(kind="youtube_subscribe", payload={"channel_id": CHANNEL})
+        db.add(job)
+        db.flush()
+        claim, _ = claim_job(db, job.id)
+        db.commit()
+    websub.request_subscription(CHANNEL, claim)
     with sessions() as db:
         assert db.get(ChannelSync, CHANNEL).state == "verified"
 

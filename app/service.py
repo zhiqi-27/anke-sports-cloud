@@ -32,6 +32,13 @@ def ensure_user(db, user_id: str) -> User:
     return user
 
 
+def lock_user(db, user_id):
+    db.execute(update(User).where(User.id == user_id).values(revision=User.revision))
+    return db.scalar(
+        select(User).where(User.id == user_id).with_for_update().execution_options(populate_existing=True)
+    )
+
+
 def enqueue(db, kind: str, payload: dict):
     db.add(Job(kind=kind, payload=payload))
 
@@ -120,10 +127,13 @@ def user_view(db, user: User) -> dict:
 
 def attach_link(db, user: User, event: Event, url: str, title: str, kind: str):
     canonical, platform = canonical_url(url)
+    user = lock_user(db, user.id)
+    if not user or user.deleted:
+        problem("NOT_FOUND", "账号已不可用", 404)
     link = db.scalar(
-        select(Link).where(
-            Link.owner_id == user.id, Link.event_id == event.id, Link.url_hash == digest(canonical)
-        )
+        select(Link)
+        .where(Link.owner_id == user.id, Link.event_id == event.id, Link.url_hash == digest(canonical))
+        .execution_options(populate_existing=True)
     )
     if link is None:
         link = Link(

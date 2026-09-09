@@ -10,7 +10,7 @@ os.environ["ANKE_SPORTS_ENCRYPTION_KEY"] = Fernet.generate_key().decode()
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event as sql_event
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
@@ -42,4 +42,30 @@ def stack(monkeypatch):
     yield client, sessions
     client.close()
     app.dependency_overrides.clear()
+    engine.dispose()
+
+
+@pytest.fixture
+def disk_stack(tmp_path, monkeypatch):
+    from app.service import ensure_user
+    from tests.test_calendar_flow import insert_event
+
+    # Independent connections on a real file; StaticPool is not concurrency evidence.
+    engine = create_engine(
+        "sqlite:///" + str(tmp_path / "concurrent.db"), connect_args={"check_same_thread": False}
+    )
+
+    @sql_event.listens_for(engine, "connect")
+    def pragmas(connection, _):
+        connection.execute("PRAGMA journal_mode=WAL")
+        connection.execute("PRAGMA busy_timeout=3000")
+
+    Base.metadata.create_all(engine)
+    sessions = sessionmaker(engine, expire_on_commit=False)
+    monkeypatch.setattr(worker, "SessionLocal", sessions)
+    with sessions() as db:
+        ensure_user(db, "local-reviewer")
+        db.commit()
+    ident = insert_event(sessions)
+    yield sessions, ident
     engine.dispose()

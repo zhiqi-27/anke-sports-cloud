@@ -1,0 +1,26 @@
+{
+  "date": "2026-09-10",
+  "scope": "local SQLite and synthetic protocol tests",
+  "pytest_passed": 116,
+  "new_channel_cases": 18,
+  "ruff": "passed",
+  "client_typechecks": "passed",
+  "migration": {
+    "revision": "a8c502e7d134",
+    "backup": "data/before-channel-work-20260910-021321.db",
+    "backup_mode": "0600",
+    "preserved_existing_tables": 23,
+    "existing_rows_and_columns_equal": true,
+    "events": 163,
+    "new_work_rows": 0,
+    "integrity_check": "ok",
+    "sqlite_upgrade_downgrade_reupgrade_check": "passed with legacy row",
+    "mysql": "offline DDL only"
+  },
+  "external_youtube_hub": "not tested",
+  "azure_mysql_queue": "not tested",
+  "device_calendar": "not tested",
+  "final_targeted_content_checks": 35,
+  "after_restart_original_rows_equal": true,
+  "runtime_health": "local/ok"
+}

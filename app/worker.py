@@ -46,7 +46,7 @@ def execute_claim(db, claim):
             for video in db.scalars(select(Video).where(Video.channel_id == payload["channel_id"])):
                 match_video(db, video, only_user=payload["user_id"])
         elif kind == "youtube_subscribe":
-            request_subscription(payload["channel_id"])
+            request_subscription(payload["channel_id"], claim)
         else:
             raise ValueError("UNKNOWN_JOB")
     else:

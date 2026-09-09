@@ -2,11 +2,12 @@
 
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 
 from app.calendar import chosen_links, event_keys, included
 from app.db import (
     ChannelSync,
+    ChannelWork,
     Creator,
     Event,
     Feed,
@@ -23,11 +24,11 @@ from app.matching import evaluate, parse_time
 from app.providers import youtube_request
 from app.schemas import CreatorFollow
 from app.security import digest, problem
-from app.service import enqueue, save_config
+from app.service import enqueue, lock_user, save_config
 
 
 def channel_users(db, channel_id, active_only=True):
-    for user in db.scalars(select(User).where(User.deleted.is_(False))):
+    for user in db.scalars(select(User).where(User.deleted.is_(False)).order_by(User.id)):
         config = next((c for c in user.config["creators"] if c["channel_id"] == channel_id), None)
         if config and (not active_only or config["enabled"]):
             yield user, config
@@ -37,6 +38,12 @@ def enqueue_channel(db, channel_id, kind="youtube_poll"):
     if not db.get(ChannelSync, channel_id):
         db.add(ChannelSync(channel_id=channel_id))
         db.flush()
+    # Serialize scheduling decisions across processes, including SQLite.
+    db.execute(
+        update(ChannelSync)
+        .where(ChannelSync.channel_id == channel_id)
+        .values(next_poll_at=ChannelSync.next_poll_at)
+    )
     pending = db.scalar(
         select(Job.id)
         .where(
@@ -116,6 +123,14 @@ def match_video(db, video, only_user=None):
     for user, follow in channel_users(db, video.channel_id):
         if only_user and user.id != only_user:
             continue
+        user = lock_user(db, user.id)
+        if not user or user.deleted:
+            continue
+        follow = next(
+            (f for f in user.config["creators"] if f["channel_id"] == video.channel_id and f["enabled"]), None
+        )
+        if not follow:
+            continue
         feed = db.scalar(select(Feed).where(Feed.owner_id == user.id))
         retained = (
             set(
@@ -138,13 +153,19 @@ def match_video(db, video, only_user=None):
         existing = {
             m.event_id: m
             for m in db.scalars(
-                select(VideoMatch).where(VideoMatch.owner_id == user.id, VideoMatch.video_id == video.id)
+                select(VideoMatch)
+                .where(VideoMatch.owner_id == user.id, VideoMatch.video_id == video.id)
+                .execution_options(populate_existing=True)
             )
         }
         seen = set()
         links = {
             link.event_id: link
-            for link in db.scalars(select(Link).where(Link.owner_id == user.id, Link.url_hash == digest(url)))
+            for link in db.scalars(
+                select(Link)
+                .where(Link.owner_id == user.id, Link.url_hash == digest(url))
+                .execution_options(populate_existing=True)
+            )
         }
         overrides = {o["event_key"]: o["state"] for o in user.config["link_overrides"] if o["url"] == url}
         event_by_id = {e.id: e for e in all_events}
@@ -373,7 +394,12 @@ def review_list(db, user):
 
 
 def decide_review(db, user, match_id, decision, kind, version):
-    row = db.get(VideoMatch, match_id)
+    user = lock_user(db, user.id)
+    if not user or user.deleted:
+        problem("NOT_FOUND", "账号已不可用", 404)
+    row = db.scalar(
+        select(VideoMatch).where(VideoMatch.id == match_id).execution_options(populate_existing=True)
+    )
     if not row or row.owner_id != user.id:
         problem("NOT_FOUND", "未找到待确认内容", 404)
     if row.updated_at != version or row.decision != "needs_review":
@@ -433,10 +459,13 @@ def pin_link(db, user, link_id):
 
 def creator_status(db, channel_id):
     sync = db.get(ChannelSync, channel_id)
+    data_work = db.get(ChannelWork, channel_id + ":data")
+    hub_work = db.get(ChannelWork, channel_id + ":hub")
+    data_error = data_work.error if data_work else (sync.error if sync else "")
     pending = db.scalar(
         select(Job.id)
         .where(
-            Job.kind.in_(["youtube_poll", "youtube_videos"]),
+            Job.kind.in_(["youtube_poll", "youtube_videos", "youtube_channel_metadata"]),
             Job.state.in_(["pending", "running"]),
             Job.payload["channel_id"].as_string() == channel_id,
         )
@@ -446,19 +475,27 @@ def creator_status(db, channel_id):
         "sync_status": "syncing"
         if pending
         else "error"
-        if sync and sync.error
+        if data_error
         else "current"
         if sync and sync.last_success
         else "pending",
         "last_synced_at": sync.last_success if sync else None,
-        "websub_status": sync.state if sync else "disabled",
+        "websub_status": "error" if hub_work and hub_work.error else sync.state if sync else "disabled",
     }
 
 
 def expire_metadata(db):
     cutoff = (datetime.now(timezone.utc) - timedelta(days=28)).isoformat()
     for video in db.scalars(select(Video).where(Video.updated_at < cutoff, Video.available.is_(True))):
-        video.title, video.description, video.available = "元数据已过期", "", False
+        changed = db.execute(
+            update(Video)
+            .where(Video.id == video.id, Video.updated_at == video.updated_at, Video.available.is_(True))
+            .values(title="元数据已过期", description="", available=False)
+            .execution_options(synchronize_session=False)
+        )
+        if not changed.rowcount:
+            continue  # A refresh committed after this maintenance scan read its candidate.
+        db.refresh(video)
         url = f"https://www.youtube.com/watch?v={video.id}"
         for link in db.scalars(select(Link).where(Link.url_hash == digest(url))):
             link.available = False
@@ -474,7 +511,15 @@ def expire_metadata(db):
     for creator in db.scalars(
         select(Creator).where(Creator.updated_at < cutoff, Creator.name != Creator.channel_id)
     ):
-        creator.name = creator.channel_id
+        changed = db.execute(
+            update(Creator)
+            .where(Creator.channel_id == creator.channel_id, Creator.updated_at == creator.updated_at)
+            .values(name=creator.channel_id)
+            .execution_options(synchronize_session=False)
+        )
+        if not changed.rowcount:
+            continue
+        db.refresh(creator)
         for link in db.scalars(select(Link).where(Link.channel_id == creator.channel_id)):
             link.creator = "YouTube"
             enqueue(db, "projection", {"user_id": link.owner_id})

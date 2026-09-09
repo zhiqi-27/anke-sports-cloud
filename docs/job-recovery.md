@@ -8,6 +8,8 @@
 
 同一个体育 Provider 另有共享租约，阻止两个不同任务同时发布该来源的结果。其他任务等待时不消耗尝试次数；本地最多约 15 秒复查正在使用的 Provider，熔断等待保持其原期限。个人 Feed 在读取配置前锁定所属用户，再读取当前配置，避免缓存快照覆盖新关注。SQLite 的锁行为与 MySQL 不同，不能将本机并发测试当作 Azure MySQL 证明；锁定读取与 ORM 刷新行为参考 [SQLAlchemy Session API](https://docs.sqlalchemy.org/en/20/orm/session_api.html)。
 
+YouTube已增加按频道的数据/Hub两类执行租约与相同的条件提交，网络重试冷却不会阻止本地重新匹配。详见 [频道并发与恢复](channel-concurrency.md)。
+
 租约不构成外部 HTTP 的“只调用一次”承诺。若执行超过 5 分钟被重新领取，可能重复读取上游，旧结果会被拒绝。WebSub 包含用于异步核验的预提交意图，外部订阅请求允许按协议重发；实际 Hub、长耗时任务及大规模视频并发仍需单独验收。
 
 ## 重试、熔断与界面

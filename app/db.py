@@ -211,6 +211,18 @@ class ChannelSync(Base):
     renew_at: Mapped[str | None] = mapped_column(String(40), nullable=True)
     last_notification_at: Mapped[str | None] = mapped_column(String(40), nullable=True)
     error: Mapped[str] = mapped_column(String(80), default="")
+    verification_digest: Mapped[str] = mapped_column(String(64), default="", server_default="")
+
+
+class ChannelWork(Base):
+    __tablename__ = "channel_work"
+    id: Mapped[str] = mapped_column(String(100), primary_key=True)
+    lease_job_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    lease_attempt: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    lease_until: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    next_attempt_at: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    consecutive_failures: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    error: Mapped[str] = mapped_column(String(80), default="", server_default="")
 
 
 class VideoMatch(Base):

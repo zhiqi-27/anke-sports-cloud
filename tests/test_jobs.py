@@ -5,13 +5,12 @@ from threading import Event as Signal
 
 import httpx
 import pytest
-from sqlalchemy import create_engine, event as sql_event, select
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy import select
 
 from app import jobs, worker
 from app.calendar import rebuild_feed
-from app.db import Base, Event, Feed, Job, JobReplay, Projection, ProviderState, User
-from app.service import enqueue, ensure_user, save_config
+from app.db import Event, Feed, Job, JobReplay, Projection, ProviderState, User
+from app.service import enqueue, save_config
 from tests.test_calendar_flow import insert_event
 
 
@@ -21,29 +20,6 @@ def job(sessions, kind="provider", payload=None):
         db.add(row)
         db.commit()
         return row.id
-
-
-@pytest.fixture
-def disk_stack(tmp_path, monkeypatch):
-    # Independent connections on a real file; StaticPool is not concurrency evidence.
-    engine = create_engine(
-        "sqlite:///" + str(tmp_path / "concurrent.db"), connect_args={"check_same_thread": False}
-    )
-
-    @sql_event.listens_for(engine, "connect")
-    def pragmas(connection, _):
-        connection.execute("PRAGMA journal_mode=WAL")
-        connection.execute("PRAGMA busy_timeout=3000")
-
-    Base.metadata.create_all(engine)
-    sessions = sessionmaker(engine, expire_on_commit=False)
-    monkeypatch.setattr(worker, "SessionLocal", sessions)
-    with sessions() as db:
-        ensure_user(db, "local-reviewer")
-        db.commit()
-    ident = insert_event(sessions)
-    yield sessions, ident
-    engine.dispose()
 
 
 @pytest.mark.parametrize("late_error", [False, True])
