@@ -24,3 +24,5 @@ uv run python -m experiments.schedule_capacity --samples 20 --concurrency 4 --ou
 该场景存储1,000个账号，实际最大4个并发请求；只发布一个含200场比赛的Feed。赛程测量使用100场一页，先预热HTTP/数据库路径，没有应用结果缓存。它不能证明1,000用户同时在线、所有Feed发布、通知到Feed的两分钟目标或真实MySQL/Azure性能。
 
 当前结果和边界：[容量实测记录](../evidence/schedule-queries-2026-09-10.md)。回归测试 `tests/test_schedule_queries.py` 覆盖时区排序/边界、字面搜索、分页加载上限、关注与版本失效、公开审核/私人链接，以及独立SQLite连接的改期竞争。
+
+个人Feed随后增加关注/已有投影的SQL候选筛选，通知到多人发布与重复任务合并另有独立验收，见 [内容容量](content-capacity.md)。上面的HTTP查询实验仍保留原范围，不等同新通知实验。

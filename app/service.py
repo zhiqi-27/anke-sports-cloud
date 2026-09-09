@@ -53,6 +53,20 @@ def enqueue(db, kind: str, payload: dict):
         user = lock_user(db, owner_id)
         if not user or user.deleted:
             return False
+        if kind == "projection" and db.scalar(
+            select(Job.id)
+            .where(
+                Job.kind == "projection",
+                Job.state == "pending",
+                Job.attempts == 0,
+                Job.payload["user_id"].as_string() == owner_id,
+            )
+            .limit(1)
+            .with_for_update()
+        ):
+            # Latest state is read only when this pending job starts. Never
+            # absorb into a running/retrying job: it may hold an older snapshot.
+            return False
     db.add(Job(kind=kind, payload=payload))
     return True
 

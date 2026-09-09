@@ -1,0 +1,115 @@
+{
+  "health": {
+    "status": "ok",
+    "product": "Anke Sports",
+    "environment": "local"
+  },
+  "original_config_unchanged": true,
+  "actual_feed_rebuild": "completed",
+  "feed_http_body_unchanged": true,
+  "feed_http_200_and_304": true,
+  "temporary_session_logged_out": true,
+  "migration_required": false,
+  "tables": {
+    "alembic_version": {
+      "count": 1,
+      "unchanged": true
+    },
+    "broadcast_audit": {
+      "count": 0,
+      "unchanged": true
+    },
+    "broadcast_records": {
+      "count": 0,
+      "unchanged": true
+    },
+    "channel_sync": {
+      "count": 0,
+      "unchanged": true
+    },
+    "channel_work": {
+      "count": 0,
+      "unchanged": true
+    },
+    "command_receipts": {
+      "count": 0,
+      "unchanged": true
+    },
+    "creators": {
+      "count": 0,
+      "unchanged": true
+    },
+    "events": {
+      "count": 163,
+      "unchanged": true
+    },
+    "feeds": {
+      "count": 1,
+      "unchanged": true
+    },
+    "job_replays": {
+      "count": 0,
+      "unchanged": true
+    },
+    "links": {
+      "count": 0,
+      "unchanged": true
+    },
+    "notification_receipts": {
+      "count": 0,
+      "unchanged": true
+    },
+    "oauth_clients": {
+      "count": 2,
+      "unchanged": true
+    },
+    "oauth_grants": {
+      "count": 0,
+      "unchanged": true
+    },
+    "oauth_requests": {
+      "count": 0,
+      "unchanged": true
+    },
+    "oauth_tokens": {
+      "count": 0,
+      "unchanged": true
+    },
+    "outbox": {
+      "old_rows_unchanged": true,
+      "one_new_completed_publication": true
+    },
+    "projections": {
+      "count": 217,
+      "unchanged": true
+    },
+    "provider_states": {
+      "count": 4,
+      "unchanged": true
+    },
+    "public_feeds": {
+      "count": 14,
+      "unchanged": true
+    },
+    "sessions": {
+      "count": 3,
+      "unchanged": true
+    },
+    "sources": {
+      "count": 14,
+      "unchanged": true
+    },
+    "users": {
+      "count": 1,
+      "unchanged": true
+    },
+    "video_matches": {
+      "count": 0,
+      "unchanged": true
+    },
+    "videos": {
+      "count": 0,
+      "unchanged": true
+    }
+  }
+}

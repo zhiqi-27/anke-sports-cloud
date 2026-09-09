@@ -124,3 +124,18 @@ Provider启动即检查持久截止时间，之后每分钟检查；成功/执�
 当前主API8787 session58923/PID31467，worker session41622/PID31478；四个显式local/preview/public/web参数与关闭访问日志保持。主Web3000 session43940/PID53698；production Web3002 session73957/PID31177已更新最终构建。旧合成维护API3001 session29715/PID92350、扩展预览18792 session25462/PID86801仍保留。旧主API29651/worker29664/production17719已正常结束。
 
 T07/T31/T33保持in_progress。后续继续项目级YouTube配额、通知到Feed/积压规模及新增个人锁的容量影响、Codex实际业务调用，真实Firebase/MySQL/Azure、Chrome安装和设备验收；备份恢复保留删除决定与云日志/告警仍待验收。主页面 http://127.0.0.1:3000/calendar 可继续检查。托管Chrome创建并配置独立云资源、用户负责登录的授权保留。本批无push、部署或云资源变更，完整目标继续。
+
+
+## 最新批次：通知到多人 Feed 容量（T13 / T15 / T16 / T18）
+
+Feed先按关注/显式加入/既有投影在SQL缩小候选，再应用原排除与历史规则；SQLite结构化JSON成员与MySQL JSON_CONTAINS分支分开。视频匹配读取发布时间窗口及所有旧关联，仍能撤销改期到窗口外的链接。账号锁下合并同用户pending/attempts=0的发布任务；running/重试任务保留后继，重试deadline不变。无跨账号结果缓存。
+
+隔离20,000活动比赛、1,000账号、200活跃创作者、每Feed30场：同一热门创作者通知应更新900份，100份预先屏蔽。基线150秒后仅完成556份/剩381任务；最终900份全发布，P95 34.64秒、36.21秒清空。实际loopback签名HTTP、worker、ICS；YouTube是合成适配器。最终解析全部1,000份ICS的30,000个UID均不变。三条不同但元数据相同的通知只保留1,000条待发布任务，44.15秒清空，所有Feed版本/ETag/时间不变。P95为一条通知下900份Feed的观察值，不是多通知独立样本或云端承诺。
+
+后端158项pytest/ruff通过，新增4项含独立SQLite连接并发、结构化ID与全扫描语义对比、旧关联撤销。两条既有弃用警告。OpenAPI/config schema字节一致；客户端本批仅文档，无新UI或重复构建。MySQL只做SQL编译。证据anke-sports-cloud/evidence/content-capacity-2026-09-10.md；原始before/after/final/verified JSON均保留，verified包含完整UID检查，源hash与最终代码一致。
+
+无迁移。0600备份data/before-content-capacity-20260909-202020.db；主账号实际完成一次Feed发布，24张非outbox表原行hash相同，旧outbox行相同，仅多一条done任务。163场、原账号/关注/Feed/投影与会话保留；真实HTTP原配置、Feed正文逐字相同及200/304通过。首次核对脚本用错jobs表名，已按outbox改正，未重复发布。仅注销脚本临时cookie，原草稿与浏览器标签未操作。
+
+主API8787 session89340/PID32417，worker session88069/PID32428运行最终代码，四个显式local/preview/public/web参数、关闭访问日志保持。旧31467/31478正常停止。Web3000 session43940/PID53698、production3002 session73957/PID31177、旧维护夹具3001 session29715/PID92350、扩展预览18792 session25462/PID86801继续运行。原关注草稿16/公共订阅12/维护10保留。容量实验临时HTTP与数据库均已正常清理。
+
+T13/T15/T16/T18继续in_progress。项目级YouTube配额仍未实现（已核对官方成本/太平洋午夜规则）；后续继续配额、同时多频道/历史积压、Codex真实业务调用，以及Firebase/MySQL/Azure、Chrome安装和设备验收。托管Chrome创建配置独立云资源、用户负责登录的授权继续有效。无真实上游请求、push、部署或云资源变更；完整目标继续，本回合有代码与容量证据进展。

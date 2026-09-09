@@ -1,0 +1,55 @@
+{
+  "environment": "temporary SQLite; actual loopback HTTP and single worker; synthetic YouTube adapter",
+  "source_sha256": {
+    "app/content.py": "13987780fa175e8bfa5826c87f7b423393165f417617a955afcc2b826da4fb88",
+    "app/calendar.py": "fc378fb45d0c34b4572ad6341935c459e9ff8ba76e01f51eb7c5170034db235f",
+    "app/service.py": "67abc8583ad8ee29c841d1cea3b638b4504e7bd8de29c1ed747f9850a137355a",
+    "app/jobs.py": "987b56cb498cd03d3aff02842e701470db63b67b3b4147e85e99d7660065e8f4",
+    "experiments/content_capacity.py": "bd32be98749d423eb0ab377f818252f8fc01a6b916a3898c1c2d2c26d53c54d9"
+  },
+  "recorded_at": "2026-09-09T20:16:11+00:00",
+  "accounts": 1000,
+  "events": 20000,
+  "creators": 200,
+  "events_per_feed": 30,
+  "eligible_owners": 900,
+  "blocked_owners": 100,
+  "deadline_seconds": 150,
+  "notification_ack_ms": 46.25,
+  "processed_jobs": 1001,
+  "changed_feeds": 900,
+  "pending_jobs": 0,
+  "failed_jobs": 0,
+  "upstream_adapter_requests": 1,
+  "sql_statements": 24735,
+  "event_objects_loaded": 31056,
+  "drain_seconds": 35.71,
+  "stable_uids": true,
+  "blocked_feeds_unchanged": true,
+  "p95_seconds": 34.05,
+  "all_eligible_published": true,
+  "target_met": true,
+  "http_samples": [
+    {
+      "blocked": true,
+      "http_200_and_304": true
+    },
+    {
+      "blocked": false,
+      "http_200_and_304": true
+    },
+    {
+      "blocked": false,
+      "http_200_and_304": true
+    }
+  ],
+  "unchanged_metadata_burst": {
+    "distinct_notifications": 3,
+    "upstream_adapter_requests": 3,
+    "pending_publications_after_three_video_jobs": 1000,
+    "processed_publications": 1000,
+    "remaining": 0,
+    "feed_versions_etags_timestamps_unchanged": true,
+    "duration_seconds": 43.87
+  }
+}

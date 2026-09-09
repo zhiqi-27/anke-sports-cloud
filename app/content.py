@@ -2,9 +2,9 @@
 
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import select, update
+from sqlalchemy import and_, or_, select, update
 
-from app.calendar import chosen_links, event_keys, included
+from app.calendar import chosen_links, event_keys, inclusion_filter
 from app.db import (
     ChannelSync,
     ChannelWork,
@@ -138,7 +138,22 @@ def match_video(db, video, only_user=None):
     creator = db.get(Creator, video.channel_id)
     if not creator:
         return
-    all_events = db.scalars(select(Event)).all()
+    # evaluate() accepts only [-3, +7] days around publication. Keep a generous
+    # date margin for stored timezone offsets, plus ALL earlier associations so
+    # title/date edits and unavailable videos can still retire stale matches.
+    published = parse_time(video.published_at)
+    lower = (published - timedelta(days=5)).date().isoformat()
+    upper = (published + timedelta(days=9)).date().isoformat()
+    all_events = db.scalars(
+        select(Event).where(
+            or_(
+                and_(Event.starts_at >= lower, Event.starts_at < upper),
+                Event.id.in_(select(VideoMatch.event_id).where(VideoMatch.video_id == video.id)),
+                Event.id.in_(select(Link.event_id).where(Link.url_hash == digest(url))),
+            )
+        )
+    ).all()
+    event_by_id = {e.id: e for e in all_events}
     for user, follow in channel_users(db, video.channel_id):
         if only_user and user.id != only_user:
             continue
@@ -162,10 +177,11 @@ def match_video(db, video, only_user=None):
             if feed
             else set()
         )
+        accepts = inclusion_filter(user.config)
         candidates = [
             e
             for e in all_events
-            if (included(e, user.config) or e.id in retained)
+            if (accepts(e) or e.id in retained)
             and (not follow["scope_keys"] or event_keys(e).intersection(follow["scope_keys"]))
         ]
         outputs = evaluate(video, candidates) if video.available else []
@@ -187,7 +203,6 @@ def match_video(db, video, only_user=None):
             )
         }
         overrides = {o["event_key"]: o["state"] for o in user.config["link_overrides"] if o["url"] == url}
-        event_by_id = {e.id: e for e in all_events}
         for output in outputs:
             eid = output["event_id"]
             seen.add(eid)

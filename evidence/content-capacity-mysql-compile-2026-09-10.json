@@ -1,0 +1,11 @@
+{
+  "scope": "MySQL dialect SQL compilation only; no MySQL connection or runtime proof",
+  "sql": "SELECT events.id \nFROM events \nWHERE events.source_key IN (%s) OR events.source_key IN (%s) OR events.competition_id IN (%s) OR json_contains(events.participants, %s) = %s",
+  "synthetic_parameters": {
+    "json_contains_1": "{\"id\": \"fixture:team\"}",
+    "json_contains_2": 1,
+    "source_key_1_1": "fixture:explicit",
+    "source_key_2_1": "fixture:team",
+    "competition_id_1_1": "fixture:team"
+  }
+}

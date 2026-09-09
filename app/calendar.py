@@ -4,7 +4,7 @@ from datetime import date, datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 from icalendar import Calendar, Event as IcsEvent
-from sqlalchemy import and_, or_, select, update
+from sqlalchemy import and_, false, func, or_, select, update
 
 from app.db import BroadcastRecord, Event, Feed, Link, Projection, User, now
 from app.schemas import Config
@@ -339,6 +339,47 @@ def feed_window(lower, upper):
     )
 
 
+def source_candidates(db, config, existing):
+    """Conservative SQL candidates; the Python inclusion/history rules stay final.
+
+    JSON membership is structural, never a substring of a name or serialized ID.
+    No personal query results are shared between users.
+    """
+    keys = list({x["source_key"] for x in config.get("follows", [])})
+    explicit = [x["event_key"] for x in config.get("event_overrides", []) if x["state"] == "include"]
+    predicates = [Event.source_key.in_(explicit)] if explicit else []
+    if keys:
+        predicates.extend([Event.source_key.in_(keys), Event.competition_id.in_(keys)])
+        dialect = db.get_bind().dialect.name
+        if dialect == "sqlite":
+            members = func.json_each(Event.participants).table_valued("value")
+            predicates.append(
+                select(1)
+                .select_from(members)
+                .where(func.json_extract(members.c.value, "$.id").in_(keys))
+                .correlate(Event)
+                .exists()
+            )
+        elif dialect == "mysql":
+            predicates.extend(
+                func.json_contains(Event.participants, json.dumps({"id": key})) == 1 for key in keys
+            )
+        else:
+            raise ValueError("UNSUPPORTED_DATABASE")
+    if existing:
+        # The passed projection set belongs to one feed. A subquery avoids an
+        # unbounded IN parameter list for retained history.
+        feed_id = next(iter(existing.values())).feed_id
+        predicates.append(
+            Event.id.in_(
+                select(Projection.event_id).where(
+                    Projection.feed_id == feed_id, Projection.removed.is_(False)
+                )
+            )
+        )
+    return or_(*predicates) if predicates else false()
+
+
 def select_feed_events(db, config, existing, instant=None):
     instant = instant or datetime.now(timezone.utc)
     lower = (instant - timedelta(days=90)).date().isoformat()
@@ -346,7 +387,9 @@ def select_feed_events(db, config, existing, instant=None):
     overrides = {x["event_key"]: x["state"] for x in config.get("event_overrides", [])}
     accepts = inclusion_filter(config)
     selected = []
-    for event in db.scalars(select(Event).where(feed_window(lower, upper))):
+    for event in db.scalars(
+        select(Event).where(feed_window(lower, upper), source_candidates(db, config, existing))
+    ):
         date_key = (event.starts_at or event.local_date or "")[:10]
         prior = existing.get(event.id)
         retain_history = bool(

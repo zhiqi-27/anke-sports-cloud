@@ -1,0 +1,46 @@
+{
+  "environment": "temporary SQLite; actual loopback HTTP and single worker; synthetic YouTube adapter",
+  "source_sha256": {
+    "app/content.py": "1feb8f3c68c004809bfb0c122f2ccd80d93fc00377587da25c0d75ce1eb5892f",
+    "app/calendar.py": "a1eec0ef35010bc75283506f916717b66238efef4ab848f147227c662c78b97c",
+    "app/service.py": "7aa3f2d206bafe0ccfc7cb58236183571aa7b22ea2f096cf90b54dfabe4df362",
+    "app/jobs.py": "987b56cb498cd03d3aff02842e701470db63b67b3b4147e85e99d7660065e8f4",
+    "experiments/content_capacity.py": "82577d93fcc51cd9f7f7a887f86d6a6f00e90add436cc403485e2a524d6a0737"
+  },
+  "recorded_at": "2026-09-09T20:11:21+00:00",
+  "accounts": 1000,
+  "events": 20000,
+  "creators": 200,
+  "events_per_feed": 30,
+  "eligible_owners": 900,
+  "blocked_owners": 100,
+  "deadline_seconds": 150,
+  "notification_ack_ms": 50.76,
+  "processed_jobs": 620,
+  "changed_feeds": 556,
+  "pending_jobs": 381,
+  "failed_jobs": 0,
+  "upstream_adapter_requests": 1,
+  "sql_statements": 19236,
+  "event_objects_loaded": 12400000,
+  "drain_seconds": 150.19,
+  "stable_uids": true,
+  "blocked_feeds_unchanged": true,
+  "p95_seconds": 143.95,
+  "all_eligible_published": false,
+  "target_met": false,
+  "http_samples": [
+    {
+      "blocked": true,
+      "http_200_and_304": true
+    },
+    {
+      "blocked": false,
+      "http_200_and_304": true
+    },
+    {
+      "blocked": false,
+      "http_200_and_304": true
+    }
+  ]
+}
