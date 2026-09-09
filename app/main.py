@@ -10,6 +10,7 @@ from fastapi.exceptions import RequestValidationError
 from sqlalchemy import delete, select
 
 from app import actions
+from app.broadcast_routes import router as broadcast_router
 from app.mcp_server import build_mcp
 from app.calendar import event_view
 from app.oauth_routes import auth_routes
@@ -76,6 +77,7 @@ async def lifespan(app):
 
 
 app = FastAPI(title="Anke Sports API", version="0.1.0", lifespan=lifespan)
+app.include_router(broadcast_router)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[settings().web_url],

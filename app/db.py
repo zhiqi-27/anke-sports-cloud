@@ -139,6 +139,33 @@ class Link(Base):
     created_at: Mapped[str] = mapped_column(String(40), default=now)
 
 
+class BroadcastRecord(Base):
+    __tablename__ = "broadcast_records"
+    link_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    revision: Mapped[int] = mapped_column(Integer, default=0)
+    status: Mapped[str] = mapped_column(String(24), default="draft", index=True)
+    draft: Mapped[dict] = mapped_column(JSON)
+    published: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    published_revision: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    device_tests: Mapped[list] = mapped_column(JSON, default=list)
+    network_status: Mapped[str] = mapped_column(String(40), default="not_checked")
+    network_checked_at: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    next_check_at: Mapped[str] = mapped_column(String(40), default=now, index=True)
+    missing_count: Mapped[int] = mapped_column(Integer, default=0)
+    updated_at: Mapped[str] = mapped_column(String(40), default=now)
+
+
+class BroadcastAudit(Base):
+    __tablename__ = "broadcast_audit"
+    id: Mapped[str] = mapped_column(String(64), primary_key=True, default=uid)
+    link_id: Mapped[str] = mapped_column(String(64), index=True)
+    actor_id: Mapped[str] = mapped_column(String(128))
+    action: Mapped[str] = mapped_column(String(40))
+    revision: Mapped[int] = mapped_column(Integer)
+    detail: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[str] = mapped_column(String(40), default=now)
+
+
 class Creator(Base):
     __tablename__ = "creators"
     channel_id: Mapped[str] = mapped_column(String(80), primary_key=True)

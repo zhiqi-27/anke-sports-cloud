@@ -1,3 +1,4 @@
+from app.broadcast_schemas import BroadcastPublicView
 from typing import Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -124,6 +125,7 @@ class SourceList(BaseModel):
 
 
 class LinkView(BaseModel):
+    broadcast: BroadcastPublicView | None = None
     id: str
     url: str
     title: str
@@ -240,6 +242,7 @@ class FeedView(BaseModel):
 
 
 class CalendarUserView(BaseModel):
+    is_maintainer: bool = False
     id: str
     display_name: str
     revision: int

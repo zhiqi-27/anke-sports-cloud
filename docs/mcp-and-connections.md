@@ -1,6 +1,6 @@
 # MCP 与应用连接
 
-当前为本地实现与验收，尚未通过真实 Firebase、Azure 或 Codex 客户端集成验收。Chrome 安装包另行交付。
+当前为本地实现与验收，尚未通过真实 Firebase、Azure 或 Codex 客户端集成验收。Chrome 本地安装包已在客户端仓库生成，实际安装与授权仍待验收。
 
 ## 使用入口
 

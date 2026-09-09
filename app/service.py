@@ -80,6 +80,7 @@ def user_view(db, user: User) -> dict:
     return {
         "id": user.id,
         "display_name": user.display_name,
+        "is_maintainer": user.id in settings().maintainer_ids,
         "revision": user.revision,
         "config": user.config,
         "creators": [

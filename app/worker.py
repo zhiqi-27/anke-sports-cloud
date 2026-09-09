@@ -43,6 +43,10 @@ def run_one(job_id: str | None = None) -> bool:
                 sync_provider(db, payload["provider"])
                 for user in db.scalars(select(User).where(User.deleted.is_(False))):
                     enqueue(db, "projection", {"user_id": user.id})
+            elif kind == "broadcast_check":
+                from app.broadcasts import check_record
+
+                check_record(db, payload["link_id"], payload["url_hash"])
             elif kind.startswith("youtube_"):
                 from app.content import match_video, poll_channel, refresh_channel_metadata, refresh_videos
                 from app.websub import request_subscription
@@ -124,6 +128,9 @@ if __name__ == "__main__":
 
             schedule_content()
             clean_expired_connections()
+            from app.broadcasts import schedule_broadcasts
+
+            schedule_broadcasts()
             next_content = time.monotonic() + 60
         if time.monotonic() >= next_schedule:
             schedule_providers()

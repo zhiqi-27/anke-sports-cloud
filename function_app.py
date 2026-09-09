@@ -41,3 +41,6 @@ def update_content(timer: func.TimerRequest):
 
     schedule_content()
     clean_expired_connections()
+    from app.broadcasts import schedule_broadcasts
+
+    schedule_broadcasts()

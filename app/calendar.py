@@ -4,7 +4,7 @@ from datetime import date, datetime, timedelta, timezone
 from icalendar import Calendar, Event as IcsEvent
 from sqlalchemy import select
 
-from app.db import Event, Feed, Link, Projection, User, now
+from app.db import BroadcastRecord, Event, Feed, Link, Projection, User, now
 from app.schemas import Config
 from app.security import digest
 
@@ -32,6 +32,24 @@ def chosen_links(db, event: Event, user: User | None) -> list[dict]:
     creators = {x["channel_id"]: x for x in config.get("creators", [])}
     result = []
     for link in links:
+        broadcast = None
+        if link.owner_id == "public":
+            record = db.get(BroadcastRecord, link.id)
+            if not record or record.status != "published" or not record.published:
+                continue
+            # Only the reviewed publication is authoritative, never an edited draft.
+            if record.published["url"] != link.url:
+                continue
+            region = config.get("preferences", {}).get("watch_region")
+            if (
+                region
+                and record.published["region_mode"] == "exclude"
+                and region in record.published["regions"]
+            ):
+                continue
+            from app.broadcasts import public_metadata
+
+            broadcast = public_metadata(record)
         state = overrides.get(link.url)
         if state == "block":
             continue
@@ -47,6 +65,7 @@ def chosen_links(db, event: Event, user: User | None) -> list[dict]:
         result.append(
             {
                 "id": link.id,
+                "broadcast": broadcast,
                 "url": link.url,
                 "title": link.title,
                 "kind": link.kind,
@@ -62,13 +81,18 @@ def chosen_links(db, event: Event, user: User | None) -> list[dict]:
     result.sort(
         key=lambda x: (not x["pinned"], x["origin"] != "official", x["creator"], x["created_at"], x["id"])
     )
-    return result
+    unique, seen_urls = [], set()
+    for item in result:
+        if item["url"] not in seen_urls:
+            unique.append(item)
+            seen_urls.add(item["url"])
+    return unique
 
 
 def delivery_links(links: list[dict]) -> list[dict]:
     output = []
-    for kind, limit in [("live", 2), ("watch_along", 2), ("preview", 3), ("recap", 3)]:
-        group = [x for x in links if x["kind"] == kind]
+    for kinds, limit in [({"live", "watch_along"}, 2), ({"preview"}, 3), ({"recap"}, 3)]:
+        group = [x for x in links if x["kind"] in kinds]
         selected, seen = [], set()
         for link in group:
             creator = link["creator"] or link["id"]
@@ -90,7 +114,13 @@ def describe(event: Event, links: list[dict], config: dict) -> str:
         "preview": "赛前前瞻",
         "recap": "赛后复盘",
     }
-    access = {"unknown": "观看条件未验证", "subscription": "需要订阅", "free": "免费", "login": "需要登录"}
+    access = {
+        "unknown": "观看条件未验证",
+        "subscription": "需要订阅",
+        "free": "免费",
+        "login": "需要登录",
+        "pay_per_view": "单次付费",
+    }
     for kind, label in labels.items():
         group = [x for x in delivery_links(links) if x["kind"] == kind]
         if not group:
@@ -104,7 +134,17 @@ def describe(event: Event, links: list[dict], config: dict) -> str:
             )
             lines += [f"{link['creator'] or link['platform']} · {title}"]
             if kind in {"live", "watch_along"}:
-                lines.append(access.get(link["access"], "观看条件未验证"))
+                if link.get("broadcast"):
+                    info = link["broadcast"]
+                    lines += [
+                        info["content_label"],
+                        info["access_label"],
+                        info["region_label"],
+                        f"官方来源核验：{info['reviewed_at'][:10]}",
+                        info["evidence_url"],
+                    ]
+                else:
+                    lines += [access.get(link["access"], "观看条件未验证"), "地区限制未验证"]
             lines += [link["url"]]
         lines.append("")
     if not links:
@@ -219,7 +259,12 @@ def rebuild_feed(db, owner_id: str):
         wanted.add(event.id)
         links = chosen_links(db, event, user)
         target = next(
-            (x["url"] for x in links if x["origin"] == "official" and x["kind"] == "live"), event.source_url
+            (
+                x["url"]
+                for x in links
+                if x.get("broadcast") and x["broadcast"]["content_type"] in {"official_match", "reservation"}
+            ),
+            event.source_url,
         )
         data = {
             "title": event.title,

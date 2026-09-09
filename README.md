@@ -47,6 +47,8 @@ uv run alembic check
 
 ## 当前状态
 
-MCP 已提供匿名与私人 Streamable HTTP、网页授权、短期令牌和撤销；入口、权限、重试约定与本地验收命令见 [MCP 与应用连接](docs/mcp-and-connections.md)。Chrome 安装包尚未交付。
+MCP 已提供匿名与私人 Streamable HTTP、网页授权、短期令牌和撤销；入口、权限、重试约定与本地验收命令见 [MCP 与应用连接](docs/mcp-and-connections.md)。Chrome 本地安装包位于客户端仓库，实际 Chrome 运行仍待验收。
+
+官方直播草稿、审核发布、地区/观看条件、撤回、到期和 HEAD 检查已接入；维护者白名单默认空，自动联网检查默认关闭。使用与证据边界见 [直播入口维护](docs/broadcasts.md)。
 
 完整验收边界见 [STATE.md](STATE.md)、[当前架构](docs/architecture.md) 与 [验收证据](evidence/local-2026-09-09.md)。系统日历刷新、Firebase 真实登录、Azure 触发器、手机内容直达及目标 Agent 客户端均尚未验证。

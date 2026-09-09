@@ -5,6 +5,398 @@
     "version": "0.1.0"
   },
   "paths": {
+    "/api/v1/platforms": {
+      "get": {
+        "summary": "Platforms",
+        "operationId": "platforms_api_v1_platforms_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/maintenance/broadcasts": {
+      "get": {
+        "summary": "List Records",
+        "operationId": "list_records_api_v1_maintenance_broadcasts_get",
+        "parameters": [
+          {
+            "name": "event_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Event Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BroadcastList"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create Record",
+        "operationId": "create_record_api_v1_maintenance_broadcasts_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BroadcastDraft"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BroadcastView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/maintenance/broadcasts/{ident}": {
+      "get": {
+        "summary": "Get Record",
+        "operationId": "get_record_api_v1_maintenance_broadcasts__ident__get",
+        "parameters": [
+          {
+            "name": "ident",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ident"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BroadcastView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Edit Record",
+        "operationId": "edit_record_api_v1_maintenance_broadcasts__ident__put",
+        "parameters": [
+          {
+            "name": "ident",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ident"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BroadcastEdit"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BroadcastView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/maintenance/broadcasts/{ident}/publish": {
+      "post": {
+        "summary": "Publish",
+        "operationId": "publish_api_v1_maintenance_broadcasts__ident__publish_post",
+        "parameters": [
+          {
+            "name": "ident",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ident"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BroadcastDecision"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BroadcastView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/maintenance/broadcasts/{ident}/suspend": {
+      "post": {
+        "summary": "Suspend",
+        "operationId": "suspend_api_v1_maintenance_broadcasts__ident__suspend_post",
+        "parameters": [
+          {
+            "name": "ident",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ident"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BroadcastAction"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BroadcastView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/maintenance/broadcasts/{ident}/check": {
+      "post": {
+        "summary": "Check",
+        "operationId": "check_api_v1_maintenance_broadcasts__ident__check_post",
+        "parameters": [
+          {
+            "name": "ident",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ident"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BroadcastAction"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BroadcastView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/maintenance/broadcasts/{ident}/device-evidence": {
+      "post": {
+        "summary": "Device Evidence",
+        "operationId": "device_evidence_api_v1_maintenance_broadcasts__ident__device_evidence_post",
+        "parameters": [
+          {
+            "name": "ident",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ident"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviceEvidence"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BroadcastView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/health": {
       "get": {
         "summary": "Health",
@@ -1391,8 +1783,445 @@
         ],
         "title": "AddLink"
       },
+      "BroadcastAction": {
+        "properties": {
+          "expected_revision": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Expected Revision"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "expected_revision",
+          "reason"
+        ],
+        "title": "BroadcastAction"
+      },
+      "BroadcastDecision": {
+        "properties": {
+          "expected_revision": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Expected Revision"
+          },
+          "source_and_event_confirmed": {
+            "type": "boolean",
+            "title": "Source And Event Confirmed"
+          },
+          "valid_until": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Valid Until"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "expected_revision",
+          "source_and_event_confirmed",
+          "valid_until"
+        ],
+        "title": "BroadcastDecision"
+      },
+      "BroadcastDraft": {
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Event Id"
+          },
+          "url": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Url"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "content_type": {
+            "type": "string",
+            "enum": [
+              "official_match",
+              "reservation",
+              "programme",
+              "watch_along",
+              "replay"
+            ],
+            "title": "Content Type"
+          },
+          "access": {
+            "type": "string",
+            "enum": [
+              "unknown",
+              "free",
+              "login",
+              "subscription",
+              "pay_per_view"
+            ],
+            "title": "Access",
+            "default": "unknown"
+          },
+          "region_mode": {
+            "type": "string",
+            "enum": [
+              "unknown",
+              "global",
+              "include",
+              "exclude"
+            ],
+            "title": "Region Mode",
+            "default": "unknown"
+          },
+          "regions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 250,
+            "title": "Regions"
+          },
+          "evidence_url": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Evidence Url"
+          },
+          "evidence_note": {
+            "type": "string",
+            "maxLength": 1500,
+            "minLength": 10,
+            "title": "Evidence Note"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "event_id",
+          "url",
+          "title",
+          "content_type",
+          "evidence_url",
+          "evidence_note"
+        ],
+        "title": "BroadcastDraft"
+      },
+      "BroadcastEdit": {
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Event Id"
+          },
+          "url": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Url"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "content_type": {
+            "type": "string",
+            "enum": [
+              "official_match",
+              "reservation",
+              "programme",
+              "watch_along",
+              "replay"
+            ],
+            "title": "Content Type"
+          },
+          "access": {
+            "type": "string",
+            "enum": [
+              "unknown",
+              "free",
+              "login",
+              "subscription",
+              "pay_per_view"
+            ],
+            "title": "Access",
+            "default": "unknown"
+          },
+          "region_mode": {
+            "type": "string",
+            "enum": [
+              "unknown",
+              "global",
+              "include",
+              "exclude"
+            ],
+            "title": "Region Mode",
+            "default": "unknown"
+          },
+          "regions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 250,
+            "title": "Regions"
+          },
+          "evidence_url": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Evidence Url"
+          },
+          "evidence_note": {
+            "type": "string",
+            "maxLength": 1500,
+            "minLength": 10,
+            "title": "Evidence Note"
+          },
+          "expected_revision": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Expected Revision"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "event_id",
+          "url",
+          "title",
+          "content_type",
+          "evidence_url",
+          "evidence_note",
+          "expected_revision"
+        ],
+        "title": "BroadcastEdit"
+      },
+      "BroadcastList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/BroadcastView"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "has_more": {
+            "type": "boolean",
+            "title": "Has More"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "has_more"
+        ],
+        "title": "BroadcastList"
+      },
+      "BroadcastPublicView": {
+        "properties": {
+          "content_type": {
+            "type": "string",
+            "enum": [
+              "official_match",
+              "reservation",
+              "programme",
+              "watch_along",
+              "replay"
+            ],
+            "title": "Content Type"
+          },
+          "content_label": {
+            "type": "string",
+            "title": "Content Label"
+          },
+          "access_label": {
+            "type": "string",
+            "title": "Access Label"
+          },
+          "region_label": {
+            "type": "string",
+            "title": "Region Label"
+          },
+          "evidence_url": {
+            "type": "string",
+            "title": "Evidence Url"
+          },
+          "reviewed_at": {
+            "type": "string",
+            "title": "Reviewed At"
+          },
+          "valid_until": {
+            "type": "string",
+            "title": "Valid Until"
+          },
+          "network_status": {
+            "type": "string",
+            "title": "Network Status"
+          },
+          "network_checked_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Network Checked At"
+          },
+          "device_tests": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Device Tests"
+          }
+        },
+        "type": "object",
+        "required": [
+          "content_type",
+          "content_label",
+          "access_label",
+          "region_label",
+          "evidence_url",
+          "reviewed_at",
+          "valid_until",
+          "network_status",
+          "network_checked_at",
+          "device_tests"
+        ],
+        "title": "BroadcastPublicView"
+      },
+      "BroadcastView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "draft": {
+            "$ref": "#/components/schemas/BroadcastDraft"
+          },
+          "published": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published"
+          },
+          "published_revision": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published Revision"
+          },
+          "draft_changed": {
+            "type": "boolean",
+            "title": "Draft Changed"
+          },
+          "event_title": {
+            "type": "string",
+            "title": "Event Title"
+          },
+          "event_demo": {
+            "type": "boolean",
+            "title": "Event Demo"
+          },
+          "network_status": {
+            "type": "string",
+            "title": "Network Status"
+          },
+          "network_checked_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Network Checked At"
+          },
+          "next_check_at": {
+            "type": "string",
+            "title": "Next Check At"
+          },
+          "device_tests": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Device Tests"
+          },
+          "audit": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Audit"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "revision",
+          "status",
+          "draft",
+          "published",
+          "published_revision",
+          "draft_changed",
+          "event_title",
+          "event_demo",
+          "network_status",
+          "network_checked_at",
+          "next_check_at",
+          "device_tests",
+          "audit"
+        ],
+        "title": "BroadcastView"
+      },
       "CalendarUserView": {
         "properties": {
+          "is_maintainer": {
+            "type": "boolean",
+            "title": "Is Maintainer",
+            "default": false
+          },
           "id": {
             "type": "string",
             "title": "Id"
@@ -1899,6 +2728,103 @@
         ],
         "title": "CreatorView"
       },
+      "DeviceEvidence": {
+        "properties": {
+          "expected_revision": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Expected Revision"
+          },
+          "platform_app": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Platform App"
+          },
+          "os_version": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Os Version"
+          },
+          "calendar_client": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Calendar Client"
+          },
+          "region": {
+            "type": "string",
+            "pattern": "^[A-Z]{2}$",
+            "title": "Region"
+          },
+          "checked_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Checked At"
+          },
+          "app_installed": {
+            "type": "boolean",
+            "title": "App Installed"
+          },
+          "exact_content": {
+            "type": "string",
+            "enum": [
+              "passed",
+              "failed",
+              "not_tested"
+            ],
+            "title": "Exact Content"
+          },
+          "app_content": {
+            "type": "string",
+            "enum": [
+              "passed",
+              "failed",
+              "not_tested"
+            ],
+            "title": "App Content"
+          },
+          "playback": {
+            "type": "string",
+            "enum": [
+              "passed",
+              "failed",
+              "not_tested"
+            ],
+            "title": "Playback"
+          },
+          "conditions": {
+            "type": "string",
+            "maxLength": 300,
+            "minLength": 3,
+            "title": "Conditions"
+          },
+          "evidence_ref": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 3,
+            "title": "Evidence Ref"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "expected_revision",
+          "platform_app",
+          "os_version",
+          "calendar_client",
+          "region",
+          "checked_at",
+          "app_installed",
+          "exact_content",
+          "app_content",
+          "playback",
+          "conditions",
+          "evidence_ref"
+        ],
+        "title": "DeviceEvidence"
+      },
       "EventList": {
         "properties": {
           "items": {
@@ -2308,6 +3234,16 @@
       },
       "LinkView": {
         "properties": {
+          "broadcast": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BroadcastPublicView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "id": {
             "type": "string",
             "title": "Id"

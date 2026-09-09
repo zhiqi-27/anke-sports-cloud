@@ -120,25 +120,46 @@ def canonical_url(value: str) -> tuple[str, str]:
         problem("INVALID_URL", "请使用平台的域名链接")
     except ValueError:
         pass
-    allowed = {
-        "youtube.com",
-        "www.youtube.com",
-        "m.youtube.com",
-        "youtu.be",
-        "nba.com",
-        "www.nba.com",
-        "watch.nba.com",
-        "tv.nba.com",
-        "f1tv.formula1.com",
-        "www.formula1.com",
-        "www.uefa.com",
-        "www.fifa.com",
-        "www.espn.com",
-        "www.bilibili.com",
-        "bilibili.com",
-    }
+    from app.platforms import RULES
+
+    allowed = {domain for rule in RULES for domain in rule["hosts"]}
     if host not in allowed:
         problem("UNSUPPORTED_PLATFORM", "暂不支持此平台，请使用 YouTube 或已支持的官方内容链接")
+    from urllib.parse import unquote
+
+    decoded_path = unquote(unquote(parsed.path)).lower()
+    if any(x in decoded_path for x in ["\\", "..", ".m3u8", ".mpd", ".mp4", ".m4s"]):
+        problem("INVALID_URL", "请使用稳定网页链接，不保存媒体流地址")
+    query = parse_qs(parsed.query, keep_blank_values=True)
+    forbidden = {
+        "token",
+        "access_token",
+        "auth",
+        "authorization",
+        "signature",
+        "sig",
+        "key",
+        "api_key",
+        "jwt",
+        "session",
+        "sessionid",
+        "code",
+        "password",
+        "expires",
+        "policy",
+        "credential",
+        "redirect",
+        "redirect_uri",
+        "redirect_url",
+        "next",
+        "return_url",
+        "returnto",
+        "continue",
+    }
+    if any(
+        k.lower().replace("-", "_") in forbidden or k.lower().startswith(("x-amz-", "x-goog-")) for k in query
+    ):
+        problem("INVALID_URL", "不能保存带有访问凭据或跳转目标的链接")
     if host in {"youtube.com", "www.youtube.com", "m.youtube.com", "youtu.be"}:
         parts = parsed.path.strip("/").split("/")
         video_id = (
