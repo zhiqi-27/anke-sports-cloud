@@ -4,6 +4,7 @@ import os
 from typing import Literal
 
 from cryptography.fernet import Fernet
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -19,6 +20,13 @@ class Settings(BaseSettings):
     youtube_websub_enabled: bool = False
     maintainer_ids: list[str] = []
     broadcast_checks_enabled: bool = False
+    balldontlie_api_key: SecretStr = Field(
+        default=SecretStr(""), validation_alias="BALLDONTLIE_API_KEY", repr=False
+    )
+    football_data_api_key: SecretStr = Field(
+        default=SecretStr(""), validation_alias="FOOTBALL_DATA_API_KEY", repr=False
+    )
+    youtube_api_key: SecretStr = Field(default=SecretStr(""), validation_alias="YOUTUBE_API_KEY", repr=False)
 
     def cipher(self) -> Fernet:
         key = self.encryption_key

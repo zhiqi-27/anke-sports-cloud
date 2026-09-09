@@ -2,7 +2,7 @@ import json
 from datetime import date, datetime, timedelta, timezone
 
 from icalendar import Calendar, Event as IcsEvent
-from sqlalchemy import select
+from sqlalchemy import select, update
 
 from app.db import BroadcastRecord, Event, Feed, Link, Projection, User, now
 from app.schemas import Config
@@ -233,7 +233,12 @@ def serialize(projections: list[Projection]) -> bytes:
 
 
 def rebuild_feed(db, owner_id: str):
-    user = db.get(User, owner_id)
+    # Acquire the owner's write lock before taking the configuration snapshot.
+    # A no-op UPDATE also serializes local SQLite, where FOR UPDATE is ignored.
+    db.execute(update(User).where(User.id == owner_id).values(revision=User.revision))
+    user = db.scalar(
+        select(User).where(User.id == owner_id).with_for_update().execution_options(populate_existing=True)
+    )
     feed = db.scalar(select(Feed).where(Feed.owner_id == owner_id).with_for_update())
     if not user or user.deleted or not feed or feed.paused or feed.revoked:
         return

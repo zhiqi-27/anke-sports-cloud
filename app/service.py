@@ -1,7 +1,7 @@
 import json
 import secrets
 
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 
 from app.config import settings
 from app.db import Creator, Event, Feed, Job, Link, Projection, Source, User
@@ -66,15 +66,20 @@ def user_view(db, user: User) -> dict:
         )
         .limit(1)
     )
-    failed = db.scalar(
-        select(Job.id)
+    outcome = db.scalar(
+        select(Job)
         .where(
             Job.kind == "projection",
-            Job.state == "failed",
+            Job.state.in_(["done", "failed"]),
             Job.payload["user_id"].as_string() == user.id,
-            Job.created_at > feed.updated_at,
         )
+        .order_by(func.coalesce(Job.finished_at, Job.created_at).desc(), Job.id.desc())
         .limit(1)
+    )
+    failed = (
+        outcome
+        and outcome.state == "failed"
+        and (outcome.finished_at or outcome.created_at) > feed.updated_at
     )
     creators = {c.channel_id: c for c in db.scalars(select(Creator))}
     return {

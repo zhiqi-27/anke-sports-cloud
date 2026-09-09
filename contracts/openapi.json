@@ -3475,6 +3475,33 @@
           "enabled": {
             "type": "boolean",
             "title": "Enabled"
+          },
+          "consecutive_failures": {
+            "type": "integer",
+            "title": "Consecutive Failures",
+            "default": 0
+          },
+          "next_attempt_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Attempt At"
+          },
+          "activity": {
+            "type": "string",
+            "enum": [
+              "idle",
+              "queued",
+              "running",
+              "waiting"
+            ],
+            "title": "Activity",
+            "default": "idle"
           }
         },
         "type": "object",

@@ -256,6 +256,9 @@ class ProviderView(BaseModel):
     last_success: str | None
     error: str
     enabled: bool
+    consecutive_failures: int = 0
+    next_attempt_at: str | None = None
+    activity: Literal["idle", "queued", "running", "waiting"] = "idle"
 
 
 class ServiceStatusView(BaseModel):

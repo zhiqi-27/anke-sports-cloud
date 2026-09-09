@@ -22,14 +22,13 @@ from app.db import (
     Job,
     Link,
     Projection,
-    ProviderState,
     VideoMatch,
     Session,
     User,
     engine,
     get_db,
 )
-from app.providers import resolve_creator
+from app.providers import provider_statuses, resolve_creator
 from app.schemas import (
     CalendarUserView,
     EventList,
@@ -163,10 +162,7 @@ def status(request: Request, db=Depends(get_db)):
     return {
         "local_preview": local_allowed(request),
         "firebase_configured": bool(settings().firebase_project_id),
-        "providers": [
-            {"id": p.id, "last_success": p.last_success, "error": p.error, "enabled": p.enabled}
-            for p in db.scalars(select(ProviderState))
-        ],
+        "providers": provider_statuses(db),
         "integrations": {
             "ics_device_test": "not_tested",
             "youtube_push": "not_tested",

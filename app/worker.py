@@ -1,108 +1,90 @@
 import argparse
 import time
-import re
-from datetime import datetime, timedelta, timezone
+import logging
 
-from sqlalchemy import select, update
-from fastapi import HTTPException
+from sqlalchemy import or_, select
+from sqlalchemy.exc import IntegrityError
 
 from app.calendar import rebuild_feed
-from app.db import ChannelSync, Creator, Job, ProviderState, SessionLocal, User, Video, now
+from app.db import Job, ProviderState, SessionLocal, User, Video, now
+from app.jobs import LeaseLost, claim_job, complete_job, error_code, fail_job
 from app.providers import sync_provider
 from app.service import enqueue
 
 
+def execute_claim(db, claim):
+    kind, payload = claim.kind, claim.payload
+    if payload.get("user_id") and kind != "projection":
+        user = db.get(User, payload["user_id"])
+        if not user or user.deleted:
+            return
+    if kind == "projection":
+        rebuild_feed(db, payload["user_id"])
+    elif kind == "provider":
+        sync_provider(db, payload["provider"])
+        for user in db.scalars(select(User).where(User.deleted.is_(False))):
+            enqueue(db, "projection", {"user_id": user.id})
+    elif kind == "broadcast_check":
+        from app.broadcasts import check_record
+
+        check_record(db, payload["link_id"], payload["url_hash"])
+    elif kind.startswith("youtube_"):
+        from app.content import match_video, poll_channel, refresh_channel_metadata, refresh_videos
+        from app.websub import request_subscription
+
+        if kind == "youtube_poll":
+            poll_channel(db, payload)
+        elif kind == "youtube_videos":
+            refresh_videos(db, payload["channel_id"], payload["video_ids"])
+        elif kind == "youtube_channel_metadata":
+            refresh_channel_metadata(db, payload["channel_id"])
+        elif kind == "youtube_rematch":
+            for video in db.scalars(select(Video).where(Video.channel_id == payload["channel_id"])):
+                match_video(db, video, only_user=payload["user_id"])
+        elif kind == "youtube_subscribe":
+            request_subscription(payload["channel_id"])
+        else:
+            raise ValueError("UNKNOWN_JOB")
+    else:
+        raise ValueError("UNKNOWN_JOB")
+
+
 def run_one(job_id: str | None = None) -> bool:
-    with SessionLocal() as db:
-        query = (
-            select(Job)
-            .where(Job.state.in_(["pending", "running"]), Job.due_at <= now())
-            .order_by(Job.created_at)
-            .limit(1)
-        )
-        if job_id:
-            query = query.where(Job.id == job_id)
-        job = db.scalar(query)
-        if not job:
-            return False
-        lease = (datetime.now(timezone.utc) + timedelta(minutes=5)).isoformat()
-        claimed = db.execute(
-            update(Job)
-            .where(Job.id == job.id, Job.due_at == job.due_at, Job.state == job.state)
-            .values(state="running", due_at=lease, attempts=job.attempts + 1)
-        )
-        if not claimed.rowcount:
-            return False
-        ident, kind, payload = job.id, job.kind, job.payload
-        db.commit()
     try:
         with SessionLocal() as db:
-            if kind == "projection":
-                rebuild_feed(db, payload["user_id"])
-            elif kind == "provider":
-                sync_provider(db, payload["provider"])
-                for user in db.scalars(select(User).where(User.deleted.is_(False))):
-                    enqueue(db, "projection", {"user_id": user.id})
-            elif kind == "broadcast_check":
-                from app.broadcasts import check_record
-
-                check_record(db, payload["link_id"], payload["url_hash"])
-            elif kind.startswith("youtube_"):
-                from app.content import match_video, poll_channel, refresh_channel_metadata, refresh_videos
-                from app.websub import request_subscription
-
-                if kind == "youtube_poll":
-                    poll_channel(db, payload)
-                elif kind == "youtube_videos":
-                    refresh_videos(db, payload["channel_id"], payload["video_ids"])
-                elif kind == "youtube_channel_metadata":
-                    refresh_channel_metadata(db, payload["channel_id"])
-                elif kind == "youtube_rematch":
-                    for video in db.scalars(select(Video).where(Video.channel_id == payload["channel_id"])):
-                        match_video(db, video, only_user=payload["user_id"])
-                elif kind == "youtube_subscribe":
-                    request_subscription(payload["channel_id"])
-                else:
-                    raise ValueError("UNKNOWN_JOB")
-            else:
-                raise ValueError("UNKNOWN_JOB")
-            job = db.get(Job, ident)
-            job.state, job.error = "done", ""
+            claim, progressed = claim_job(db, job_id)
             db.commit()
-    except Exception as exc:
+    except (LeaseLost, IntegrityError):
+        # A competing claim/first provider-row insert won. The caller can poll other work.
+        return False
+    if not claim:
+        return progressed
+    try:
         with SessionLocal() as db:
-            job = db.get(Job, ident)
-            candidate = (
-                exc.detail.get("code", "")
-                if isinstance(exc, HTTPException) and isinstance(exc.detail, dict)
-                else str(exc)
-                if isinstance(exc, ValueError)
-                else ""
-            )
-            job.error = candidate if re.fullmatch(r"[A-Z][A-Z0-9_]{0,79}", candidate) else type(exc).__name__
-            job.state = "failed" if job.attempts >= 5 or job.error.endswith("KEY_REQUIRED") else "pending"
-            job.due_at = (
-                datetime.now(timezone.utc) + timedelta(seconds=min(600, 2**job.attempts * 10))
-            ).isoformat()
-            if kind == "provider":
-                state = db.get(ProviderState, payload["provider"])
-                if state:
-                    state.error = job.error
-            if kind.startswith("youtube_") and payload.get("channel_id"):
-                sync = db.get(ChannelSync, payload["channel_id"])
-                creator = db.get(Creator, payload["channel_id"])
-                if sync:
-                    sync.error = job.error
-                    sync.next_poll_at = (datetime.now(timezone.utc) + timedelta(hours=6)).isoformat()
-                if creator:
-                    creator.last_error = job.error
+            execute_claim(db, claim)
+            complete_job(db, claim)
             db.commit()
+    except LeaseLost:
+        # The context closed with rollback, including all handler changes and follow-up jobs.
+        pass
+    except Exception as exc:
+        try:
+            with SessionLocal() as db:
+                fail_job(db, claim, exc)
+                db.commit()
+        except LeaseLost:
+            pass
     return True
 
 
 def schedule_providers():
     with SessionLocal() as db:
-        for provider in db.scalars(select(ProviderState).where(ProviderState.enabled.is_(True))):
+        for provider in db.scalars(
+            select(ProviderState).where(
+                ProviderState.enabled.is_(True),
+                or_(ProviderState.next_attempt_at.is_(None), ProviderState.next_attempt_at <= now()),
+            )
+        ):
             pending = db.scalar(
                 select(Job.id).where(
                     Job.kind == "provider",
@@ -115,28 +97,50 @@ def schedule_providers():
         db.commit()
 
 
-if __name__ == "__main__":
+def run_maintenance():
+    from app.websub import schedule_content
+    from app.oauth import clean_expired_connections
+    from app.broadcasts import schedule_broadcasts
+
+    healthy = True
+    for operation in (schedule_content, clean_expired_connections, schedule_broadcasts):
+        try:
+            operation()
+        except Exception as exc:
+            logging.warning("MAINTENANCE_FAILED operation=%s code=%s", operation.__name__, error_code(exc))
+            healthy = False
+    return healthy
+
+
+def main(argv=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("--once", action="store_true")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     next_schedule = time.monotonic() + 6 * 3600
     next_content = 0
     while True:
+        healthy = True
         if time.monotonic() >= next_content:
-            from app.websub import schedule_content
-            from app.oauth import clean_expired_connections
-
-            schedule_content()
-            clean_expired_connections()
-            from app.broadcasts import schedule_broadcasts
-
-            schedule_broadcasts()
             next_content = time.monotonic() + 60
+            healthy = run_maintenance()
         if time.monotonic() >= next_schedule:
-            schedule_providers()
-            next_schedule = time.monotonic() + 6 * 3600
-        completed = run_one()
+            try:
+                schedule_providers()
+                next_schedule = time.monotonic() + 6 * 3600
+            except Exception as exc:
+                logging.warning("PROVIDER_SCHEDULER_FAILED code=%s", error_code(exc))
+                next_schedule = time.monotonic() + 60
+                healthy = False
+        try:
+            completed = run_one()
+        except Exception as exc:
+            logging.warning("WORKER_CYCLE_FAILED code=%s", error_code(exc))
+            completed, healthy = False, False
         if args.once:
-            break
+            return 0 if healthy else 1
         if not completed:
             time.sleep(2)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -1,0 +1,22 @@
+{
+  "observed_at": "2026-09-09T16:53:56.606165+00:00",
+  "environment": "temporary_local_sqlite",
+  "synthetic": true,
+  "real_child_killed_after_flush": true,
+  "uncommitted_feed_rolled_back": true,
+  "fixture_lease_clock_advanced_after_confirmed_exit": true,
+  "recovered_attempt": 2,
+  "uid_preserved": true,
+  "sequence_before": 1,
+  "sequence_after": 2,
+  "duplicate_execution_noop": true,
+  "cli_dry_run_no_write": true,
+  "cli_one_audited_replay": true,
+  "restored_tables_equal": 22,
+  "feed_credential_restored_with_retained_encryption_key": true,
+  "integrity_check": "ok",
+  "feed_sha256_after_restore": "e11661dd844a08bb7bbb52dc3d8c42afafbf1fabf124300a5738e1d8c3658917",
+  "main_database_touched": false,
+  "external_network_used": false,
+  "mysql_or_azure_verified": false
+}

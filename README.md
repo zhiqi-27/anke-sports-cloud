@@ -51,4 +51,6 @@ MCP 已提供匿名与私人 Streamable HTTP、网页授权、短期令牌和撤
 
 官方直播草稿、审核发布、地区/观看条件、撤回、到期和 HEAD 检查已接入；维护者白名单默认空，自动联网检查默认关闭。使用与证据边界见 [直播入口维护](docs/broadcasts.md)。
 
+后台任务支持领取版本校验、Provider 串行处理/熔断和可审计的失败重放。复现真实子进程中断、SQLite 备份恢复及操作 CLI，见 [任务恢复手册](docs/job-recovery.md)。本地 `.env` 可配置独立 Provider key；正式云环境未验收。
+
 完整验收边界见 [STATE.md](STATE.md)、[当前架构](docs/architecture.md) 与 [验收证据](evidence/local-2026-09-09.md)。系统日历刷新、Firebase 真实登录、Azure 触发器、手机内容直达及目标 Agent 客户端均尚未验证。

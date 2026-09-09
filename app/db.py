@@ -9,6 +9,7 @@ from sqlalchemy import (
     BigInteger,
     Boolean,
     Integer,
+    Index,
     String,
     Text,
     UniqueConstraint,
@@ -268,6 +269,7 @@ class OAuthTokenRecord(Base):
 
 class Job(Base):
     __tablename__ = "outbox"
+    __table_args__ = (Index("ix_outbox_ready", "state", "due_at", "created_at"),)
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=uid)
     kind: Mapped[str] = mapped_column(String(40), index=True)
     payload: Mapped[dict] = mapped_column(JSON, default=dict)
@@ -275,6 +277,15 @@ class Job(Base):
     attempts: Mapped[int] = mapped_column(Integer, default=0)
     due_at: Mapped[str] = mapped_column(String(40), default=now)
     error: Mapped[str] = mapped_column(String(80), default="")
+    created_at: Mapped[str] = mapped_column(String(40), default=now)
+    finished_at: Mapped[str | None] = mapped_column(String(40), nullable=True)
+
+
+class JobReplay(Base):
+    __tablename__ = "job_replays"
+    source_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    new_job_id: Mapped[str] = mapped_column(String(64), unique=True)
+    reason: Mapped[str] = mapped_column(String(500))
     created_at: Mapped[str] = mapped_column(String(40), default=now)
 
 
@@ -284,6 +295,12 @@ class ProviderState(Base):
     last_success: Mapped[str | None] = mapped_column(String(40), nullable=True)
     error: Mapped[str] = mapped_column(String(100), default="")
     enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    consecutive_failures: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    next_attempt_at: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    last_attempt_at: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    lease_job_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    lease_attempt: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    lease_until: Mapped[str | None] = mapped_column(String(40), nullable=True)
 
 
 url = settings().database_url

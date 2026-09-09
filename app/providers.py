@@ -2,9 +2,10 @@ import os
 from datetime import datetime, timedelta, timezone
 
 import httpx
-from sqlalchemy import select
+from sqlalchemy import and_, case, func, select
 
-from app.db import Event, ProviderState, Source, now
+from app.db import Event, Job, ProviderState, Source, now
+from app.config import settings
 from app.security import problem
 
 
@@ -12,6 +13,53 @@ def get_json(client, path, **kwargs):
     result = client.get(path, **kwargs)
     result.raise_for_status()
     return result.json()
+
+
+def provider_key(name):
+    # Explicit process configuration wins, including an empty value to disable it.
+    value = os.getenv(name)
+    if value is not None:
+        return value
+    field = {
+        "BALLDONTLIE_API_KEY": "balldontlie_api_key",
+        "FOOTBALL_DATA_API_KEY": "football_data_api_key",
+        "YOUTUBE_API_KEY": "youtube_api_key",
+    }[name]
+    return getattr(settings(), field).get_secret_value()
+
+
+def provider_statuses(db):
+    instant = now()
+    provider = Job.payload["provider"].as_string()
+    activities = dict(
+        db.execute(
+            select(
+                provider,
+                func.max(
+                    case(
+                        (and_(Job.state == "running", Job.due_at > instant), 3),
+                        (Job.due_at <= instant, 2),
+                        else_=1,
+                    )
+                ),
+            )
+            .where(Job.kind == "provider", Job.state.in_(["pending", "running"]))
+            .group_by(provider)
+        ).all()
+    )
+    labels = {0: "idle", 1: "waiting", 2: "queued", 3: "running"}
+    return [
+        {
+            "id": p.id,
+            "last_success": p.last_success,
+            "error": p.error,
+            "enabled": p.enabled,
+            "consecutive_failures": p.consecutive_failures,
+            "next_attempt_at": p.next_attempt_at,
+            "activity": labels[activities.get(p.id, 0)],
+        }
+        for p in db.scalars(select(ProviderState))
+    ]
 
 
 def source(db, key, name, short, sport, kind, provider, color="#8bbdaa"):
@@ -101,7 +149,7 @@ def sync_provider(db, provider):
                         demo=False,
                     )
         elif provider == "balldontlie":
-            key = os.getenv("BALLDONTLIE_API_KEY")
+            key = provider_key("BALLDONTLIE_API_KEY")
             if not key:
                 raise ValueError("PROVIDER_KEY_REQUIRED")
             start = datetime.now(timezone.utc).date()
@@ -163,7 +211,7 @@ def sync_provider(db, provider):
                     demo=False,
                 )
         elif provider == "football-data":
-            key = os.getenv("FOOTBALL_DATA_API_KEY")
+            key = provider_key("FOOTBALL_DATA_API_KEY")
             if not key:
                 raise ValueError("PROVIDER_KEY_REQUIRED")
             payload = get_json(
@@ -236,7 +284,7 @@ def sync_provider(db, provider):
 
 
 def youtube_request(endpoint, params):
-    key = os.getenv("YOUTUBE_API_KEY")
+    key = provider_key("YOUTUBE_API_KEY")
     if not key:
         problem("YOUTUBE_KEY_REQUIRED", "YouTube 频道服务尚未配置，暂时无法读取创作者", 503)
     try:
