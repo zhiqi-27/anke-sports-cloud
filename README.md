@@ -45,7 +45,7 @@ uv run alembic upgrade head
 uv run alembic check
 ```
 
-迁移前应明确连接的目标环境，备份并确认恢复方式。以上命令未在 Azure 数据库执行。初始迁移在独立 SQLite 校验库通过；MySQL 仅生成并检查了离线 DDL。锁定依赖由 `uv.lock` 管理，Functions 构建使用导出的 `requirements.txt`。
+迁移前应明确连接的目标环境，备份并确认恢复方式。以上命令未在 Azure 数据库执行。迁移在独立 SQLite 与本机 MySQL 8.4.11 临时库完成升级、回退、再升级及模型检查；尚未在 Azure 执行。MySQL 的连接隔离级别与身份比较要求、复现命令见 [MySQL 验证](docs/mysql-validation.md)。锁定依赖由 `uv.lock` 管理，Functions 构建使用导出的 `requirements.txt`。
 
 ## 当前状态
 

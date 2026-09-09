@@ -326,7 +326,8 @@ def test_uploads_and_video_fetch_use_separate_budgeted_jobs(quota_env, monkeypat
         child_id = child.id
         current = datetime.fromisoformat(child.due_at) + timedelta(seconds=1)
         assert worker.run_one(child_id)
-        db.expire_all()
+        # Observe the other transaction after ending this MySQL repeatable-read snapshot.
+        db.rollback()
         child = db.get(Job, child_id)
         assert child.state == "pending" and child.attempts == 0 and calls == ["playlistItems"]
         current = datetime.fromisoformat(child.due_at) + timedelta(seconds=1)

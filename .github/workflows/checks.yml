@@ -15,3 +15,28 @@ jobs:
       - run: uv run pytest -q
       - run: uv run python -m scripts.export_contracts
       - run: git diff --exit-code -- contracts
+  mysql:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4.11@sha256:3466ba4a4828aa8d46fb7c3bc16b67b781c98413cf4ea0fac6feaa6e881faa26
+        env:
+          MYSQL_ROOT_PASSWORD: anke_mysql_fixture
+          MYSQL_ROOT_HOST: '%'
+        ports:
+          - 127.0.0.1:3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h127.0.0.1 -uroot -panke_mysql_fixture --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    env:
+      ANKE_TEST_MYSQL_DISPOSABLE: '1'
+      ANKE_TEST_MYSQL_URL: mysql+pymysql://root:anke_mysql_fixture@127.0.0.1:3306/?charset=utf8mb4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.12.9"
+      - run: uv sync --frozen --python 3.12
+      - run: uv run pytest -q

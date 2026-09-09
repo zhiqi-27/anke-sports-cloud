@@ -152,3 +152,12 @@ HTTP/MCP/后台 Data API 请求在独立 SQL 短事务预留额度，按项目�
 主API8787 session45462/PID34189、worker session77294/PID34200运行最终源码，四个显式local/preview/public/web参数与关闭访问日志保持。production Web3002 session65485/PID33834、主Web3000 session43940/PID53698。旧API32417/worker32428/production31177已停止；隔离配额API3004 session40885已停止并清理，临时22/23/24已关闭，原草稿16/公共订阅12/旧维护10保留，viewport已重置。
 
 说明anke-sports-cloud/docs/youtube-budget.md，证据evidence/youtube-budget-2026-09-10.md及youtube-budget-main-2026-09-10.json。预算为本服务预留值，不是Google真实额度/余额。T13/T14/T15/T33仍in_progress；下一步仍需同时多频道/积压、Codex真实业务调用，真实Firebase/MySQL/Azure/YouTube、Chrome安装和设备验收。M6 Google直连未实现。完整目标保持active，本回合有实现和验收进展。用户未来托管Chrome创建配置独立云资源、负责登录的授权有效；无push、部署或云资源变更。
+
+
+## 2026-09-10 · 真实 MySQL 与 Firebase 开始接入
+
+实际 MySQL Community 8.4.11 临时进程完成后端验证：MySQL 模式179 passed，SQLite177 passed/2 skipped；ruff通过，契约字节不变。修复精确身份比较、事务旧快照和预算首次插入竞争。说明docs/mysql-validation.md，证据evidence/mysql-2026-09-10.md；不是Azure运行证明。CI新增固定版本MySQL但尚未push/执行。
+
+主SQLite备份data/before-mysql-compat-20260909-232308.db（UTC，0600）并迁移f809a45c2d71；25张业务表逐行哈希一致，163场保留。主API session27072/PID37845、worker session29987/PID37859，保留原四个显式本地参数。状态与赛程200；首次读回脚本使用错误start/end参数得到422，改为契约from/to后通过。证据evidence/mysql-main-2026-09-10.json。
+
+用户切换Google账号后已创建独立Firebase项目anke-sports-dev（Anke Sports Dev），Spark免费方案，Analytics/Gemini关闭；注册Web应用Anke Sports Web Dev，启用Google登录，localhost与127.0.0.1授权域名读回通过。仅Web配置保存本机data/firebase-dev-web.json（0600、Git忽略）。服务端凭据及真实登录仍在接入，主预览未切换到Firebase。此前“未创建云资源”仅为历史状态。用户再次确认后端使用Azure Functions；Azure资源仍未创建/部署，YouTube真实配置尚未完成。

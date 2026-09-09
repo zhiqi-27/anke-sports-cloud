@@ -55,7 +55,23 @@ def wait_error(code, resume):
 
 def lock_row(db, project, instant):
     period, _ = window(instant)
-    if not db.get(YouTubeBudget, project):
+    if db.bind.dialect.name == "mysql":
+        # A duplicate INSERT leaves a shared record lock under InnoDB. Multiple
+        # contenders upgrading that lock to UPDATE can deadlock. This upsert
+        # obtains the exclusive row lock directly and preserves existing usage.
+        from sqlalchemy.dialects.mysql import insert
+
+        db.execute(
+            insert(YouTubeBudget)
+            .values(
+                project_id=project,
+                period=period,
+                daily_limit=settings().youtube_daily_budget,
+                reserved_units=0,
+            )
+            .on_duplicate_key_update(project_id=project)
+        )
+    elif not db.get(YouTubeBudget, project):
         try:
             with db.begin_nested():
                 db.add(

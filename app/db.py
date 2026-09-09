@@ -30,8 +30,13 @@ def uid() -> str:
     return uuid4().hex
 
 
+# Firebase subjects and external IDs are exact values. MySQL's default
+# accent/case-insensitive collation must never collapse two account identities.
+MYSQL_TABLE_OPTIONS = {"mysql_charset": "utf8mb4", "mysql_collate": "utf8mb4_0900_bin"}
+
+
 class Base(DeclarativeBase):
-    pass
+    __table_args__ = MYSQL_TABLE_OPTIONS
 
 
 class Source(Base):
@@ -120,7 +125,7 @@ class PublicFeed(Base):
 
 class Projection(Base):
     __tablename__ = "projections"
-    __table_args__ = (UniqueConstraint("feed_id", "event_id"),)
+    __table_args__ = (UniqueConstraint("feed_id", "event_id"), MYSQL_TABLE_OPTIONS)
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=uid)
     feed_id: Mapped[str] = mapped_column(String(64), index=True)
     event_id: Mapped[str] = mapped_column(String(64))
@@ -133,7 +138,7 @@ class Projection(Base):
 
 class Link(Base):
     __tablename__ = "links"
-    __table_args__ = (UniqueConstraint("owner_id", "event_id", "url_hash"),)
+    __table_args__ = (UniqueConstraint("owner_id", "event_id", "url_hash"), MYSQL_TABLE_OPTIONS)
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=uid)
     owner_id: Mapped[str] = mapped_column(String(128), index=True)
     event_id: Mapped[str] = mapped_column(String(64), index=True)
@@ -156,6 +161,7 @@ class BroadcastRecord(Base):
     __table_args__ = (
         Index("ix_broadcast_expiry", "status", "expires_at", "link_id"),
         Index("ix_broadcast_due", "status", "next_check_at", "link_id"),
+        MYSQL_TABLE_OPTIONS,
     )
     link_id: Mapped[str] = mapped_column(String(64), primary_key=True)
     revision: Mapped[int] = mapped_column(Integer, default=0)
@@ -233,7 +239,7 @@ class ChannelWork(Base):
 
 class VideoMatch(Base):
     __tablename__ = "video_matches"
-    __table_args__ = (UniqueConstraint("owner_id", "video_id", "event_id"),)
+    __table_args__ = (UniqueConstraint("owner_id", "video_id", "event_id"), MYSQL_TABLE_OPTIONS)
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=uid)
     owner_id: Mapped[str] = mapped_column(String(128), index=True)
     video_id: Mapped[str] = mapped_column(String(40), index=True)
@@ -298,7 +304,7 @@ class OAuthTokenRecord(Base):
 
 class Job(Base):
     __tablename__ = "outbox"
-    __table_args__ = (Index("ix_outbox_ready", "state", "due_at", "created_at"),)
+    __table_args__ = (Index("ix_outbox_ready", "state", "due_at", "created_at"), MYSQL_TABLE_OPTIONS)
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=uid)
     kind: Mapped[str] = mapped_column(String(40), index=True)
     payload: Mapped[dict] = mapped_column(JSON, default=dict)
@@ -352,7 +358,20 @@ connection_args = (
     if url.startswith("sqlite")
     else ({"ssl": ssl.create_default_context()} if settings().env != "local" else {})
 )
-engine = create_engine(url, pool_pre_ping=True, hide_parameters=True, connect_args=connection_args)
+
+
+def engine_options(database_url):
+    # Handlers reread versions after network/owner locks; these reads must see
+    # committed changes rather than an earlier MySQL repeatable-read snapshot.
+    from sqlalchemy.engine import make_url
+
+    options = {"pool_pre_ping": True, "hide_parameters": True}
+    if make_url(database_url).get_backend_name() == "mysql":
+        options["isolation_level"] = "READ COMMITTED"
+    return options
+
+
+engine = create_engine(url, **engine_options(url), connect_args=connection_args)
 if url.startswith("sqlite"):
 
     @event.listens_for(engine, "connect")

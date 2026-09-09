@@ -22,8 +22,18 @@ import app.db as database
 
 
 @pytest.fixture
-def stack(monkeypatch):
-    engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
+def mysql_engine():
+    from tests.mysql_support import disposable_mysql
+
+    with disposable_mysql() as engine:
+        yield engine
+
+
+@pytest.fixture
+def stack(monkeypatch, mysql_engine):
+    engine = mysql_engine or create_engine(
+        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
+    )
     Base.metadata.create_all(engine)
     sessions = sessionmaker(engine, expire_on_commit=False)
 
@@ -46,19 +56,21 @@ def stack(monkeypatch):
 
 
 @pytest.fixture
-def disk_stack(tmp_path, monkeypatch):
+def disk_stack(tmp_path, monkeypatch, mysql_engine):
     from app.service import ensure_user
     from tests.test_calendar_flow import insert_event
 
     # Independent connections on a real file; StaticPool is not concurrency evidence.
-    engine = create_engine(
+    engine = mysql_engine or create_engine(
         "sqlite:///" + str(tmp_path / "concurrent.db"), connect_args={"check_same_thread": False}
     )
 
-    @sql_event.listens_for(engine, "connect")
-    def pragmas(connection, _):
-        connection.execute("PRAGMA journal_mode=WAL")
-        connection.execute("PRAGMA busy_timeout=3000")
+    if mysql_engine is None:
+
+        @sql_event.listens_for(engine, "connect")
+        def pragmas(connection, _):
+            connection.execute("PRAGMA journal_mode=WAL")
+            connection.execute("PRAGMA busy_timeout=3000")
 
     Base.metadata.create_all(engine)
     sessions = sessionmaker(engine, expire_on_commit=False)
