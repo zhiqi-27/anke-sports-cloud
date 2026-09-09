@@ -153,16 +153,11 @@ def command(db, user, operation, key, payload, perform):
 
 
 def set_follows(db, user, data):
-    for follow in data.follows:
-        source = db.get(Source, follow.source_key)
-        event = (
-            db.scalar(select(Event).where(Event.source_key == follow.source_key))
-            if follow.type == "event"
-            else None
-        )
-        if not (source and source.kind == follow.type) and not event:
-            problem("SOURCE_NOT_FOUND", "该关注对象或类型尚未接入")
-    config = {**user.config, "follows": list({f.source_key: f.model_dump() for f in data.follows}.values())}
+    from app.follow_changes import preview_follows, proposed_config
+
+    config = proposed_config(db, user, data)
+    if data.confirmation and preview_follows(db, user, data)["confirmation"] != data.confirmation:
+        problem("FOLLOWS_PREVIEW_CHANGED", "赛程或订阅内容已变化，请重新预览后保存", 409)
     save_config(db, user, config, data.expected_revision)
     return user_view(db, user)
 

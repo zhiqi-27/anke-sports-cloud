@@ -1,5 +1,6 @@
 import json
 from datetime import date, datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
 from icalendar import Calendar, Event as IcsEvent
 from sqlalchemy import select, update
@@ -272,6 +273,37 @@ def update_projection(db, feed, event, data, existing):
         projection.removed = False
 
 
+def event_is_past(event, instant):
+    if event.time_precision == "exact" and event.starts_at:
+        start = datetime.fromisoformat(event.starts_at.replace("Z", "+00:00"))
+        return bool(start.tzinfo and start < instant)
+    # A date-only event today is not known to have happened yet.
+    return bool(
+        event.local_date
+        and event.local_date < instant.astimezone(ZoneInfo(event.timezone)).date().isoformat()
+    )
+
+
+def select_feed_events(db, config, existing, instant=None):
+    instant = instant or datetime.now(timezone.utc)
+    lower = (instant - timedelta(days=90)).date().isoformat()
+    upper = (instant + timedelta(days=180)).date().isoformat()
+    overrides = {x["event_key"]: x["state"] for x in config.get("event_overrides", [])}
+    selected = []
+    for event in db.scalars(select(Event)):
+        date_key = (event.starts_at or event.local_date or "")[:10]
+        prior = existing.get(event.id)
+        retain_history = bool(
+            prior
+            and not prior.removed
+            and event_is_past(event, instant)
+            and overrides.get(event.source_key) != "exclude"
+        )
+        if (included(event, config) or retain_history) and lower <= date_key <= upper:
+            selected.append(event)
+    return selected, lower, upper
+
+
 def rebuild_feed(db, owner_id: str):
     # Acquire the owner's write lock before taking the configuration snapshot.
     # A no-op UPDATE also serializes local SQLite, where FOR UPDATE is ignored.
@@ -284,23 +316,9 @@ def rebuild_feed(db, owner_id: str):
         return
     config = user.config
     existing = {p.event_id: p for p in db.scalars(select(Projection).where(Projection.feed_id == feed.id))}
-    lower = (datetime.now(timezone.utc) - timedelta(days=90)).date().isoformat()
-    upper = (datetime.now(timezone.utc) + timedelta(days=180)).date().isoformat()
+    events, lower, _ = select_feed_events(db, config, existing)
     wanted = set()
-    instant = datetime.now(timezone.utc).isoformat()
-    overrides = {x["event_key"]: x["state"] for x in config.get("event_overrides", [])}
-    events = db.scalars(select(Event)).all()
     for event in events:
-        date_key = (event.starts_at or event.local_date or "")[:10]
-        prior = existing.get(event.id)
-        retain_history = bool(
-            prior
-            and not prior.removed
-            and (event.starts_at or event.local_date or "9999") < instant
-            and overrides.get(event.source_key) != "exclude"
-        )
-        if not (included(event, config) or retain_history) or not (lower <= date_key <= upper):
-            continue
         wanted.add(event.id)
         data = projection_data(db, event, user, config)
         update_projection(db, feed, event, data, existing)

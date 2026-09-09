@@ -44,6 +44,7 @@ from app.schemas import (
     ImportInput,
     OverrideInput,
     SaveFollows,
+    FollowPreviewView,
     SavePreferences,
     ConsentRequestView,
     ConsentDecision,
@@ -226,6 +227,13 @@ def calendar(user=Depends(me), db=Depends(get_db)):
     return user_view(db, user)
 
 
+@app.post("/api/v1/me/follows/preview", response_model=FollowPreviewView)
+def follows_preview(data: SaveFollows, user=Depends(me), db=Depends(get_db)):
+    from app.follow_changes import preview_follows
+
+    return preview_follows(db, user, data)
+
+
 @app.put("/api/v1/me/follows", response_model=CalendarUserView)
 def follows(
     data: SaveFollows, idempotency_key: str | None = Header(None), user=Depends(me), db=Depends(get_db)
@@ -235,7 +243,7 @@ def follows(
         user,
         "set_follows",
         idempotency_key,
-        data.model_dump(),
+        data.model_dump(exclude_none=True),
         lambda: actions.set_follows(db, user, data),
     )
     db.commit()

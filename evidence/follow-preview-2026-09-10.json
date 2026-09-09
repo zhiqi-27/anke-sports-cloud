@@ -1,0 +1,61 @@
+{
+  "before": {
+    "user_revision": 1,
+    "follows": [
+      {
+        "type": "team",
+        "source_key": "demo:lakers"
+      },
+      {
+        "type": "team",
+        "source_key": "demo:warriors"
+      }
+    ],
+    "event_count": 16,
+    "etag": "\"bc8954deb6fa8c9cb4449129af812e4c080fc535ada19aa9852bd056ad7dd32b\"",
+    "uids": [
+      "032f646f11874796b32f58eef904b6fd@calendar.anke-sports",
+      "0a9b35bb97964d47a6cf2246f986f06a@calendar.anke-sports",
+      "1005d95524124a2facddd2164e692904@calendar.anke-sports",
+      "44d2bee29cb3467a8e484c29ad7fe32c@calendar.anke-sports",
+      "4888f286ddc349029cb6f20ec2f47926@calendar.anke-sports",
+      "69df0fe6089d46ca9ecbd6b1ee590152@calendar.anke-sports",
+      "af9634a5eb2a4e21aff8d17af9f694b7@calendar.anke-sports",
+      "be2b75f954714c4ea5943fb6b19c833f@calendar.anke-sports",
+      "c3e8750ee2414761919a1ea8ec9d0da7@calendar.anke-sports",
+      "cb25a07c60394b5790d6c718636fc7d6@calendar.anke-sports",
+      "d6e4330d65b5439aa98bb3da2facb741@calendar.anke-sports",
+      "e61a2da187d342728bcd14d2a07acb8e@calendar.anke-sports",
+      "eac4853553a6443f9d07d3b62ac47054@calendar.anke-sports",
+      "f825eb969e814f5cb7c935d6d5603933@calendar.anke-sports",
+      "f82bee09c6bb4d168bee04245976a0e0@calendar.anke-sports",
+      "fbb04c5a9da6475b81c2e9c9e232bd07@calendar.anke-sports"
+    ]
+  },
+  "synthetic": true,
+  "browser_observed_preview": {
+    "removed_future": 6,
+    "other_selections_retained": 2,
+    "historical_retained": 2,
+    "result_count": 10
+  },
+  "after": {
+    "user_revision": 2,
+    "follows": [
+      {
+        "type": "team",
+        "source_key": "demo:warriors"
+      }
+    ],
+    "active_events": 10,
+    "withdrawn_events": 6,
+    "etag": "\"0ffc055502b68e1915d421f28a52727c0fccceab2d30fc477e42f25ee82f1eea\"",
+    "same_uids": true,
+    "feed_status": "published"
+  },
+  "stale_preview": {
+    "rejected_twice_in_browser": true,
+    "preserved_revision_before_retry": 1,
+    "error_focused_and_visible_at_1024": true
+  }
+}

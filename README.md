@@ -56,3 +56,5 @@ MCP 已提供匿名与私人 Streamable HTTP、网页授权、短期令牌和撤
 完整验收边界见 [STATE.md](STATE.md)、[当前架构](docs/architecture.md) 与 [验收证据](evidence/local-2026-09-09.md)。系统日历刷新、Firebase 真实登录、Azure 触发器、手机内容直达及目标 Agent 客户端均尚未验证。
 
 游客公共球队/赛事订阅已接入。后台发布公共快照，`GET /api/v1/public-feed?source_key=…`读取公开状态与地址；生产来源需先核验分发资格并配置。边界、迁移和重试见 [docs/public-feeds.md](docs/public-feeds.md)。
+
+个人关注支持 `POST /api/v1/me/follows/preview` 预览新增、移除、重叠与历史保留；Web确认后携带摘要和幂等键保存。计算规则、暂停状态与冲突处理见 [docs/follow-changes.md](docs/follow-changes.md)。

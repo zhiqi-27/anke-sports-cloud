@@ -62,6 +62,46 @@ class Config(StrictModel):
 class SaveFollows(StrictModel):
     expected_revision: int
     follows: list[Follow] = Field(max_length=500)
+    confirmation: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
+
+
+class FollowChangeSource(Follow):
+    name: str
+    demo: bool | None
+
+
+class FollowImpactEvent(BaseModel):
+    id: str
+    title: str
+    starts_at: str | None
+    local_date: str | None
+    time_precision: str
+    past: bool
+    demo: bool | None
+
+
+class FollowImpactGroup(BaseModel):
+    total: int
+    future: int
+    past: int
+    items: list[FollowImpactEvent]
+
+
+class FollowPreviewView(BaseModel):
+    revision: int
+    confirmation: str
+    added_sources: list[FollowChangeSource]
+    removed_sources: list[FollowChangeSource]
+    added: FollowImpactGroup
+    removed: FollowImpactGroup
+    retained: FollowImpactGroup
+    historical_retained: int
+    result_count: int
+    undated_count: int
+    window_start: str
+    window_end: str
+    feed_paused: bool
+    publication_pending: bool
 
 
 class SavePreferences(StrictModel):

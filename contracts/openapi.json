@@ -719,6 +719,44 @@
         }
       }
     },
+    "/api/v1/me/follows/preview": {
+      "post": {
+        "summary": "Follows Preview",
+        "operationId": "follows_preview_api_v1_me_follows_preview_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveFollows"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FollowPreviewView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/me/follows": {
       "put": {
         "summary": "Follows",
@@ -3130,6 +3168,226 @@
         ],
         "title": "Follow"
       },
+      "FollowChangeSource": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "team",
+              "competition",
+              "event",
+              "series"
+            ],
+            "title": "Type"
+          },
+          "source_key": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Source Key"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "demo": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Demo"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "type",
+          "source_key",
+          "name",
+          "demo"
+        ],
+        "title": "FollowChangeSource"
+      },
+      "FollowImpactEvent": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "starts_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Starts At"
+          },
+          "local_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Local Date"
+          },
+          "time_precision": {
+            "type": "string",
+            "title": "Time Precision"
+          },
+          "past": {
+            "type": "boolean",
+            "title": "Past"
+          },
+          "demo": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Demo"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "starts_at",
+          "local_date",
+          "time_precision",
+          "past",
+          "demo"
+        ],
+        "title": "FollowImpactEvent"
+      },
+      "FollowImpactGroup": {
+        "properties": {
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "future": {
+            "type": "integer",
+            "title": "Future"
+          },
+          "past": {
+            "type": "integer",
+            "title": "Past"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/FollowImpactEvent"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total",
+          "future",
+          "past",
+          "items"
+        ],
+        "title": "FollowImpactGroup"
+      },
+      "FollowPreviewView": {
+        "properties": {
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          },
+          "confirmation": {
+            "type": "string",
+            "title": "Confirmation"
+          },
+          "added_sources": {
+            "items": {
+              "$ref": "#/components/schemas/FollowChangeSource"
+            },
+            "type": "array",
+            "title": "Added Sources"
+          },
+          "removed_sources": {
+            "items": {
+              "$ref": "#/components/schemas/FollowChangeSource"
+            },
+            "type": "array",
+            "title": "Removed Sources"
+          },
+          "added": {
+            "$ref": "#/components/schemas/FollowImpactGroup"
+          },
+          "removed": {
+            "$ref": "#/components/schemas/FollowImpactGroup"
+          },
+          "retained": {
+            "$ref": "#/components/schemas/FollowImpactGroup"
+          },
+          "historical_retained": {
+            "type": "integer",
+            "title": "Historical Retained"
+          },
+          "result_count": {
+            "type": "integer",
+            "title": "Result Count"
+          },
+          "undated_count": {
+            "type": "integer",
+            "title": "Undated Count"
+          },
+          "window_start": {
+            "type": "string",
+            "title": "Window Start"
+          },
+          "window_end": {
+            "type": "string",
+            "title": "Window End"
+          },
+          "feed_paused": {
+            "type": "boolean",
+            "title": "Feed Paused"
+          },
+          "publication_pending": {
+            "type": "boolean",
+            "title": "Publication Pending"
+          }
+        },
+        "type": "object",
+        "required": [
+          "revision",
+          "confirmation",
+          "added_sources",
+          "removed_sources",
+          "added",
+          "removed",
+          "retained",
+          "historical_retained",
+          "result_count",
+          "undated_count",
+          "window_start",
+          "window_end",
+          "feed_paused",
+          "publication_pending"
+        ],
+        "title": "FollowPreviewView"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -3788,6 +4046,18 @@
             "type": "array",
             "maxItems": 500,
             "title": "Follows"
+          },
+          "confirmation": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confirmation"
           }
         },
         "additionalProperties": false,
