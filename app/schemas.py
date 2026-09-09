@@ -274,3 +274,34 @@ class ImportPreviewView(BaseModel):
 class LinkAddedView(BaseModel):
     id: str
     event: EventView
+
+
+class ConsentRequestView(BaseModel):
+    client_id: str
+    client_name: str
+    redirect_uri: str
+    scopes: list[str]
+    resource: str
+    expires_at: int
+
+
+class ConsentDecision(StrictModel):
+    approved: bool
+    scopes: list[Literal["calendar:read", "calendar:write", "feed:read"]] = Field(max_length=3)
+
+
+class ConsentRedirectView(BaseModel):
+    redirect_url: str
+
+
+class ConnectionView(BaseModel):
+    id: str
+    client_name: str
+    scopes: list[str]
+    resource: str
+    created_at: str
+    expires_at: int
+
+
+class ConnectionList(BaseModel):
+    items: list[ConnectionView]

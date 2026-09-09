@@ -17,6 +17,8 @@ from sqlalchemy.pool import StaticPool
 from app.db import Base, get_db
 from app.main import app
 import app.worker as worker
+import app.oauth as oauth
+import app.db as database
 
 
 @pytest.fixture
@@ -31,6 +33,8 @@ def stack(monkeypatch):
 
     app.dependency_overrides[get_db] = db_override
     monkeypatch.setattr(worker, "SessionLocal", sessions)
+    monkeypatch.setattr(oauth, "SessionLocal", sessions)
+    monkeypatch.setattr(database, "SessionLocal", sessions)
     client = TestClient(app, headers={"Origin": "http://127.0.0.1:3000"})
     client.post("/api/v1/auth/local").raise_for_status()
     while worker.run_one():

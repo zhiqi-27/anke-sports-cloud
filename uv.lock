@@ -54,7 +54,7 @@ requires-dist = [
     { name = "firebase-admin", specifier = ">=6.7,<8" },
     { name = "httpx", specifier = ">=0.28,<1" },
     { name = "icalendar", specifier = ">=6.1,<7" },
-    { name = "mcp", specifier = ">=1.20,<2" },
+    { name = "mcp", specifier = "==1.30.0" },
     { name = "pydantic-settings", specifier = ">=2.8,<3" },
     { name = "pymysql", extras = ["rsa"], specifier = ">=1.1,<2" },
     { name = "sqlalchemy", specifier = ">=2.0,<3" },

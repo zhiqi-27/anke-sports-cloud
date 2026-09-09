@@ -47,4 +47,6 @@ uv run alembic check
 
 ## 当前状态
 
-完整验收边界见 [STATE.md](STATE.md)、[当前架构](docs/architecture.md) 与 [验收证据](evidence/local-2026-09-09.md)。系统日历刷新、Firebase 真实登录、Azure 触发器、手机内容直达均尚未验证。Chrome 扩展与 MCP 为后续交付，不因库已安装而视为完成。
+MCP 已提供匿名与私人 Streamable HTTP、网页授权、短期令牌和撤销；入口、权限、重试约定与本地验收命令见 [MCP 与应用连接](docs/mcp-and-connections.md)。Chrome 安装包尚未交付。
+
+完整验收边界见 [STATE.md](STATE.md)、[当前架构](docs/architecture.md) 与 [验收证据](evidence/local-2026-09-09.md)。系统日历刷新、Firebase 真实登录、Azure 触发器、手机内容直达及目标 Agent 客户端均尚未验证。

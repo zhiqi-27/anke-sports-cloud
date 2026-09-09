@@ -120,8 +120,10 @@ if __name__ == "__main__":
     while True:
         if time.monotonic() >= next_content:
             from app.websub import schedule_content
+            from app.oauth import clean_expired_connections
 
             schedule_content()
+            clean_expired_connections()
             next_content = time.monotonic() + 60
         if time.monotonic() >= next_schedule:
             schedule_providers()

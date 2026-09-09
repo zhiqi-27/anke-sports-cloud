@@ -1,20 +1,22 @@
 from contextlib import asynccontextmanager
-from datetime import datetime, timedelta
+from datetime import datetime
 from email.utils import format_datetime, parsedate_to_datetime
 from uuid import uuid4
 
-from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from sqlalchemy import delete, select
 
+from app import actions
+from app.mcp_server import build_mcp
 from app.calendar import event_view
+from app.oauth_routes import auth_routes
 from app.config import settings
 from app.db import (
     Base,
     Creator,
-    Event,
     Feed,
     Job,
     Link,
@@ -22,7 +24,6 @@ from app.db import (
     ProviderState,
     VideoMatch,
     Session,
-    Source,
     User,
     engine,
     get_db,
@@ -44,6 +45,10 @@ from app.schemas import (
     OverrideInput,
     SaveFollows,
     SavePreferences,
+    ConsentRequestView,
+    ConsentDecision,
+    ConsentRedirectView,
+    ConnectionList,
     ResolveCreator,
     CreatorIdentity,
     UpdateCreator,
@@ -53,7 +58,7 @@ from app.schemas import (
 )
 from app.security import actor, check_origin, digest, local_allowed, local_session, problem
 from app.seed import seed_demo
-from app.service import attach_link, enqueue, ensure_user, import_preview, save_config, user_view
+from app.service import enqueue, ensure_user, save_config, user_view
 
 
 @asynccontextmanager
@@ -66,7 +71,8 @@ async def lifespan(app):
             with SessionLocal() as db:
                 seed_demo(db)
                 db.commit()
-    yield
+    async with mcp_lifespan():
+        yield
 
 
 app = FastAPI(title="Anke Sports API", version="0.1.0", lifespan=lifespan)
@@ -83,7 +89,12 @@ app.add_middleware(
 async def boundary(request, call_next):
     request.state.request_id = uuid4().hex[:16]
     try:
-        if request.method not in {"GET", "HEAD", "OPTIONS"} and not request.url.path.startswith("/webhooks/"):
+        if (
+            request.method not in {"GET", "HEAD", "OPTIONS"}
+            and not request.url.path.startswith("/webhooks/")
+            and request.url.path
+            not in {"/register", "/authorize", "/token", "/revoke", "/mcp", "/mcp/public"}
+        ):
             check_origin(request)
         response = await call_next(request)
     except HTTPException as exc:
@@ -93,7 +104,12 @@ async def boundary(request, call_next):
     response.headers["X-Request-ID"] = request.state.request_id
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["Referrer-Policy"] = "no-referrer"
-    if request.url.path.startswith("/api/"):
+    if request.url.path.startswith(("/api/", "/mcp")) or request.url.path in {
+        "/authorize",
+        "/token",
+        "/register",
+        "/revoke",
+    }:
         response.headers["Cache-Control"] = "no-store"
     return response
 
@@ -132,10 +148,7 @@ def me(request: Request, db=Depends(get_db)):
 
 
 def find_event(db, event_id):
-    event = db.get(Event, event_id)
-    if not event:
-        problem("EVENT_NOT_FOUND", "未找到这场比赛", 404)
-    return event
+    return actions.find_event(db, event_id)
 
 
 @app.get("/api/v1/health")
@@ -183,24 +196,7 @@ def logout(request: Request, response: Response, db=Depends(get_db)):
 
 @app.get("/api/v1/sources", response_model=SourceList)
 def sources(q: str = "", dataset: str = "real", db=Depends(get_db)):
-    rows = db.scalars(
-        select(Source).where(Source.demo.is_(dataset == "demo")).order_by(Source.kind, Source.name)
-    ).all()
-    return {
-        "items": [
-            {
-                "id": s.id,
-                "name": s.name,
-                "short_name": s.short_name,
-                "sport": s.sport,
-                "kind": s.kind,
-                "color": s.color,
-                "demo": s.demo,
-            }
-            for s in rows
-            if q.lower() in (s.name + s.short_name).lower()
-        ]
-    }
+    return actions.search_sources(db, q, dataset)
 
 
 @app.get("/api/v1/events", response_model=EventList)
@@ -211,46 +207,13 @@ def events(
     dataset: str = "real",
     followed: bool = False,
     q: str = "",
+    limit: int = Query(500, ge=1, le=500),
+    cursor: str | None = None,
     db=Depends(get_db),
 ):
-    try:
-        lower, upper = (
-            datetime.fromisoformat(from_.replace("Z", "+00:00")),
-            datetime.fromisoformat(to.replace("Z", "+00:00")),
-        )
-        if not lower.tzinfo or not upper.tzinfo or not timedelta(0) < upper - lower <= timedelta(days=181):
-            raise ValueError()
-    except ValueError:
-        problem("INVALID_RANGE", "请查询带时区、最长 180 天的有效时间范围")
     user_id = actor(request, db, required=followed)
     user = db.get(User, user_id) if user_id else None
-    result = []
-    for event in db.scalars(select(Event).where(Event.demo.is_(dataset == "demo"))):
-        start = datetime.fromisoformat(event.starts_at.replace("Z", "+00:00")) if event.starts_at else None
-        if start is not None and not lower <= start < upper:
-            continue
-        if (
-            start is None
-            and event.local_date
-            and not lower.date().isoformat() <= event.local_date < upper.date().isoformat()
-        ):
-            continue
-        view = event_view(db, event, user)
-        if (followed and not view["included"]) or q.lower() not in event.title.lower():
-            continue
-        result.append(view)
-    result.sort(key=lambda x: (x["starts_at"] or x["local_date"] or "9999", x["id"]))
-    return {
-        "items": result,
-        "coverage": {
-            "dataset": dataset,
-            "complete": dataset == "demo",
-            "note": "synthetic fixtures"
-            if dataset == "demo"
-            else "Only connected provider snapshots; coverage is not guaranteed",
-        },
-        "next_cursor": None,
-    }
+    return actions.get_schedule(db, from_, to, dataset, followed, q, user, limit, cursor)
 
 
 @app.get("/api/v1/events/{event_id}", response_model=EventView)
@@ -265,14 +228,19 @@ def calendar(user=Depends(me), db=Depends(get_db)):
 
 
 @app.put("/api/v1/me/follows", response_model=CalendarUserView)
-def follows(data: SaveFollows, user=Depends(me), db=Depends(get_db)):
-    for follow in data.follows:
-        if not db.get(Source, follow.source_key):
-            problem("SOURCE_NOT_FOUND", "该关注对象尚未接入")
-    config = {**user.config, "follows": list({f.source_key: f.model_dump() for f in data.follows}.values())}
-    save_config(db, user, config, data.expected_revision)
+def follows(
+    data: SaveFollows, idempotency_key: str | None = Header(None), user=Depends(me), db=Depends(get_db)
+):
+    result = actions.command(
+        db,
+        user,
+        "set_follows",
+        idempotency_key,
+        data.model_dump(),
+        lambda: actions.set_follows(db, user, data),
+    )
     db.commit()
-    return user_view(db, user)
+    return result
 
 
 @app.patch("/api/v1/me/preferences", response_model=CalendarUserView)
@@ -296,26 +264,37 @@ def selection(event_id: str, data: OverrideInput, user=Depends(me), db=Depends(g
 
 
 @app.post("/api/v1/events/{event_id}/links", response_model=LinkAddedView)
-def add_link(event_id: str, data: AddLink, user=Depends(me), db=Depends(get_db)):
-    event = find_event(db, event_id)
-    link = attach_link(db, user, event, data.url, data.title, data.kind)
+def add_link(
+    event_id: str,
+    data: AddLink,
+    idempotency_key: str | None = Header(None),
+    user=Depends(me),
+    db=Depends(get_db),
+):
+    result = actions.command(
+        db,
+        user,
+        "attach_event_link",
+        idempotency_key,
+        {"event_id": event_id, **data.model_dump()},
+        lambda: actions.add_link(db, user, event_id, data),
+    )
     db.commit()
-    return {"id": link.id, "event": event_view(db, event, user)}
+    return result
 
 
 @app.post("/api/v1/me/links/{link_id}/block")
-def block(link_id: str, user=Depends(me), db=Depends(get_db)):
-    link = db.get(Link, link_id)
-    if not link or link.owner_id not in {user.id, "public"}:
-        problem("NOT_FOUND", "未找到此链接", 404)
-    event = find_event(db, link.event_id)
-    overrides = [
-        x for x in user.config["link_overrides"] if (x["event_key"], x["url"]) != (event.source_key, link.url)
-    ]
-    overrides.append({"event_key": event.source_key, "url": link.url, "state": "block"})
-    save_config(db, user, {**user.config, "link_overrides": overrides}, user.revision)
+def block(link_id: str, idempotency_key: str | None = Header(None), user=Depends(me), db=Depends(get_db)):
+    result = actions.command(
+        db,
+        user,
+        "remove_event_link",
+        idempotency_key,
+        {"link_id": link_id},
+        lambda: actions.block_link(db, user, link_id),
+    )
     db.commit()
-    return {"blocked": True}
+    return result
 
 
 @app.post("/api/v1/me/creators/resolve", response_model=CreatorIdentity)
@@ -329,13 +308,19 @@ def creator_resolve(data: ResolveCreator, user=Depends(me)):
 
 
 @app.post("/api/v1/me/creators", response_model=CalendarUserView)
-def creator_add(data: AddCreator, user=Depends(me), db=Depends(get_db)):
-    from app.content import save_creator
-
-    details = resolve_creator(data.url.strip())
-    save_creator(db, user, details, data.scope_keys, data.preview, data.recap, True, data.expected_revision)
+def creator_add(
+    data: AddCreator, idempotency_key: str | None = Header(None), user=Depends(me), db=Depends(get_db)
+):
+    result = actions.command(
+        db,
+        user,
+        "add_creator",
+        idempotency_key,
+        data.model_dump(),
+        lambda: actions.add_creator(db, user, data),
+    )
     db.commit()
-    return user_view(db, user)
+    return result
 
 
 def followed_creator(db, user, channel_id):
@@ -455,31 +440,24 @@ def export_config(user=Depends(me)):
 
 
 @app.post("/api/v1/me/config/import", response_model=ImportPreviewView)
-def import_config(data: ImportInput, user=Depends(me), db=Depends(get_db)):
-    if data.expected_revision != user.revision:
-        problem("REVISION_CONFLICT", "配置已更新，请重新预览", 409)
-    config, preview = import_preview(db, user, data)
-    if not data.dry_run:
-        try:
-            valid = settings().cipher().decrypt(
-                (data.confirmation or "").encode()
-            ) == settings().cipher().decrypt(preview["confirmation"].encode())
-        except Exception:
-            valid = False
-        if not valid:
-            problem("PREVIEW_REQUIRED", "请先预览并确认本次导入")
-        if preview["unresolved"]:
-            problem("UNRESOLVED_CONFIG", "存在无法解析的对象，请修正后导入")
-        save_config(db, user, config, data.expected_revision)
-        db.commit()
-    return {**preview, "applied": not data.dry_run}
+def import_config(
+    data: ImportInput, idempotency_key: str | None = Header(None), user=Depends(me), db=Depends(get_db)
+):
+    result = actions.command(
+        db,
+        user,
+        "import_config",
+        idempotency_key if not data.dry_run else None,
+        data.model_dump(),
+        lambda: actions.import_config(db, user, data),
+    )
+    db.commit()
+    return result
 
 
 @app.get("/api/v1/me/feed/address")
 def address(user=Depends(me), db=Depends(get_db)):
-    feed = db.scalar(select(Feed).where(Feed.owner_id == user.id))
-    token = settings().cipher().decrypt(feed.token_ciphertext.encode()).decode()
-    return {"url": f"{settings().public_url}/feeds/{token}.ics", "local_only": settings().env == "local"}
+    return actions.feed_address(db, user)
 
 
 @app.post("/api/v1/me/feed/rotate")
@@ -564,6 +542,11 @@ def trigger_sync(provider: str, request: Request, user=Depends(me), db=Depends(g
 def delete_account(data: FeedAction, user=Depends(me), db=Depends(get_db)):
     if not data.confirmed:
         problem("CONFIRM_REQUIRED", "请确认删除账号数据")
+    from app.db import CommandReceipt
+    from app.oauth import delete_owner_connections
+
+    delete_owner_connections(db, user.id)
+    db.execute(delete(CommandReceipt).where(CommandReceipt.owner_id == user.id))
     feed = db.scalar(select(Feed).where(Feed.owner_id == user.id))
     db.execute(delete(Projection).where(Projection.feed_id == feed.id))
     db.execute(delete(Link).where(Link.owner_id == user.id))
@@ -574,3 +557,39 @@ def delete_account(data: FeedAction, user=Depends(me), db=Depends(get_db)):
     user.deleted, user.config, user.display_name = True, {}, "Deleted account"
     db.commit()
     return {"deleted": True, "external_cache": "请在系统日历中删除旧订阅以清除缓存"}
+
+
+@app.get("/api/v1/me/connections/requests/{pending}", response_model=ConsentRequestView)
+def connection_preview(pending: str, user=Depends(me), db=Depends(get_db)):
+    from app.oauth import consent_preview
+
+    return consent_preview(db, pending)[1]
+
+
+@app.post("/api/v1/me/connections/requests/{pending}", response_model=ConsentRedirectView)
+def connection_consent(pending: str, data: ConsentDecision, user=Depends(me), db=Depends(get_db)):
+    from app.oauth import consent_decide
+
+    url = consent_decide(db, user, pending, data.approved, data.scopes)
+    db.commit()
+    return {"redirect_url": url}
+
+
+@app.get("/api/v1/me/connections", response_model=ConnectionList)
+def connections(user=Depends(me), db=Depends(get_db)):
+    from app.oauth import connection_list
+
+    return connection_list(db, user)
+
+
+@app.delete("/api/v1/me/connections/{grant_id}")
+def connection_revoke(grant_id: str, user=Depends(me), db=Depends(get_db)):
+    from app.oauth import revoke_connection
+
+    revoke_connection(db, user, grant_id)
+    db.commit()
+    return {"revoked": True}
+
+
+mcp_routes, mcp_lifespan = build_mcp()
+app.router.routes.extend(auth_routes() + mcp_routes)

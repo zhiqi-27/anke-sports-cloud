@@ -37,4 +37,7 @@ def update_schedules(timer: func.TimerRequest):
 
 @app.timer_trigger(schedule="0 */5 * * * *", arg_name="timer", use_monitor=True)
 def update_content(timer: func.TimerRequest):
+    from app.oauth import clean_expired_connections
+
     schedule_content()
+    clean_expired_connections()

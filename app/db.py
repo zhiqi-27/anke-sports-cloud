@@ -1,9 +1,20 @@
 from datetime import datetime, timezone
 from pathlib import Path
 import ssl
+import time
 from uuid import uuid4
 
-from sqlalchemy import JSON, Boolean, Integer, String, Text, UniqueConstraint, create_engine, event
+from sqlalchemy import (
+    JSON,
+    BigInteger,
+    Boolean,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    create_engine,
+    event,
+)
 from sqlalchemy.dialects.mysql import LONGTEXT
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
 
@@ -69,6 +80,16 @@ class Session(Base):
     token_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
     user_id: Mapped[str] = mapped_column(String(128), index=True)
     expires_at: Mapped[str] = mapped_column(String(40))
+
+
+class CommandReceipt(Base):
+    __tablename__ = "command_receipts"
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    owner_id: Mapped[str] = mapped_column(String(128), index=True)
+    operation: Mapped[str] = mapped_column(String(80))
+    payload_hash: Mapped[str] = mapped_column(String(64))
+    result: Mapped[dict] = mapped_column(JSON)
+    expires_at: Mapped[int] = mapped_column(BigInteger, index=True)
 
 
 class Feed(Base):
@@ -172,6 +193,50 @@ class NotificationReceipt(Base):
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     channel_id: Mapped[str] = mapped_column(String(80), index=True)
     received_at: Mapped[str] = mapped_column(String(40), default=now)
+
+
+class OAuthClient(Base):
+    __tablename__ = "oauth_clients"
+    id: Mapped[str] = mapped_column(String(200), primary_key=True)
+    name: Mapped[str] = mapped_column(String(100))
+    metadata_ciphertext: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[int] = mapped_column(BigInteger, default=lambda: int(time.time()))
+
+
+class OAuthRequest(Base):
+    __tablename__ = "oauth_requests"
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    client_id: Mapped[str] = mapped_column(String(200), index=True)
+    owner_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    params: Mapped[dict] = mapped_column(JSON)
+    expires_at: Mapped[int] = mapped_column(BigInteger)
+    approved: Mapped[bool] = mapped_column(Boolean, default=False)
+    consumed: Mapped[bool] = mapped_column(Boolean, default=False)
+    code_hash: Mapped[str | None] = mapped_column(String(64), unique=True, nullable=True)
+    code_expires_at: Mapped[int] = mapped_column(BigInteger, default=0)
+
+
+class OAuthGrant(Base):
+    __tablename__ = "oauth_grants"
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    owner_id: Mapped[str] = mapped_column(String(128), index=True)
+    client_id: Mapped[str] = mapped_column(String(200))
+    scopes: Mapped[list] = mapped_column(JSON)
+    resource: Mapped[str] = mapped_column(String(500))
+    issuer: Mapped[str] = mapped_column(String(500))
+    expires_at: Mapped[int] = mapped_column(BigInteger)
+    revoked: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[str] = mapped_column(String(40), default=now)
+
+
+class OAuthTokenRecord(Base):
+    __tablename__ = "oauth_tokens"
+    token_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    grant_id: Mapped[str] = mapped_column(String(64), index=True)
+    kind: Mapped[str] = mapped_column(String(16))
+    scopes: Mapped[list] = mapped_column(JSON)
+    expires_at: Mapped[int] = mapped_column(BigInteger)
+    used: Mapped[bool] = mapped_column(Boolean, default=False)
 
 
 class Job(Base):

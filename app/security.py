@@ -33,6 +33,30 @@ def local_allowed(request: Request) -> bool:
 def actor(request: Request, db, required=True) -> str | None:
     bearer = request.headers.get("Authorization", "")
     token = request.cookies.get("anke_sports_session", "")
+    if bearer.startswith("Bearer as_at_"):
+        from app.oauth import resource, verify_access
+
+        principal = verify_access(db, bearer[7:], resource("extension"))
+        if not principal:
+            problem("AUTH_REQUIRED", "连接已失效，请重新授权", 401)
+        path = request.url.path
+        if request.method in {"GET", "HEAD"} and re.fullmatch(
+            r"/api/v1/(sources|events(/[^/]+)?|me/(calendar|config/export|reviews|creators/[^/]+/impact))",
+            path,
+        ):
+            needed = "calendar:read"
+        elif request.method in {"POST", "PUT", "PATCH", "DELETE"} and re.fullmatch(
+            r"/api/v1/(events/[^/]+/(links|selection)|me/(follows|preferences|links/[^/]+/(block|pin)|creators(/[^/]+(/refresh)?)?|reviews/[^/]+|config/import))",
+            path,
+        ):
+            needed = "calendar:write"
+        elif request.method == "GET" and path in {"/api/v1/me/feed/address", "/api/v1/me/feed/preview"}:
+            needed = "feed:read"
+        else:
+            problem("INSUFFICIENT_SCOPE", "此连接不允许执行此操作", 403)
+        if needed not in principal.scopes:
+            problem("INSUFFICIENT_SCOPE", "此连接未获得所需权限", 403)
+        return principal.subject
     if bearer.startswith("Bearer "):
         import firebase_admin
         from firebase_admin import auth
@@ -147,6 +171,27 @@ def check_origin(request: Request):
         if settings().env == "local"
         else {settings().web_url}
     )
+    if (
+        origin
+        and origin.startswith("chrome-extension://")
+        and request.headers.get("Authorization", "").startswith("Bearer as_at_")
+    ):
+        from app.db import OAuthClient, SessionLocal
+        from app.oauth import resource, verify_access
+
+        with SessionLocal() as db:
+            principal = verify_access(db, request.headers["Authorization"][7:], resource("extension"))
+            client = db.get(OAuthClient, principal.client_id) if principal else None
+            if client:
+                import json
+
+                metadata = json.loads(settings().cipher().decrypt(client.metadata_ciphertext.encode()))
+                extension_id = origin.removeprefix("chrome-extension://")
+                if re.fullmatch(r"[a-p]{32}", extension_id) and any(
+                    urlsplit(uri).hostname == extension_id + ".chromiumapp.org"
+                    for uri in metadata.get("redirect_uris", [])
+                ):
+                    return
     if origin and origin not in allowed:
         problem("ORIGIN_REJECTED", "请求来源不受支持", 403)
     if request.cookies.get("anke_sports_session") and not origin:
