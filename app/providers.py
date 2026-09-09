@@ -238,11 +238,14 @@ def sync_provider(db, provider):
 def youtube_request(endpoint, params):
     key = os.getenv("YOUTUBE_API_KEY")
     if not key:
-        problem("YOUTUBE_KEY_REQUIRED", "创作者自动更新需要服务端配置 YouTube API Key", 503)
-    with httpx.Client(timeout=20) as client:
-        return get_json(
-            client, "https://www.googleapis.com/youtube/v3/" + endpoint, params={**params, "key": key}
-        )
+        problem("YOUTUBE_KEY_REQUIRED", "YouTube 频道服务尚未配置，暂时无法读取创作者", 503)
+    try:
+        with httpx.Client(timeout=20, follow_redirects=False) as client:
+            return get_json(
+                client, "https://www.googleapis.com/youtube/v3/" + endpoint, params={**params, "key": key}
+            )
+    except (httpx.HTTPError, ValueError):
+        problem("YOUTUBE_API_UNAVAILABLE", "YouTube 暂时无法读取，请检查服务配置或稍后重试", 503)
 
 
 def resolve_creator(value):

@@ -176,6 +176,59 @@ class EventList(BaseModel):
 class CreatorView(CreatorFollow):
     name: str
     last_error: str
+    sync_status: str
+    last_synced_at: str | None
+    websub_status: str
+
+
+class ResolveCreator(StrictModel):
+    url: str = Field(min_length=3, max_length=2000)
+
+
+class CreatorIdentity(BaseModel):
+    channel_id: str
+    name: str
+    url: str
+
+
+class UpdateCreator(StrictModel):
+    expected_revision: int
+    scope_keys: list[str] = Field(max_length=500)
+    preview: bool
+    recap: bool
+    enabled: bool
+
+
+class CreatorRemovalImpact(BaseModel):
+    automatic_removed: int
+    manual_retained: int
+    revision: int
+
+
+class ReviewView(BaseModel):
+    id: str
+    video_id: str
+    title: str
+    url: str
+    creator: str
+    published_at: str
+    event_id: str
+    event_title: str
+    starts_at: str | None
+    kind: str
+    reason_codes: list[str]
+    rule_version: str
+    updated_at: str
+
+
+class ReviewList(BaseModel):
+    items: list[ReviewView]
+
+
+class ReviewDecision(StrictModel):
+    decision: Literal["confirm", "ignore"]
+    kind: Literal["preview", "recap"]
+    expected_updated_at: str
 
 
 class FeedView(BaseModel):

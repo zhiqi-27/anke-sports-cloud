@@ -138,6 +138,42 @@ class Video(Base):
     available: Mapped[bool] = mapped_column(Boolean, default=True)
 
 
+class ChannelSync(Base):
+    __tablename__ = "channel_sync"
+    channel_id: Mapped[str] = mapped_column(String(80), primary_key=True)
+    last_success: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    next_poll_at: Mapped[str] = mapped_column(String(40), default=now)
+    callback_id: Mapped[str] = mapped_column(String(64), unique=True, default=uid)
+    secret_ciphertext: Mapped[str] = mapped_column(Text, default="")
+    state: Mapped[str] = mapped_column(String(24), default="disabled")
+    pending_until: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    lease_expires_at: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    renew_at: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    last_notification_at: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    error: Mapped[str] = mapped_column(String(80), default="")
+
+
+class VideoMatch(Base):
+    __tablename__ = "video_matches"
+    __table_args__ = (UniqueConstraint("owner_id", "video_id", "event_id"),)
+    id: Mapped[str] = mapped_column(String(64), primary_key=True, default=uid)
+    owner_id: Mapped[str] = mapped_column(String(128), index=True)
+    video_id: Mapped[str] = mapped_column(String(40), index=True)
+    event_id: Mapped[str] = mapped_column(String(64), index=True)
+    kind: Mapped[str] = mapped_column(String(24))
+    decision: Mapped[str] = mapped_column(String(24))
+    reason_codes: Mapped[list] = mapped_column(JSON, default=list)
+    rule_version: Mapped[str] = mapped_column(String(40))
+    updated_at: Mapped[str] = mapped_column(String(40), default=now)
+
+
+class NotificationReceipt(Base):
+    __tablename__ = "notification_receipts"
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    channel_id: Mapped[str] = mapped_column(String(80), index=True)
+    received_at: Mapped[str] = mapped_column(String(40), default=now)
+
+
 class Job(Base):
     __tablename__ = "outbox"
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=uid)

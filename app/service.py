@@ -48,9 +48,14 @@ def save_config(db, user: User, config: dict, revision: int):
     enqueue(db, "projection", {"user_id": user.id})
     db.flush()
     db.refresh(user)
+    for creator in user.config.get("creators", []):
+        if creator["enabled"]:
+            enqueue(db, "youtube_rematch", {"user_id": user.id, "channel_id": creator["channel_id"]})
 
 
 def user_view(db, user: User) -> dict:
+    from app.content import creator_status
+
     feed = db.scalar(select(Feed).where(Feed.owner_id == user.id))
     pending = db.scalar(
         select(Job.id)
@@ -80,6 +85,7 @@ def user_view(db, user: User) -> dict:
         "creators": [
             {
                 **c,
+                **creator_status(db, c["channel_id"]),
                 "name": creators[c["channel_id"]].name if c["channel_id"] in creators else c["channel_id"],
                 "last_error": creators[c["channel_id"]].last_error if c["channel_id"] in creators else "",
             }
@@ -126,6 +132,20 @@ def attach_link(db, user: User, event: Event, url: str, title: str, kind: str):
         db.add(link)
     else:
         link.title, link.kind = title.strip() or link.title, kind
+    link.origin = "manual"
+    link.available = True
+    blocked = any(
+        o["event_key"] == event.source_key and o["url"] == canonical and o["state"] == "block"
+        for o in user.config["link_overrides"]
+    )
+    if not blocked:
+        overrides = [
+            o
+            for o in user.config["link_overrides"]
+            if (o["event_key"], o["url"]) != (event.source_key, canonical)
+        ]
+        overrides.append({"event_key": event.source_key, "url": canonical, "state": "pin"})
+        save_config(db, user, {**user.config, "link_overrides": overrides}, user.revision)
     enqueue(db, "projection", {"user_id": user.id})
     db.flush()
     return link

@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     local_preview: bool = False
     firebase_project_id: str = ""
     encryption_key: str = ""
+    youtube_websub_enabled: bool = False
 
     def cipher(self) -> Fernet:
         key = self.encryption_key

@@ -8,6 +8,7 @@ from sqlalchemy import select
 from app.db import Job, SessionLocal, now
 from app.main import app as fastapi_app
 from app.worker import run_one, schedule_providers
+from app.websub import schedule_content
 
 app = func.AsgiFunctionApp(app=fastapi_app, http_auth_level=func.AuthLevel.ANONYMOUS)
 
@@ -32,3 +33,8 @@ def process_job(message: func.QueueMessage):
 @app.timer_trigger(schedule="0 0 */6 * * *", arg_name="timer", use_monitor=True)
 def update_schedules(timer: func.TimerRequest):
     schedule_providers()
+
+
+@app.timer_trigger(schedule="0 */5 * * * *", arg_name="timer", use_monitor=True)
+def update_content(timer: func.TimerRequest):
+    schedule_content()

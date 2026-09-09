@@ -35,7 +35,7 @@ def chosen_links(db, event: Event, user: User | None) -> list[dict]:
         state = overrides.get(link.url)
         if state == "block":
             continue
-        if link.origin == "automatic":
+        if link.origin == "automatic" and state != "pin":
             creator = creators.get(link.channel_id)
             if not creator or not creator.get(link.kind, False):
                 continue

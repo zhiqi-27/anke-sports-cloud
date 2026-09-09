@@ -24,7 +24,7 @@ uv run python -m app.worker
 
 前端通过同源 `/api/` 代理连接。Web 默认 127.0.0.1:3000。私人订阅地址通过已登录页面复制，服务访问日志应始终关闭。其令牌仅授权读取已发布的个人 Feed，不是写入凭据。
 
-在设置页手动获取 F1；首次成功后，本地 worker 每 6 小时调度已启用的数据源。NBA、足球和 YouTube 的 key 只配置于服务端；不复制 FormaLM 凭据。当前 YouTube 只实现频道解析入口，自动发现、推送、匹配与审核尚未交付。
+在设置页手动获取 F1；首次成功后，本地 worker 每 6 小时调度已启用的数据源。NBA、足球和 YouTube 的 key 只配置于服务端；不复制 FormaLM 凭据。YouTube 频道确认、后台补查、匹配、人工确认与移除/固定已接入本地流程；真实 API、Hub 与 Azure 尚未联调。详见 [内容链路](docs/content-pipeline.md)。
 
 ## 检查与契约
 

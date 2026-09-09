@@ -1,0 +1,480 @@
+"""Shared channel discovery and per-user match/override ownership."""
+
+from datetime import datetime, timedelta, timezone
+
+from sqlalchemy import select
+
+from app.calendar import chosen_links, event_keys, included
+from app.db import (
+    ChannelSync,
+    Creator,
+    Event,
+    Feed,
+    Job,
+    Link,
+    Projection,
+    Source,
+    User,
+    Video,
+    VideoMatch,
+    now,
+)
+from app.matching import evaluate, parse_time
+from app.providers import youtube_request
+from app.schemas import CreatorFollow
+from app.security import digest, problem
+from app.service import enqueue, save_config
+
+
+def channel_users(db, channel_id, active_only=True):
+    for user in db.scalars(select(User).where(User.deleted.is_(False))):
+        config = next((c for c in user.config["creators"] if c["channel_id"] == channel_id), None)
+        if config and (not active_only or config["enabled"]):
+            yield user, config
+
+
+def enqueue_channel(db, channel_id, kind="youtube_poll"):
+    if not db.get(ChannelSync, channel_id):
+        db.add(ChannelSync(channel_id=channel_id))
+        db.flush()
+    pending = db.scalar(
+        select(Job.id)
+        .where(
+            Job.kind == kind,
+            Job.state.in_(["pending", "running"]),
+            Job.payload["channel_id"].as_string() == channel_id,
+        )
+        .limit(1)
+    )
+    if not pending:
+        enqueue(db, kind, {"channel_id": channel_id})
+
+
+def save_creator(db, user, details, scope_keys, preview, recap, enabled, revision, refresh_metadata=True):
+    if revision != user.revision:
+        problem("REVISION_CONFLICT", "配置已更新，请刷新后重试", 409)
+    for key in scope_keys:
+        if not db.get(Source, key):
+            problem("SOURCE_NOT_FOUND", "关联范围尚未接入")
+    creator = db.get(Creator, details["channel_id"])
+    if not creator:
+        creator = Creator(**details)
+        db.add(creator)
+    elif refresh_metadata:
+        creator.name, creator.uploads_id, creator.updated_at = details["name"], details["uploads_id"], now()
+    row = CreatorFollow(
+        channel_id=creator.channel_id, scope_keys=scope_keys, preview=preview, recap=recap, enabled=enabled
+    ).model_dump()
+    creators = [c for c in user.config["creators"] if c["channel_id"] != creator.channel_id] + [row]
+    save_config(db, user, {**user.config, "creators": creators}, revision)
+    if enabled:
+        enqueue_channel(db, creator.channel_id)
+    return creator
+
+
+def remove_creator(db, user, channel_id, revision):
+    save_config(
+        db,
+        user,
+        {**user.config, "creators": [c for c in user.config["creators"] if c["channel_id"] != channel_id]},
+        revision,
+    )
+    for match in db.scalars(
+        select(VideoMatch)
+        .join(Video, Video.id == VideoMatch.video_id)
+        .where(
+            VideoMatch.owner_id == user.id,
+            Video.channel_id == channel_id,
+            VideoMatch.decision == "needs_review",
+        )
+    ):
+        match.decision = "retired"
+
+
+def removal_impact(db, user, channel_id):
+    links = db.scalars(select(Link).where(Link.owner_id == user.id, Link.channel_id == channel_id)).all()
+    visible = {
+        link["id"]
+        for event_id in {link.event_id for link in links}
+        for link in chosen_links(db, db.get(Event, event_id), user)
+    }
+    links = [link for link in links if link.id in visible]
+    pins = {(o["event_key"], o["url"]) for o in user.config["link_overrides"] if o["state"] == "pin"}
+    events = {e.id: e.source_key for e in db.scalars(select(Event))}
+    removed = sum(
+        link.origin == "automatic" and (events.get(link.event_id), link.url) not in pins for link in links
+    )
+    return {"automatic_removed": removed, "manual_retained": len(links) - removed, "revision": user.revision}
+
+
+def match_video(db, video, only_user=None):
+    url = f"https://www.youtube.com/watch?v={video.id}"
+    creator = db.get(Creator, video.channel_id)
+    if not creator:
+        return
+    all_events = db.scalars(select(Event)).all()
+    for user, follow in channel_users(db, video.channel_id):
+        if only_user and user.id != only_user:
+            continue
+        feed = db.scalar(select(Feed).where(Feed.owner_id == user.id))
+        retained = (
+            set(
+                db.scalars(
+                    select(Projection.event_id).where(
+                        Projection.feed_id == feed.id, Projection.removed.is_(False)
+                    )
+                )
+            )
+            if feed
+            else set()
+        )
+        candidates = [
+            e
+            for e in all_events
+            if (included(e, user.config) or e.id in retained)
+            and (not follow["scope_keys"] or event_keys(e).intersection(follow["scope_keys"]))
+        ]
+        outputs = evaluate(video, candidates) if video.available else []
+        existing = {
+            m.event_id: m
+            for m in db.scalars(
+                select(VideoMatch).where(VideoMatch.owner_id == user.id, VideoMatch.video_id == video.id)
+            )
+        }
+        seen = set()
+        links = {
+            link.event_id: link
+            for link in db.scalars(select(Link).where(Link.owner_id == user.id, Link.url_hash == digest(url)))
+        }
+        overrides = {o["event_key"]: o["state"] for o in user.config["link_overrides"] if o["url"] == url}
+        event_by_id = {e.id: e for e in all_events}
+        for output in outputs:
+            eid = output["event_id"]
+            seen.add(eid)
+            state = overrides.get(event_by_id[eid].source_key)
+            match = existing.get(eid)
+            if match and match.decision in {"confirmed", "ignored"}:
+                continue
+            if not match:
+                match = VideoMatch(owner_id=user.id, video_id=video.id, **output)
+                db.add(match)
+            else:
+                for k, v in output.items():
+                    setattr(match, k, v)
+            if state == "block":
+                match.decision = "ignored"
+            if output["kind"] != "unknown" and not follow.get(output["kind"], False):
+                match.decision = "reject"
+            match.updated_at = now()
+            link = links.get(eid)
+            if match.decision == "automatic":
+                if not link:
+                    link = Link(
+                        owner_id=user.id,
+                        event_id=eid,
+                        url=url,
+                        url_hash=digest(url),
+                        title=video.title,
+                        kind=output["kind"],
+                        platform="YouTube",
+                        channel_id=video.channel_id,
+                        creator=creator.name,
+                        origin="automatic",
+                    )
+                    db.add(link)
+                elif link.origin == "automatic" and state != "pin":
+                    link.kind, link.available = output["kind"], True
+            elif link and link.origin == "automatic" and state != "pin":
+                link.available = False
+        for eid, match in existing.items():
+            if eid not in seen and match.decision not in {"confirmed", "ignored"}:
+                match.decision = "retired"
+                match.updated_at = now()
+                link = links.get(eid)
+                if (
+                    link
+                    and link.origin == "automatic"
+                    and overrides.get(event_by_id[eid].source_key) != "pin"
+                ):
+                    link.available = False
+        enqueue(db, "projection", {"user_id": user.id})
+
+
+def refresh_videos(db, channel_id, video_ids):
+    ids = list(dict.fromkeys(video_ids))
+    if not ids:
+        return
+    if len(ids) > 50:
+        raise ValueError("VIDEO_BATCH_TOO_LARGE")
+    payload = youtube_request("videos", {"id": ",".join(ids), "part": "snippet,status"})
+    rows = payload.get("items")
+    if not isinstance(rows, list):
+        raise ValueError("INVALID_VIDEO_RESPONSE")
+    found = {r["id"]: r for r in rows}
+    if set(found) - set(ids):
+        raise ValueError("UNEXPECTED_VIDEO_ID")
+    if any(r.get("snippet", {}).get("channelId") != channel_id for r in rows):
+        raise ValueError("CHANNEL_ID_MISMATCH")
+    for ident in ids:
+        raw = found.get(ident)
+        video = db.get(Video, ident)
+        if video and video.channel_id != channel_id:
+            raise ValueError("CHANNEL_ID_MISMATCH")
+        public = bool(raw and raw.get("status", {}).get("privacyStatus") == "public")
+        if not raw and not video:
+            continue
+        if not video:
+            snippet = raw["snippet"]
+            parse_time(snippet["publishedAt"])
+            video = Video(
+                id=ident,
+                channel_id=channel_id,
+                title=snippet["title"][:300],
+                description=snippet.get("description", "")[:10000],
+                published_at=snippet["publishedAt"],
+            )
+            db.add(video)
+        if public:
+            snippet = raw["snippet"]
+            parse_time(snippet["publishedAt"])
+            video.title, video.description, video.published_at = (
+                snippet["title"][:300],
+                snippet.get("description", "")[:10000],
+                snippet["publishedAt"],
+            )
+        else:
+            video.title, video.description = "视频不可用", ""
+        video.available, video.updated_at = public, now()
+        db.flush()
+        url = f"https://www.youtube.com/watch?v={ident}"
+        for link in db.scalars(select(Link).where(Link.url_hash == digest(url))):
+            if not public or link.origin != "automatic":
+                link.available = public
+            elif not link.available:
+                owner = db.get(User, link.owner_id)
+                event = db.get(Event, link.event_id)
+                if (
+                    owner
+                    and event
+                    and any(
+                        o["event_key"] == event.source_key and o["url"] == url and o["state"] == "pin"
+                        for o in owner.config.get("link_overrides", [])
+                    )
+                ):
+                    link.available = True
+            if link.origin in {"automatic", "confirmed"}:
+                link.title = video.title
+            enqueue(db, "projection", {"user_id": link.owner_id})
+        match_video(db, video)
+
+
+def poll_channel(db, payload):
+    channel_id = payload["channel_id"]
+    creator = db.get(Creator, channel_id)
+    if not creator or not list(channel_users(db, channel_id)):
+        return
+    sync = db.get(ChannelSync, channel_id)
+    if not sync:
+        sync = ChannelSync(channel_id=channel_id)
+        db.add(sync)
+        db.flush()
+    cutoff = payload.get("cutoff") or (datetime.now(timezone.utc) - timedelta(days=14)).isoformat()
+    args = {"playlistId": creator.uploads_id, "part": "contentDetails", "maxResults": 50}
+    if payload.get("cursor"):
+        args["pageToken"] = payload["cursor"]
+    raw = youtube_request("playlistItems", args)
+    if not isinstance(raw.get("items"), list):
+        raise ValueError("INVALID_UPLOADS_RESPONSE")
+    ids = []
+    reached_cutoff = False
+    for item in raw["items"]:
+        details = item["contentDetails"]
+        published = details.get("videoPublishedAt")
+        if published and parse_time(published) < parse_time(cutoff):
+            reached_cutoff = True
+            continue
+        ids.append(details["videoId"])
+    refresh_videos(db, channel_id, ids)
+    cursor = raw.get("nextPageToken")
+    seen = payload.get("seen", [])
+    if cursor and not reached_cutoff:
+        if cursor in seen or len(seen) >= 100:
+            raise ValueError("PAGINATION_LOOP")
+        enqueue(
+            db,
+            "youtube_poll",
+            {"channel_id": channel_id, "cursor": cursor, "cutoff": cutoff, "seen": [*seen, cursor]},
+        )
+    else:
+        sync.last_success, sync.error, sync.next_poll_at = (
+            now(),
+            "",
+            (datetime.now(timezone.utc) + timedelta(hours=6)).isoformat(),
+        )
+        creator.last_error = ""
+        # Refresh known retained videos: absence from uploads is never a deletion signal.
+        retained_ids = list(db.scalars(select(Video.id).where(Video.channel_id == channel_id)))
+        for offset in range(0, len(retained_ids), 50):
+            enqueue(
+                db,
+                "youtube_videos",
+                {"channel_id": channel_id, "video_ids": retained_ids[offset : offset + 50]},
+            )
+        enqueue(db, "youtube_channel_metadata", {"channel_id": channel_id})
+
+
+def refresh_channel_metadata(db, channel_id):
+    creator = db.get(Creator, channel_id)
+    if not creator:
+        return
+    items = youtube_request("channels", {"id": channel_id, "part": "snippet,contentDetails"})["items"]
+    if len(items) != 1 or items[0]["id"] != channel_id:
+        raise ValueError("CHANNEL_UNAVAILABLE")
+    creator.name = items[0]["snippet"]["title"][:160]
+    creator.updated_at = now()
+    creator.uploads_id = items[0]["contentDetails"]["relatedPlaylists"]["uploads"]
+    for link in db.scalars(select(Link).where(Link.channel_id == channel_id)):
+        link.creator = creator.name
+        enqueue(db, "projection", {"user_id": link.owner_id})
+
+
+def review_list(db, user):
+    rows = db.scalars(
+        select(VideoMatch)
+        .where(VideoMatch.owner_id == user.id, VideoMatch.decision == "needs_review")
+        .order_by(VideoMatch.updated_at.desc())
+        .limit(200)
+    ).all()
+    result = []
+    for row in rows:
+        video = db.get(Video, row.video_id)
+        event = db.get(Event, row.event_id)
+        if not video or not video.available or not event:
+            continue
+        creator = db.get(Creator, video.channel_id)
+        result.append(
+            {
+                "id": row.id,
+                "video_id": video.id,
+                "title": video.title,
+                "url": f"https://www.youtube.com/watch?v={video.id}",
+                "creator": creator.name if creator else video.channel_id,
+                "published_at": video.published_at,
+                "event_id": event.id,
+                "event_title": event.title,
+                "starts_at": event.starts_at,
+                "kind": row.kind,
+                "reason_codes": row.reason_codes,
+                "rule_version": row.rule_version,
+                "updated_at": row.updated_at,
+            }
+        )
+    return {"items": result}
+
+
+def decide_review(db, user, match_id, decision, kind, version):
+    row = db.get(VideoMatch, match_id)
+    if not row or row.owner_id != user.id:
+        problem("NOT_FOUND", "未找到待确认内容", 404)
+    if row.updated_at != version or row.decision != "needs_review":
+        problem("REVIEW_CHANGED", "内容已更新，请重新查看", 409)
+    video = db.get(Video, row.video_id)
+    event = db.get(Event, row.event_id)
+    if not video or not video.available:
+        problem("VIDEO_UNAVAILABLE", "视频已不可用", 409)
+    url = f"https://www.youtube.com/watch?v={video.id}"
+    overrides = [
+        o for o in user.config["link_overrides"] if (o["event_key"], o["url"]) != (event.source_key, url)
+    ]
+    overrides.append(
+        {"event_key": event.source_key, "url": url, "state": "pin" if decision == "confirm" else "block"}
+    )
+    save_config(db, user, {**user.config, "link_overrides": overrides}, user.revision)
+    row.decision = "confirmed" if decision == "confirm" else "ignored"
+    row.updated_at = now()
+    if decision == "confirm":
+        creator = db.get(Creator, video.channel_id)
+        link = db.scalar(
+            select(Link).where(
+                Link.owner_id == user.id, Link.event_id == event.id, Link.url_hash == digest(url)
+            )
+        )
+        if not link:
+            link = Link(
+                owner_id=user.id,
+                event_id=event.id,
+                url=url,
+                url_hash=digest(url),
+                title=video.title,
+                platform="YouTube",
+                kind=kind,
+            )
+            db.add(link)
+        link.origin, link.kind, link.available, link.channel_id, link.creator = (
+            "confirmed",
+            kind,
+            True,
+            video.channel_id,
+            creator.name,
+        )
+
+
+def pin_link(db, user, link_id):
+    link = db.get(Link, link_id)
+    if not link or link.owner_id not in {user.id, "public"}:
+        problem("NOT_FOUND", "未找到此链接", 404)
+    event = db.get(Event, link.event_id)
+    overrides = [
+        o for o in user.config["link_overrides"] if (o["event_key"], o["url"]) != (event.source_key, link.url)
+    ]
+    overrides.append({"event_key": event.source_key, "url": link.url, "state": "pin"})
+    save_config(db, user, {**user.config, "link_overrides": overrides}, user.revision)
+
+
+def creator_status(db, channel_id):
+    sync = db.get(ChannelSync, channel_id)
+    pending = db.scalar(
+        select(Job.id)
+        .where(
+            Job.kind.in_(["youtube_poll", "youtube_videos"]),
+            Job.state.in_(["pending", "running"]),
+            Job.payload["channel_id"].as_string() == channel_id,
+        )
+        .limit(1)
+    )
+    return {
+        "sync_status": "syncing"
+        if pending
+        else "error"
+        if sync and sync.error
+        else "current"
+        if sync and sync.last_success
+        else "pending",
+        "last_synced_at": sync.last_success if sync else None,
+        "websub_status": sync.state if sync else "disabled",
+    }
+
+
+def expire_metadata(db):
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=28)).isoformat()
+    for video in db.scalars(select(Video).where(Video.updated_at < cutoff, Video.available.is_(True))):
+        video.title, video.description, video.available = "元数据已过期", "", False
+        url = f"https://www.youtube.com/watch?v={video.id}"
+        for link in db.scalars(select(Link).where(Link.url_hash == digest(url))):
+            link.available = False
+            if link.origin in {"automatic", "confirmed"}:
+                link.title = "元数据已过期"
+            enqueue(db, "projection", {"user_id": link.owner_id})
+        for match in db.scalars(
+            select(VideoMatch).where(
+                VideoMatch.video_id == video.id, VideoMatch.decision.in_(["automatic", "needs_review"])
+            )
+        ):
+            match.decision = "retired"
+    for creator in db.scalars(
+        select(Creator).where(Creator.updated_at < cutoff, Creator.name != Creator.channel_id)
+    ):
+        creator.name = creator.channel_id
+        for link in db.scalars(select(Link).where(Link.channel_id == creator.channel_id)):
+            link.creator = "YouTube"
+            enqueue(db, "projection", {"user_id": link.owner_id})

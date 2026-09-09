@@ -20,6 +20,7 @@ from app.db import (
     Link,
     Projection,
     ProviderState,
+    VideoMatch,
     Session,
     Source,
     User,
@@ -38,12 +39,17 @@ from app.schemas import (
     AddCreator,
     AddLink,
     Config,
-    CreatorFollow,
     FeedAction,
     ImportInput,
     OverrideInput,
     SaveFollows,
     SavePreferences,
+    ResolveCreator,
+    CreatorIdentity,
+    UpdateCreator,
+    CreatorRemovalImpact,
+    ReviewList,
+    ReviewDecision,
 )
 from app.security import actor, check_origin, digest, local_allowed, local_session, problem
 from app.seed import seed_demo
@@ -312,35 +318,135 @@ def block(link_id: str, user=Depends(me), db=Depends(get_db)):
     return {"blocked": True}
 
 
+@app.post("/api/v1/me/creators/resolve", response_model=CreatorIdentity)
+def creator_resolve(data: ResolveCreator, user=Depends(me)):
+    details = resolve_creator(data.url.strip())
+    return {
+        "channel_id": details["channel_id"],
+        "name": details["name"],
+        "url": "https://www.youtube.com/channel/" + details["channel_id"],
+    }
+
+
 @app.post("/api/v1/me/creators", response_model=CalendarUserView)
 def creator_add(data: AddCreator, user=Depends(me), db=Depends(get_db)):
+    from app.content import save_creator
+
     details = resolve_creator(data.url.strip())
-    if not db.get(Creator, details["channel_id"]):
-        db.add(Creator(**details))
-    creators = [x for x in user.config["creators"] if x["channel_id"] != details["channel_id"]]
-    creators.append(
-        CreatorFollow(
-            channel_id=details["channel_id"],
-            scope_keys=data.scope_keys,
-            preview=data.preview,
-            recap=data.recap,
-        ).model_dump()
-    )
-    save_config(db, user, {**user.config, "creators": creators}, data.expected_revision)
+    save_creator(db, user, details, data.scope_keys, data.preview, data.recap, True, data.expected_revision)
     db.commit()
     return user_view(db, user)
+
+
+def followed_creator(db, user, channel_id):
+    creator = db.get(Creator, channel_id)
+    if not creator or not any(c["channel_id"] == channel_id for c in user.config["creators"]):
+        problem("NOT_FOUND", "未关注此创作者", 404)
+    return creator
+
+
+@app.patch("/api/v1/me/creators/{channel_id}", response_model=CalendarUserView)
+def creator_update(channel_id: str, data: UpdateCreator, user=Depends(me), db=Depends(get_db)):
+    from app.content import save_creator
+
+    creator = followed_creator(db, user, channel_id)
+    details = {"channel_id": creator.channel_id, "name": creator.name, "uploads_id": creator.uploads_id}
+    save_creator(
+        db,
+        user,
+        details,
+        data.scope_keys,
+        data.preview,
+        data.recap,
+        data.enabled,
+        data.expected_revision,
+        refresh_metadata=False,
+    )
+    db.commit()
+    return user_view(db, user)
+
+
+@app.get("/api/v1/me/creators/{channel_id}/impact", response_model=CreatorRemovalImpact)
+def creator_impact(channel_id: str, user=Depends(me), db=Depends(get_db)):
+    from app.content import removal_impact
+
+    followed_creator(db, user, channel_id)
+    return removal_impact(db, user, channel_id)
 
 
 @app.delete("/api/v1/me/creators/{channel_id}", response_model=CalendarUserView)
-def creator_delete(channel_id: str, expected_revision: int, user=Depends(me), db=Depends(get_db)):
-    save_config(
-        db,
-        user,
-        {**user.config, "creators": [x for x in user.config["creators"] if x["channel_id"] != channel_id]},
-        expected_revision,
-    )
+def creator_delete(
+    channel_id: str, expected_revision: int, confirmed: bool = False, user=Depends(me), db=Depends(get_db)
+):
+    from app.content import remove_creator
+
+    followed_creator(db, user, channel_id)
+    if not confirmed:
+        problem("CONFIRM_REQUIRED", "请查看删除影响并确认")
+    remove_creator(db, user, channel_id, expected_revision)
     db.commit()
     return user_view(db, user)
+
+
+@app.post("/api/v1/me/creators/{channel_id}/refresh")
+def creator_refresh(channel_id: str, user=Depends(me), db=Depends(get_db)):
+    from app.content import enqueue_channel
+
+    followed_creator(db, user, channel_id)
+    follow = next(c for c in user.config["creators"] if c["channel_id"] == channel_id)
+    if not follow["enabled"]:
+        problem("CREATOR_PAUSED", "请先恢复此创作者的更新", 409)
+    enqueue_channel(db, channel_id)
+    db.commit()
+    return {"queued": True}
+
+
+@app.get("/api/v1/me/reviews", response_model=ReviewList)
+def reviews(user=Depends(me), db=Depends(get_db)):
+    from app.content import review_list
+
+    return review_list(db, user)
+
+
+@app.post("/api/v1/me/reviews/{match_id}")
+def review_decide(match_id: str, data: ReviewDecision, user=Depends(me), db=Depends(get_db)):
+    from app.content import decide_review
+
+    decide_review(db, user, match_id, data.decision, data.kind, data.expected_updated_at)
+    db.commit()
+    return {"saved": True}
+
+
+@app.post("/api/v1/me/links/{link_id}/pin")
+def link_pin(link_id: str, user=Depends(me), db=Depends(get_db)):
+    from app.content import pin_link
+
+    pin_link(db, user, link_id)
+    db.commit()
+    return {"pinned": True}
+
+
+@app.get("/webhooks/youtube/{callback_id}", include_in_schema=False)
+def youtube_verify(callback_id: str, request: Request, db=Depends(get_db)):
+    from app.websub import verify_subscription
+
+    challenge = verify_subscription(db, callback_id, request.query_params)
+    db.commit()
+    return Response(challenge, media_type="text/plain", headers={"Cache-Control": "no-store"})
+
+
+@app.post("/webhooks/youtube/{callback_id}", include_in_schema=False)
+async def youtube_notification(callback_id: str, request: Request, db=Depends(get_db)):
+    from app.websub import notification
+
+    body = bytearray()
+    async for part in request.stream():
+        if len(body) + len(part) > 65536:
+            return Response(status_code=413)
+        body.extend(part)
+    notification(db, callback_id, bytes(body), request.headers.get("x-hub-signature"))
+    db.commit()
+    return Response(status_code=204)
 
 
 @app.get("/api/v1/me/config/export", response_model=Config)
@@ -461,6 +567,7 @@ def delete_account(data: FeedAction, user=Depends(me), db=Depends(get_db)):
     feed = db.scalar(select(Feed).where(Feed.owner_id == user.id))
     db.execute(delete(Projection).where(Projection.feed_id == feed.id))
     db.execute(delete(Link).where(Link.owner_id == user.id))
+    db.execute(delete(VideoMatch).where(VideoMatch.owner_id == user.id))
     db.execute(delete(Session).where(Session.user_id == user.id))
     db.execute(delete(Job).where(Job.payload["user_id"].as_string() == user.id))
     feed.revoked, feed.body, feed.token_ciphertext = True, "", ""

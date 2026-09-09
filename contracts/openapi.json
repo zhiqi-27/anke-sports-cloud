@@ -469,6 +469,44 @@
         }
       }
     },
+    "/api/v1/me/creators/resolve": {
+      "post": {
+        "summary": "Creator Resolve",
+        "operationId": "creator_resolve_api_v1_me_creators_resolve_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolveCreator"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatorIdentity"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/me/creators": {
       "post": {
         "summary": "Creator Add",
@@ -508,6 +546,53 @@
       }
     },
     "/api/v1/me/creators/{channel_id}": {
+      "patch": {
+        "summary": "Creator Update",
+        "operationId": "creator_update_api_v1_me_creators__channel_id__patch",
+        "parameters": [
+          {
+            "name": "channel_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Channel Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCreator"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarUserView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
       "delete": {
         "summary": "Creator Delete",
         "operationId": "creator_delete_api_v1_me_creators__channel_id__delete",
@@ -529,6 +614,16 @@
               "type": "integer",
               "title": "Expected Revision"
             }
+          },
+          {
+            "name": "confirmed",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Confirmed"
+            }
           }
         ],
         "responses": {
@@ -539,6 +634,184 @@
                 "schema": {
                   "$ref": "#/components/schemas/CalendarUserView"
                 }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/creators/{channel_id}/impact": {
+      "get": {
+        "summary": "Creator Impact",
+        "operationId": "creator_impact_api_v1_me_creators__channel_id__impact_get",
+        "parameters": [
+          {
+            "name": "channel_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Channel Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatorRemovalImpact"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/creators/{channel_id}/refresh": {
+      "post": {
+        "summary": "Creator Refresh",
+        "operationId": "creator_refresh_api_v1_me_creators__channel_id__refresh_post",
+        "parameters": [
+          {
+            "name": "channel_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Channel Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/reviews": {
+      "get": {
+        "summary": "Reviews",
+        "operationId": "reviews_api_v1_me_reviews_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewList"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/reviews/{match_id}": {
+      "post": {
+        "summary": "Review Decide",
+        "operationId": "review_decide_api_v1_me_reviews__match_id__post",
+        "parameters": [
+          {
+            "name": "match_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Match Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewDecision"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/links/{link_id}/pin": {
+      "post": {
+        "summary": "Link Pin",
+        "operationId": "link_pin_api_v1_me_links__link_id__pin_post",
+        "parameters": [
+          {
+            "name": "link_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Link Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
               }
             }
           },
@@ -1111,6 +1384,52 @@
         ],
         "title": "CreatorFollow"
       },
+      "CreatorIdentity": {
+        "properties": {
+          "channel_id": {
+            "type": "string",
+            "title": "Channel Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "channel_id",
+          "name",
+          "url"
+        ],
+        "title": "CreatorIdentity"
+      },
+      "CreatorRemovalImpact": {
+        "properties": {
+          "automatic_removed": {
+            "type": "integer",
+            "title": "Automatic Removed"
+          },
+          "manual_retained": {
+            "type": "integer",
+            "title": "Manual Retained"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          }
+        },
+        "type": "object",
+        "required": [
+          "automatic_removed",
+          "manual_retained",
+          "revision"
+        ],
+        "title": "CreatorRemovalImpact"
+      },
       "CreatorView": {
         "properties": {
           "channel_id": {
@@ -1149,6 +1468,25 @@
           "last_error": {
             "type": "string",
             "title": "Last Error"
+          },
+          "sync_status": {
+            "type": "string",
+            "title": "Sync Status"
+          },
+          "last_synced_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Synced At"
+          },
+          "websub_status": {
+            "type": "string",
+            "title": "Websub Status"
           }
         },
         "additionalProperties": false,
@@ -1160,7 +1498,10 @@
           "recap",
           "enabled",
           "name",
-          "last_error"
+          "last_error",
+          "sync_status",
+          "last_synced_at",
+          "websub_status"
         ],
         "title": "CreatorView"
       },
@@ -1815,6 +2156,153 @@
         ],
         "title": "ProviderView"
       },
+      "ResolveCreator": {
+        "properties": {
+          "url": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 3,
+            "title": "Url"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "title": "ResolveCreator"
+      },
+      "ReviewDecision": {
+        "properties": {
+          "decision": {
+            "type": "string",
+            "enum": [
+              "confirm",
+              "ignore"
+            ],
+            "title": "Decision"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "preview",
+              "recap"
+            ],
+            "title": "Kind"
+          },
+          "expected_updated_at": {
+            "type": "string",
+            "title": "Expected Updated At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "decision",
+          "kind",
+          "expected_updated_at"
+        ],
+        "title": "ReviewDecision"
+      },
+      "ReviewList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewView"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "ReviewList"
+      },
+      "ReviewView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "video_id": {
+            "type": "string",
+            "title": "Video Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url"
+          },
+          "creator": {
+            "type": "string",
+            "title": "Creator"
+          },
+          "published_at": {
+            "type": "string",
+            "title": "Published At"
+          },
+          "event_id": {
+            "type": "string",
+            "title": "Event Id"
+          },
+          "event_title": {
+            "type": "string",
+            "title": "Event Title"
+          },
+          "starts_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Starts At"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "reason_codes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Reason Codes"
+          },
+          "rule_version": {
+            "type": "string",
+            "title": "Rule Version"
+          },
+          "updated_at": {
+            "type": "string",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "video_id",
+          "title",
+          "url",
+          "creator",
+          "published_at",
+          "event_id",
+          "event_title",
+          "starts_at",
+          "kind",
+          "reason_codes",
+          "rule_version",
+          "updated_at"
+        ],
+        "title": "ReviewView"
+      },
       "SaveFollows": {
         "properties": {
           "expected_revision": {
@@ -1948,6 +2436,44 @@
           "demo"
         ],
         "title": "SourceView"
+      },
+      "UpdateCreator": {
+        "properties": {
+          "expected_revision": {
+            "type": "integer",
+            "title": "Expected Revision"
+          },
+          "scope_keys": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 500,
+            "title": "Scope Keys"
+          },
+          "preview": {
+            "type": "boolean",
+            "title": "Preview"
+          },
+          "recap": {
+            "type": "boolean",
+            "title": "Recap"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "expected_revision",
+          "scope_keys",
+          "preview",
+          "recap",
+          "enabled"
+        ],
+        "title": "UpdateCreator"
       },
       "ValidationError": {
         "properties": {

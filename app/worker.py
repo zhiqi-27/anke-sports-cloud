@@ -1,11 +1,13 @@
 import argparse
 import time
+import re
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import select, update
+from fastapi import HTTPException
 
 from app.calendar import rebuild_feed
-from app.db import Job, ProviderState, SessionLocal, User, now
+from app.db import ChannelSync, Creator, Job, ProviderState, SessionLocal, User, Video, now
 from app.providers import sync_provider
 from app.service import enqueue
 
@@ -41,6 +43,23 @@ def run_one(job_id: str | None = None) -> bool:
                 sync_provider(db, payload["provider"])
                 for user in db.scalars(select(User).where(User.deleted.is_(False))):
                     enqueue(db, "projection", {"user_id": user.id})
+            elif kind.startswith("youtube_"):
+                from app.content import match_video, poll_channel, refresh_channel_metadata, refresh_videos
+                from app.websub import request_subscription
+
+                if kind == "youtube_poll":
+                    poll_channel(db, payload)
+                elif kind == "youtube_videos":
+                    refresh_videos(db, payload["channel_id"], payload["video_ids"])
+                elif kind == "youtube_channel_metadata":
+                    refresh_channel_metadata(db, payload["channel_id"])
+                elif kind == "youtube_rematch":
+                    for video in db.scalars(select(Video).where(Video.channel_id == payload["channel_id"])):
+                        match_video(db, video, only_user=payload["user_id"])
+                elif kind == "youtube_subscribe":
+                    request_subscription(payload["channel_id"])
+                else:
+                    raise ValueError("UNKNOWN_JOB")
             else:
                 raise ValueError("UNKNOWN_JOB")
             job = db.get(Job, ident)
@@ -49,7 +68,14 @@ def run_one(job_id: str | None = None) -> bool:
     except Exception as exc:
         with SessionLocal() as db:
             job = db.get(Job, ident)
-            job.error = str(exc) if isinstance(exc, ValueError) and str(exc).isupper() else type(exc).__name__
+            candidate = (
+                exc.detail.get("code", "")
+                if isinstance(exc, HTTPException) and isinstance(exc.detail, dict)
+                else str(exc)
+                if isinstance(exc, ValueError)
+                else ""
+            )
+            job.error = candidate if re.fullmatch(r"[A-Z][A-Z0-9_]{0,79}", candidate) else type(exc).__name__
             job.state = "failed" if job.attempts >= 5 or job.error.endswith("KEY_REQUIRED") else "pending"
             job.due_at = (
                 datetime.now(timezone.utc) + timedelta(seconds=min(600, 2**job.attempts * 10))
@@ -58,6 +84,14 @@ def run_one(job_id: str | None = None) -> bool:
                 state = db.get(ProviderState, payload["provider"])
                 if state:
                     state.error = job.error
+            if kind.startswith("youtube_") and payload.get("channel_id"):
+                sync = db.get(ChannelSync, payload["channel_id"])
+                creator = db.get(Creator, payload["channel_id"])
+                if sync:
+                    sync.error = job.error
+                    sync.next_poll_at = (datetime.now(timezone.utc) + timedelta(hours=6)).isoformat()
+                if creator:
+                    creator.last_error = job.error
             db.commit()
     return True
 
@@ -82,7 +116,13 @@ if __name__ == "__main__":
     parser.add_argument("--once", action="store_true")
     args = parser.parse_args()
     next_schedule = time.monotonic() + 6 * 3600
+    next_content = 0
     while True:
+        if time.monotonic() >= next_content:
+            from app.websub import schedule_content
+
+            schedule_content()
+            next_content = time.monotonic() + 60
         if time.monotonic() >= next_schedule:
             schedule_providers()
             next_schedule = time.monotonic() + 6 * 3600
