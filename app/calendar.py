@@ -1,9 +1,10 @@
 import json
+from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 from icalendar import Calendar, Event as IcsEvent
-from sqlalchemy import select, update
+from sqlalchemy import and_, or_, select, update
 
 from app.db import BroadcastRecord, Event, Feed, Link, Projection, User, now
 from app.schemas import Config
@@ -14,19 +15,60 @@ def event_keys(event: Event) -> set[str]:
     return {event.competition_id, event.source_key, *(x["id"] for x in event.participants)}
 
 
-def included(event: Event, config: dict) -> bool:
+def inclusion_filter(config: dict):
+    """Compile personal choices once for a candidate set, not once per event."""
     overrides = {x["event_key"]: x["state"] for x in config.get("event_overrides", [])}
-    if event.source_key in overrides:
-        return overrides[event.source_key] == "include"
-    return bool(event_keys(event) & {x["source_key"] for x in config.get("follows", [])})
+    follows = {x["source_key"] for x in config.get("follows", [])}
+
+    def accepts(event):
+        if event.source_key in overrides:
+            return overrides[event.source_key] == "include"
+        return bool(event_keys(event) & follows)
+
+    return accepts
 
 
-def chosen_links(db, event: Event, user: User | None) -> list[dict]:
+def included(event: Event, config: dict) -> bool:
+    return inclusion_filter(config)(event)
+
+
+def load_links(db, events, user):
+    """Request-local rows, owner-filtered before loading. Never cache across actors."""
+    by_event, broadcasts = defaultdict(list), {}
+    ids = [event.id for event in events]
+    owners = ["public"] + ([user.id] if user else [])
+    # Bound SQL parameters for large Feed publications as well as HTTP pages.
+    for offset in range(0, len(ids), 400):
+        rows = db.scalars(
+            select(Link).where(
+                Link.event_id.in_(ids[offset : offset + 400]),
+                Link.owner_id.in_(owners),
+                Link.available.is_(True),
+            )
+        ).all()
+        for row in rows:
+            by_event[row.event_id].append(row)
+        public = [row.id for row in rows if row.owner_id == "public"]
+        for start in range(0, len(public), 400):
+            broadcasts.update(
+                (row.link_id, row)
+                for row in db.scalars(
+                    select(BroadcastRecord).where(BroadcastRecord.link_id.in_(public[start : start + 400]))
+                )
+            )
+    return by_event, broadcasts
+
+
+def chosen_links(db, event: Event, user: User | None, *, rows=None, broadcasts=None) -> list[dict]:
     config = user.config if user else Config().model_dump()
     owners = ["public"] + ([user.id] if user else [])
-    links = db.scalars(
-        select(Link).where(Link.event_id == event.id, Link.owner_id.in_(owners), Link.available.is_(True))
-    ).all()
+    links = (
+        rows
+        if rows is not None
+        else db.scalars(
+            select(Link).where(Link.event_id == event.id, Link.owner_id.in_(owners), Link.available.is_(True))
+        ).all()
+    )
     overrides = {
         x["url"]: x["state"] for x in config.get("link_overrides", []) if x["event_key"] == event.source_key
     }
@@ -35,7 +77,7 @@ def chosen_links(db, event: Event, user: User | None) -> list[dict]:
     for link in links:
         broadcast = None
         if link.owner_id == "public":
-            record = db.get(BroadcastRecord, link.id)
+            record = broadcasts.get(link.id) if broadcasts is not None else db.get(BroadcastRecord, link.id)
             if not record or record.status != "published" or not record.published:
                 continue
             # Only the reviewed publication is authoritative, never an edited draft.
@@ -156,8 +198,8 @@ def describe(event: Event, links: list[dict], config: dict) -> str:
     return "\n".join(lines)
 
 
-def event_view(db, event: Event, user: User | None = None) -> dict:
-    links = chosen_links(db, event, user)
+def event_view(db, event: Event, user: User | None = None, *, link_rows=None, broadcasts=None) -> dict:
+    links = chosen_links(db, event, user, rows=link_rows, broadcasts=broadcasts)
     config = user.config if user else Config().model_dump()
     return {
         "id": event.id,
@@ -233,8 +275,8 @@ def serialize(projections: list[Projection], calendar_name="Anke Sports") -> byt
     return calendar.to_ical()
 
 
-def projection_data(db, event, user, config):
-    links = chosen_links(db, event, user)
+def projection_data(db, event, user, config, *, link_rows=None, broadcasts=None):
+    links = chosen_links(db, event, user, rows=link_rows, broadcasts=broadcasts)
     target = next(
         (
             x["url"]
@@ -284,13 +326,27 @@ def event_is_past(event, instant):
     )
 
 
+def feed_window(lower, upper):
+    """Preserve the published inclusive date window while excluding old seasons in SQL."""
+    end = (date.fromisoformat(upper) + timedelta(days=1)).isoformat()
+    return or_(
+        and_(Event.starts_at >= lower, Event.starts_at < end),
+        and_(
+            or_(Event.starts_at.is_(None), Event.starts_at == ""),
+            Event.local_date >= lower,
+            Event.local_date < end,
+        ),
+    )
+
+
 def select_feed_events(db, config, existing, instant=None):
     instant = instant or datetime.now(timezone.utc)
     lower = (instant - timedelta(days=90)).date().isoformat()
     upper = (instant + timedelta(days=180)).date().isoformat()
     overrides = {x["event_key"]: x["state"] for x in config.get("event_overrides", [])}
+    accepts = inclusion_filter(config)
     selected = []
-    for event in db.scalars(select(Event)):
+    for event in db.scalars(select(Event).where(feed_window(lower, upper))):
         date_key = (event.starts_at or event.local_date or "")[:10]
         prior = existing.get(event.id)
         retain_history = bool(
@@ -299,7 +355,7 @@ def select_feed_events(db, config, existing, instant=None):
             and event_is_past(event, instant)
             and overrides.get(event.source_key) != "exclude"
         )
-        if (included(event, config) or retain_history) and lower <= date_key <= upper:
+        if (accepts(event) or retain_history) and lower <= date_key <= upper:
             selected.append(event)
     return selected, lower, upper
 
@@ -317,10 +373,11 @@ def rebuild_feed(db, owner_id: str):
     config = user.config
     existing = {p.event_id: p for p in db.scalars(select(Projection).where(Projection.feed_id == feed.id))}
     events, lower, _ = select_feed_events(db, config, existing)
+    links, broadcasts = load_links(db, events, user)
     wanted = set()
     for event in events:
         wanted.add(event.id)
-        data = projection_data(db, event, user, config)
+        data = projection_data(db, event, user, config, link_rows=links[event.id], broadcasts=broadcasts)
         update_projection(db, feed, event, data, existing)
     publish_snapshot(db, feed, existing, wanted, lower)
 

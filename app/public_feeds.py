@@ -5,7 +5,14 @@ from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy import func, select, update
 
-from app.calendar import event_keys, projection_data, publish_snapshot, update_projection
+from app.calendar import (
+    event_keys,
+    feed_window,
+    load_links,
+    projection_data,
+    publish_snapshot,
+    update_projection,
+)
 from app.config import settings
 from app.db import Event, Job, Projection, PublicFeed, Source, get_db, now
 from app.feed_delivery import calendar_response
@@ -71,13 +78,17 @@ def rebuild_public_feed(db, ident):
     upper = (datetime.now(timezone.utc) + timedelta(days=180)).date().isoformat()
     config = Config().model_dump()
     wanted = set()
-    for event in db.scalars(select(Event).where(Event.demo.is_(source.demo))):
+    events = []
+    for event in db.scalars(select(Event).where(Event.demo.is_(source.demo), feed_window(lower, upper))):
         day = (event.starts_at or event.local_date or "")[:10]
         if source.id not in event_keys(event) or not lower <= day <= upper:
             continue
+        events.append(event)
+    links, broadcasts = load_links(db, events, None)
+    for event in events:
         wanted.add(event.id)
         # Never pass an actor: personal creator links, blocks, regions and pins stay private.
-        data = projection_data(db, event, None, config)
+        data = projection_data(db, event, None, config, link_rows=links[event.id], broadcasts=broadcasts)
         update_projection(db, feed, event, data, existing)
     name = f"{'[演示] ' if source.demo else ''}Anke Sports · {source.name}"
     publish_snapshot(db, feed, existing, wanted, lower, name)

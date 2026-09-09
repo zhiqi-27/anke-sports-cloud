@@ -1,0 +1,65 @@
+{
+  "recorded_at": "2026-09-09T18:54:18.255156+00:00",
+  "source_sha256": {
+    "app/actions.py": "a423de7dd36a59c43ae8a390e852c6d15523943ec9f6286840ee51cabf0789bc",
+    "app/calendar.py": "a1eec0ef35010bc75283506f916717b66238efef4ab848f147227c662c78b97c",
+    "app/public_feeds.py": "9a4674929f12fb65788c84fe8994ebec4b85d804353abe86e3b49ae97f95bdaf"
+  },
+  "environment": "local SQLite, real loopback HTTP; synthetic data only",
+  "active_events": 20000,
+  "historical_events": 20000,
+  "stored_accounts": 1000,
+  "distinct_creators": 200,
+  "private_links": 10000,
+  "published_feeds": 1,
+  "concurrency": 4,
+  "samples_per_case": 20,
+  "publication": {
+    "seconds": 0.2353,
+    "sql_statements": 9,
+    "events": 200,
+    "body_bytes": 100548
+  },
+  "cases": {
+    "anonymous": {
+      "p50_ms": 558.57,
+      "p95_ms": 672.92,
+      "max_ms": 673.35,
+      "sql_statements_total": 60,
+      "samples": 20
+    },
+    "personal": {
+      "p50_ms": 568.68,
+      "p95_ms": 619.37,
+      "max_ms": 661.69,
+      "sql_statements_total": 120,
+      "samples": 20
+    },
+    "followed": {
+      "p50_ms": 753.37,
+      "p95_ms": 817.99,
+      "max_ms": 852.26,
+      "sql_statements_total": 120,
+      "samples": 20
+    },
+    "feed_200": {
+      "p50_ms": 3.66,
+      "p95_ms": 4.82,
+      "max_ms": 4.89,
+      "sql_statements_total": 20,
+      "samples": 20
+    },
+    "feed_304": {
+      "p50_ms": 3.15,
+      "p95_ms": 3.9,
+      "max_ms": 3.97,
+      "sql_statements_total": 20,
+      "samples": 20
+    }
+  },
+  "limits": [
+    "Stored account counts do not mean 1000 concurrent users",
+    "One 200-event Feed was published, not all 1000 feeds",
+    "No notification-to-Feed, MySQL, Azure, device or upstream API test"
+  ]
+}

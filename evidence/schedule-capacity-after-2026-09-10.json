@@ -1,0 +1,59 @@
+{
+  "environment": "local SQLite, real loopback HTTP; synthetic data only",
+  "active_events": 20000,
+  "historical_events": 20000,
+  "stored_accounts": 1000,
+  "distinct_creators": 200,
+  "private_links": 10000,
+  "published_feeds": 1,
+  "concurrency": 4,
+  "samples_per_case": 20,
+  "publication": {
+    "seconds": 0.3921,
+    "sql_statements": 9,
+    "events": 200,
+    "body_bytes": 100548
+  },
+  "cases": {
+    "anonymous": {
+      "p50_ms": 1039.6,
+      "p95_ms": 1168.62,
+      "max_ms": 1171.53,
+      "sql_statements_total": 60,
+      "samples": 20
+    },
+    "personal": {
+      "p50_ms": 1024.22,
+      "p95_ms": 1071.7,
+      "max_ms": 1099.17,
+      "sql_statements_total": 120,
+      "samples": 20
+    },
+    "followed": {
+      "p50_ms": 933.3,
+      "p95_ms": 1040.45,
+      "max_ms": 1062.36,
+      "sql_statements_total": 120,
+      "samples": 20
+    },
+    "feed_200": {
+      "p50_ms": 3.8,
+      "p95_ms": 4.36,
+      "max_ms": 4.9,
+      "sql_statements_total": 20,
+      "samples": 20
+    },
+    "feed_304": {
+      "p50_ms": 2.94,
+      "p95_ms": 3.59,
+      "max_ms": 4.0,
+      "sql_statements_total": 20,
+      "samples": 20
+    }
+  },
+  "limits": [
+    "Stored account counts do not mean 1000 concurrent users",
+    "One 200-event Feed was published, not all 1000 feeds",
+    "No notification-to-Feed, MySQL, Azure, device or upstream API test"
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "users": {
+    "rows": 1,
+    "unchanged": true
+  },
+  "events": {
+    "rows": 163,
+    "unchanged": true
+  },
+  "feeds": {
+    "rows": 1,
+    "unchanged": true
+  },
+  "projections": {
+    "rows": 217,
+    "unchanged": true
+  },
+  "links": {
+    "rows": 0,
+    "unchanged": true
+  },
+  "broadcast_records": {
+    "rows": 0,
+    "unchanged": true
+  },
+  "creators": {
+    "rows": 0,
+    "unchanged": true
+  },
+  "http_schedule": {
+    "rows": 47,
+    "unchanged": true
+  },
+  "health": {
+    "status": "ok",
+    "product": "Anke Sports",
+    "environment": "local"
+  }
+}

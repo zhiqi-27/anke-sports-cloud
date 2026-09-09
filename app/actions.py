@@ -4,11 +4,11 @@ import base64
 import json
 import re
 import time
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 
-from sqlalchemy import select
+from sqlalchemy import and_, or_, select
 
-from app.calendar import event_view
+from app.calendar import event_view, inclusion_filter, load_links
 from app.config import settings
 from app.db import CommandReceipt, Event, Feed, Link, Source, User
 from app.schemas import Config
@@ -55,10 +55,39 @@ def get_schedule(db, from_, to, dataset="real", followed=False, q="", user=None,
         lower, upper = (datetime.fromisoformat(value.replace("Z", "+00:00")) for value in (from_, to))
         if not lower.tzinfo or not upper.tzinfo or not timedelta(0) < upper - lower <= timedelta(days=180):
             raise ValueError()
-    except ValueError:
+        lower_utc, upper_utc = lower.astimezone(timezone.utc), upper.astimezone(timezone.utc)
+    except (ValueError, OverflowError):
         problem("INVALID_RANGE", "请查询带时区、最长 180 天的有效时间范围")
+    # ISO offset strings are not ordered by absolute time. Use a conservative
+    # indexed date envelope, then compare actual instants below. UTC offsets
+    # are less than 24 hours; this includes both extreme offsets at the edges.
+    earliest = date.fromordinal(max(date.min.toordinal(), lower_utc.date().toordinal() - 1)).isoformat()
+    last_day = upper_utc.date().toordinal() + 2
+    latest = date.fromordinal(last_day).isoformat() if last_day <= date.max.toordinal() else None
+    columns = [Event.id, Event.starts_at, Event.local_date, Event.updated_at]
+    if followed:
+        columns += [Event.source_key, Event.competition_id, Event.participants]
+    if q:
+        columns.append(Event.title)
+    query = select(*columns).where(
+        Event.demo.is_(dataset == "demo"),
+        or_(
+            and_(Event.starts_at >= earliest, Event.starts_at < latest if latest else True),
+            and_(
+                or_(Event.starts_at.is_(None), Event.starts_at == ""),
+                Event.local_date >= lower.date().isoformat(),
+                Event.local_date < upper.date().isoformat(),
+            ),
+        ),
+    )
     result = []
-    for event in db.scalars(select(Event).where(Event.demo.is_(dataset == "demo"))):
+    accepts = inclusion_filter(user.config) if followed else None
+    needle = q.casefold()
+    for event in db.execute(query):
+        if accepts is not None and not accepts(event):
+            continue
+        if needle and needle not in event.title.casefold():
+            continue
         start = datetime.fromisoformat(event.starts_at.replace("Z", "+00:00")) if event.starts_at else None
         if start is not None and not lower <= start < upper:
             continue
@@ -67,12 +96,9 @@ def get_schedule(db, from_, to, dataset="real", followed=False, q="", user=None,
             or not lower.date().isoformat() <= event.local_date < upper.date().isoformat()
         ):
             continue
-        if q.casefold() not in event.title.casefold():
-            continue
-        view = event_view(db, event, user)
-        if not followed or view["included"]:
-            result.append(view)
-    result.sort(key=lambda x: (x["starts_at"] or x["local_date"], x["id"]))
+        order = start.astimezone(timezone.utc).isoformat() if start else event.local_date
+        result.append((order, event))
+    result.sort(key=lambda item: (item[0], item[1].id))
     binding = digest(
         json.dumps(
             [
@@ -83,7 +109,7 @@ def get_schedule(db, from_, to, dataset="real", followed=False, q="", user=None,
                 q,
                 user.id if user else None,
                 user.revision if user else None,
-                [(e["id"], e["updated_at"]) for e in result],
+                [(e.id, e.updated_at) for _, e in result],
             ]
         )
     )
@@ -103,8 +129,27 @@ def get_schedule(db, from_, to, dataset="real", followed=False, q="", user=None,
         if offset + limit < len(result)
         else None
     )
+    page = [event for _, event in result[offset : offset + limit]]
+    current = (
+        {
+            event.id: event
+            for event in db.scalars(
+                select(Event)
+                .where(Event.id.in_([event.id for event in page]))
+                .execution_options(populate_existing=True)
+            )
+        }
+        if page
+        else {}
+    )
+    if any(event.id not in current or current[event.id].updated_at != event.updated_at for event in page):
+        problem("CURSOR_EXPIRED", "赛程或查询已变化，请重新查询第一页", 409)
+    events = [current[event.id] for event in page]
+    links, broadcasts = load_links(db, events, user)
     return {
-        "items": result[offset : offset + limit],
+        "items": [
+            event_view(db, event, user, link_rows=links[event.id], broadcasts=broadcasts) for event in events
+        ],
         "next_cursor": next_cursor,
         "coverage": {
             "dataset": dataset,
