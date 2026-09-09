@@ -2,11 +2,61 @@ import os
 from datetime import datetime, timedelta, timezone
 
 import httpx
-from sqlalchemy import and_, case, func, select
+from sqlalchemy import and_, case, func, or_, select, update
+from sqlalchemy.exc import IntegrityError
 
-from app.db import Event, Job, ProviderState, Source, now
+from app.db import BroadcastRecord, Event, Job, Link, ProviderState, Source, now
 from app.config import settings
 from app.security import problem
+
+PROVIDER_REFRESH = timedelta(hours=6)
+
+
+def provider_due(instant):
+    cutoff = (datetime.fromisoformat(instant) - PROVIDER_REFRESH).isoformat()
+    return (
+        ProviderState.enabled.is_(True),
+        or_(ProviderState.last_success.is_(None), ProviderState.last_success <= cutoff),
+        or_(ProviderState.last_attempt_at.is_(None), ProviderState.last_attempt_at <= cutoff),
+        or_(ProviderState.next_attempt_at.is_(None), ProviderState.next_attempt_at <= instant),
+    )
+
+
+def enqueue_provider(db, provider, *, scheduled=False, instant=None):
+    from app.service import enqueue
+
+    instant = instant or now()
+    if not db.get(ProviderState, provider):
+        try:
+            with db.begin_nested():
+                db.add(ProviderState(id=provider))
+                db.flush()
+        except IntegrityError:
+            pass  # Another first-use request inserted the same provider.
+    # Lock before the decision; CURRENT reads also avoid a stale MySQL snapshot.
+    db.execute(update(ProviderState).where(ProviderState.id == provider).values(error=ProviderState.error))
+    row = db.scalar(
+        select(ProviderState)
+        .where(ProviderState.id == provider, *(provider_due(instant) if scheduled else ()))
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    if not row:
+        return False
+    pending = db.scalar(
+        select(Job.id)
+        .where(
+            Job.kind == "provider",
+            Job.state.in_(["pending", "running"]),
+            Job.payload["provider"].as_string() == provider,
+        )
+        .limit(1)
+        .with_for_update()
+    )
+    if pending:
+        return False
+    enqueue(db, "provider", {"provider": provider})
+    return True
 
 
 def get_json(client, path, **kwargs):
@@ -85,9 +135,21 @@ def upsert_event(db, key, **values):
         event = Event(source_key=key, **values)
         db.add(event)
     elif any(getattr(event, k) != v for k, v in values.items()):
+        rescheduled = "starts_at" in values and event.starts_at != values["starts_at"]
         for k, value in values.items():
             setattr(event, k, value)
         event.updated_at = now()
+        if rescheduled:
+            # An earlier start can enter the hourly inspection window immediately.
+            # Only scheduling changes here; existing review/network evidence stays intact.
+            db.execute(
+                update(BroadcastRecord)
+                .where(
+                    BroadcastRecord.status == "published",
+                    BroadcastRecord.link_id.in_(select(Link.id).where(Link.event_id == event.id)),
+                )
+                .values(next_check_at=now())
+            )
 
 
 def sync_provider(db, provider):

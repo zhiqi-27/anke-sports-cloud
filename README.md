@@ -26,7 +26,7 @@ ANKE_SPORTS_ENV=local ANKE_SPORTS_LOCAL_PREVIEW=true uv run python -m app.worker
 
 前端通过同源 `/api/` 代理连接。Web 默认 127.0.0.1:3000。私人订阅地址通过已登录页面复制，服务访问日志应始终关闭。其令牌仅授权读取已发布的个人 Feed，不是写入凭据。
 
-在设置页手动获取 F1；首次成功后，本地 worker 每 6 小时调度已启用的数据源。NBA、足球和 YouTube 的 key 只配置于服务端；不复制 FormaLM 凭据。YouTube 频道确认、后台补查、匹配、人工确认与移除/固定已接入本地流程；真实 API、Hub 与 Azure 尚未联调。详见 [内容链路](docs/content-pipeline.md)。
+在设置页手动获取 F1；首次成功后，本地 worker 按数据库中的时间每 6 小时更新已启用的数据源；启动即检查，重启不会重新等待六小时或提前抓取。NBA、足球和 YouTube 的 key 只配置于服务端；不复制 FormaLM 凭据。YouTube 频道确认、后台补查、匹配、人工确认与移除/固定已接入本地流程；真实 API、Hub 与 Azure 尚未联调。详见 [内容链路](docs/content-pipeline.md)。
 
 ## 检查与契约
 
@@ -62,3 +62,5 @@ MCP 已提供匿名与私人 Streamable HTTP、网页授权、短期令牌和撤
 个人关注支持 `POST /api/v1/me/follows/preview` 预览新增、移除、重叠与历史保留；Web确认后携带摘要和幂等键保存。计算规则、暂停状态与冲突处理见 [docs/follow-changes.md](docs/follow-changes.md)。
 
 赛程查询和Feed发布按日期缩小候选、批量读取可见链接。20,000场活动数据的本机HTTP查询、时区排序与账号隔离已验证；复现命令和完整容量限制见 [docs/schedule-queries.md](docs/schedule-queries.md)。
+
+定时截止、手动/自动去重、直播分批到期与巡检、迁移和复现命令见 [持续更新调度](docs/scheduling.md)。

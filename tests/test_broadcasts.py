@@ -221,6 +221,7 @@ def test_repeated_missing_or_unsafe_result_needs_review_and_expiry_is_published(
             **row.published,
             "valid_until": (datetime.now(timezone.utc) - timedelta(seconds=1)).isoformat(),
         }
+        row.expires_at = row.published["valid_until"]
         db.commit()
     broadcasts.schedule_broadcasts()
     drain()

@@ -31,3 +31,5 @@
 迁移 `7b26efb1d423` 只增加审核记录和审计两张表。SQLite upgrade/check/downgrade/upgrade 已验证，MySQL 仅检查离线 DDL。云端迁移仍需独立环境及备份恢复演练。本次本机备份为 `data/before-broadcast-20260910-002301.db`（0600）；恢复时先停止 API/worker，并确认保留备份后产生的数据，再恢复备份与对应代码版本。
 
 验收见 [2026-09-10 本地证据](../evidence/local-2026-09-10.md)。T19/T20 保持 in_progress，真实官方入口、网络探测、真机、Azure 与规模验证未完成。
+
+持续调度已改用持久时间判断及分批候选，手动/自动请求共用去重。最新迁移、行为和验收范围见 [持续更新调度](scheduling.md)。

@@ -51,3 +51,5 @@ uv run python -m experiments.worker_recovery --output evidence/worker-recovery-2
 正式恢复必须同时保证数据库备份与对应加密密钥可恢复，密钥独立保管，不进入 Git。停写后备份；在新目标还原并验证身份、Feed 凭据、最后有效投影、outbox 和重放审计，再考虑切换服务。切换前应评估备份之后的数据，不能直接覆盖仍有新写入的数据库。
 
 本机本次迁移为 `6e9edd6daa17`，备份 `data/before-recovery-20260910-005423.db`（0600）。既有 21 表原列/行一致，新增状态字段不反填未知的历史完成时间。MySQL 只检查了离线 DDL。证据见 [恢复验收](../evidence/recovery-2026-09-10.md)。T13/T33 保持 in_progress。
+
+持续调度已改用持久时间判断及分批候选，手动/自动请求共用去重。最新迁移、行为和验收范围见 [持续更新调度](scheduling.md)。

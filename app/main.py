@@ -517,7 +517,9 @@ def trigger_sync(provider: str, request: Request, user=Depends(me), db=Depends(g
         problem("NOT_FOUND", "未找到", 404)
     if provider not in {"balldontlie", "football-data", "jolpica"}:
         problem("UNKNOWN_PROVIDER", "未知数据源")
-    enqueue(db, "provider", {"provider": provider})
+    from app.providers import enqueue_provider
+
+    enqueue_provider(db, provider)
     db.commit()
     return {"queued": True}
 

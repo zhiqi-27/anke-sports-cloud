@@ -27,6 +27,58 @@ ACCESS_LABELS = {
     "pay_per_view": "单次付费",
 }
 
+BROADCAST_BATCH = 100
+
+
+def utc_time(value):
+    return datetime.fromisoformat(value).astimezone(timezone.utc)
+
+
+def lock_record(db, ident):
+    db.execute(
+        update(BroadcastRecord)
+        .where(BroadcastRecord.link_id == ident)
+        .values(revision=BroadcastRecord.revision)
+    )
+    return db.scalar(
+        select(BroadcastRecord)
+        .where(BroadcastRecord.link_id == ident)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+
+
+def enqueue_check(db, record):
+    """Caller holds the record lock; manual and automatic checks share this decision."""
+    url_hash = digest(record.published["url"])
+    pending = db.scalar(
+        select(Job.id)
+        .where(
+            Job.kind == "broadcast_check",
+            Job.state.in_(["pending", "running"]),
+            Job.payload["link_id"].as_string() == record.link_id,
+            Job.payload["url_hash"].as_string() == url_hash,
+        )
+        .limit(1)
+        .with_for_update()
+    )
+    if pending:
+        return False
+    enqueue(db, "broadcast_check", {"link_id": record.link_id, "url_hash": url_hash})
+    return True
+
+
+def inspection_deadline(db, record, instant, hours):
+    deadline = instant + timedelta(hours=hours)
+    starts_at = db.scalar(
+        select(Event.starts_at).where(Event.id == db.get(Link, record.link_id).event_id).with_for_update()
+    )
+    if starts_at:
+        start = utc_time(starts_at)
+        if start > instant:
+            deadline = min(deadline, max(start - timedelta(hours=24), instant + timedelta(hours=1)))
+    return deadline.isoformat()
+
 
 def normalized(data):
     value = BroadcastDraft.model_validate(data).model_dump()
@@ -152,8 +204,9 @@ def approve_record(db, actor_id, ident, data):
     record.published = {
         **value,
         "reviewed_at": instant.isoformat(),
-        "valid_until": data.valid_until.isoformat(),
+        "valid_until": data.valid_until.astimezone(timezone.utc).isoformat(),
     }
+    record.expires_at = record.published["valid_until"]
     record.published_revision = record.revision
     record.status = "published"
     if not previous or previous["url"] != value["url"] or previous["content_type"] != value["content_type"]:
@@ -201,7 +254,7 @@ def queue_check(db, actor_id, ident, expected):
     if record.status != "published" or not record.published:
         problem("PUBLICATION_REQUIRED", "请先发布待检查的链接")
     changed(db, record, expected)
-    enqueue(db, "broadcast_check", {"link_id": ident, "url_hash": digest(record.published["url"])})
+    enqueue_check(db, record)
     audit(db, record, actor_id, "check_requested", {})
     return record
 
@@ -211,7 +264,7 @@ def check_record(db, ident, url_hash):
     if record.status != "published" or not record.published or digest(record.published["url"]) != url_hash:
         return
     instant = datetime.now(timezone.utc)
-    if record.published["valid_until"] <= instant.isoformat():
+    if utc_time(record.published["valid_until"]) <= instant:
         suspend_record(db, "worker", ident, record.revision, "审核期限已到，请重新核对官方入口", "expired")
         return
     outcome = head_probe(record.published["url"])
@@ -219,9 +272,9 @@ def check_record(db, ident, url_hash):
     previous_outcome = record.network_status
     changed(db, record, record.revision)
     record.network_status, record.network_checked_at = outcome, instant.isoformat()
-    record.next_check_at = (
-        instant + timedelta(hours=1 if outcome in {"retry", "not_found"} else 6)
-    ).isoformat()
+    record.next_check_at = inspection_deadline(
+        db, record, instant, 1 if outcome in {"retry", "not_found"} else 6
+    )
     if outcome == "not_found":
         if not checked_before or instant - datetime.fromisoformat(checked_before) >= timedelta(minutes=5):
             record.missing_count += 1
@@ -245,11 +298,25 @@ def check_record(db, ident, url_hash):
 def schedule_broadcasts():
     from app.db import SessionLocal
 
+    instant = now()
+    counts = {"examined": 0, "normalized": 0, "expired": 0, "queued": 0}
+    # IDs only, in index order. Old rows have an empty expiry and are normalized
+    # in these same bounded transactions. Network checks remain independently optional.
     with SessionLocal() as db:
-        instant = now()
-        rows = db.scalars(select(BroadcastRecord).where(BroadcastRecord.status == "published"))
-        for record in rows:
-            if record.published["valid_until"] <= instant:
+        expiring = db.scalars(
+            select(BroadcastRecord.link_id)
+            .where(BroadcastRecord.status == "published", BroadcastRecord.expires_at <= instant)
+            .order_by(BroadcastRecord.expires_at, BroadcastRecord.link_id)
+            .limit(BROADCAST_BATCH)
+        ).all()
+    for ident in expiring:
+        with SessionLocal() as db:
+            record = lock_record(db, ident)
+            if not record or record.status != "published":
+                continue
+            counts["examined"] += 1
+            record.expires_at = utc_time(record.published["valid_until"]).isoformat()
+            if record.expires_at <= instant:
                 suspend_record(
                     db,
                     "worker",
@@ -258,39 +325,50 @@ def schedule_broadcasts():
                     "审核期限已到，请重新核对官方入口",
                     "expired",
                 )
+                counts["expired"] += 1
+            else:
+                counts["normalized"] += 1
+            db.commit()
+    if not settings().broadcast_checks_enabled:
+        return counts
+    with SessionLocal() as db:
+        pending = (
+            select(Job.id)
+            .where(
+                Job.kind == "broadcast_check",
+                Job.state.in_(["pending", "running"]),
+                Job.payload["link_id"].as_string() == BroadcastRecord.link_id,
+                Job.payload["url_hash"].as_string() == Link.url_hash,
+            )
+            .exists()
+        )
+        due = db.scalars(
+            select(BroadcastRecord.link_id)
+            .join(Link, Link.id == BroadcastRecord.link_id)
+            .where(
+                BroadcastRecord.status == "published",
+                BroadcastRecord.next_check_at <= instant,
+                ~pending,
+            )
+            .order_by(BroadcastRecord.next_check_at, BroadcastRecord.link_id)
+            .limit(BROADCAST_BATCH)
+        ).all()
+    for ident in due:
+        with SessionLocal() as db:
+            record = lock_record(db, ident)
+            if not record or record.status != "published" or record.next_check_at > instant:
                 continue
-            if not settings().broadcast_checks_enabled:
-                continue
-            event = db.get(Event, db.get(Link, record.link_id).event_id)
-            near = (
-                event.starts_at
-                and 0
-                < (datetime.fromisoformat(event.starts_at) - datetime.fromisoformat(instant)).total_seconds()
-                < 86400
-            )
-            due = record.next_check_at <= instant or (
-                near
-                and record.network_checked_at
-                and record.network_checked_at
-                <= (datetime.fromisoformat(instant) - timedelta(hours=1)).isoformat()
-            )
-            pending = db.scalar(
-                select(Job.id)
-                .where(
-                    Job.kind == "broadcast_check",
-                    Job.state.in_(["pending", "running"]),
-                    Job.payload["link_id"].as_string() == record.link_id,
+            counts["examined"] += 1
+            if utc_time(record.published["valid_until"]) <= utc_time(instant):
+                suspend_record(
+                    db, "worker", ident, record.revision, "审核期限已到，请重新核对官方入口", "expired"
                 )
-                .limit(1)
-            )
-            if due and not pending:
-                enqueue(
-                    db,
-                    "broadcast_check",
-                    {"link_id": record.link_id, "url_hash": digest(record.published["url"])},
-                )
-                record.next_check_at = (datetime.fromisoformat(instant) + timedelta(hours=1)).isoformat()
-        db.commit()
+                counts["expired"] += 1
+            elif enqueue_check(db, record):
+                record.next_check_at = (utc_time(instant) + timedelta(hours=1)).isoformat()
+                counts["queued"] += 1
+            db.commit()
+    return counts
 
 
 def record_view(db, record):

@@ -1,0 +1,102 @@
+{
+  "backup": "data/before-scheduler-20260910-032643.db",
+  "tables": {
+    "sources": {
+      "rows": 14,
+      "original_columns_unchanged": true
+    },
+    "events": {
+      "rows": 163,
+      "original_columns_unchanged": true
+    },
+    "users": {
+      "rows": 1,
+      "original_columns_unchanged": true
+    },
+    "sessions": {
+      "rows": 3,
+      "original_columns_unchanged": true
+    },
+    "feeds": {
+      "rows": 1,
+      "original_columns_unchanged": true
+    },
+    "projections": {
+      "rows": 217,
+      "original_columns_unchanged": true
+    },
+    "links": {
+      "rows": 0,
+      "original_columns_unchanged": true
+    },
+    "creators": {
+      "rows": 0,
+      "original_columns_unchanged": true
+    },
+    "videos": {
+      "rows": 0,
+      "original_columns_unchanged": true
+    },
+    "outbox": {
+      "rows": 18,
+      "original_columns_unchanged": true
+    },
+    "provider_states": {
+      "rows": 4,
+      "original_columns_unchanged": true
+    },
+    "channel_sync": {
+      "rows": 0,
+      "original_columns_unchanged": true
+    },
+    "notification_receipts": {
+      "rows": 0,
+      "original_columns_unchanged": true
+    },
+    "video_matches": {
+      "rows": 0,
+      "original_columns_unchanged": true
+    },
+    "command_receipts": {
+      "rows": 0,
+      "original_columns_unchanged": true
+    },
+    "oauth_clients": {
+      "rows": 2,
+      "original_columns_unchanged": true
+    },
+    "oauth_grants": {
+      "rows": 0,
+      "original_columns_unchanged": true
+    },
+    "oauth_requests": {
+      "rows": 0,
+      "original_columns_unchanged": true
+    },
+    "oauth_tokens": {
+      "rows": 0,
+      "original_columns_unchanged": true
+    },
+    "broadcast_audit": {
+      "rows": 0,
+      "original_columns_unchanged": true
+    },
+    "broadcast_records": {
+      "rows": 0,
+      "original_columns_unchanged": true
+    },
+    "job_replays": {
+      "rows": 0,
+      "original_columns_unchanged": true
+    },
+    "public_feeds": {
+      "rows": 14,
+      "original_columns_unchanged": true
+    },
+    "channel_work": {
+      "rows": 0,
+      "original_columns_unchanged": true
+    }
+  },
+  "migration": "c72b961e430a"
+}

@@ -1,0 +1,49 @@
+{
+  "recorded_at": "2026-09-09T19:24:10.983200+00:00",
+  "environment": "isolated local SQLite; synthetic data only",
+  "events": 20000,
+  "broadcast_records": 20000,
+  "active_sweep": {
+    "examined": 10,
+    "normalized": 0,
+    "expired": 3,
+    "queued": 7,
+    "milliseconds": 22.08,
+    "sql_statements": 76,
+    "distinct_records_hydrated": 10
+  },
+  "idle_sweeps": {
+    "samples": 20,
+    "p95_ms": 0.35,
+    "sql_statements_per_sweep": 2,
+    "records_hydrated": 0
+  },
+  "fresh_worker_processes": [
+    {
+      "exit": 0,
+      "synthetic_fetches": 1
+    },
+    {
+      "exit": 0,
+      "synthetic_fetches": 0
+    }
+  ],
+  "query_plans": {
+    "expires_at": [
+      "SEARCH broadcast_records USING COVERING INDEX ix_broadcast_expiry (status=? AND expires_at<?)"
+    ],
+    "next_check_at": [
+      "SEARCH broadcast_records USING COVERING INDEX ix_broadcast_due (status=? AND next_check_at<?)"
+    ]
+  },
+  "source_sha256": {
+    "app/broadcasts.py": "69acf3e1452b33a853327b81d1f952b802fee623d91296a17e34b2b62c908c71",
+    "app/worker.py": "3d8ae970a3d4836114d6041e83fcf2021a2d4bdfb86b784de081e3eae884550b",
+    "app/providers.py": "87160b64bd7f6c100bfa4a18e7abfcda24ed3e7641ab13bbb036a5cbd7c841fb",
+    "app/db.py": "9fd7c1c1a7cb2ab43fbda82a95c8f1ae17d33045adb02076065e4f9349388b10"
+  },
+  "limits": [
+    "No upstream or HEAD request; seven checks queued but not fetched",
+    "No MySQL, Azure timer/queue, device, large user fanout or full backlog latency evidence"
+  ]
+}

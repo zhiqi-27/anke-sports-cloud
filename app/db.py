@@ -153,6 +153,10 @@ class Link(Base):
 
 class BroadcastRecord(Base):
     __tablename__ = "broadcast_records"
+    __table_args__ = (
+        Index("ix_broadcast_expiry", "status", "expires_at", "link_id"),
+        Index("ix_broadcast_due", "status", "next_check_at", "link_id"),
+    )
     link_id: Mapped[str] = mapped_column(String(64), primary_key=True)
     revision: Mapped[int] = mapped_column(Integer, default=0)
     status: Mapped[str] = mapped_column(String(24), default="draft", index=True)
@@ -163,6 +167,8 @@ class BroadcastRecord(Base):
     network_status: Mapped[str] = mapped_column(String(40), default="not_checked")
     network_checked_at: Mapped[str | None] = mapped_column(String(40), nullable=True)
     next_check_at: Mapped[str] = mapped_column(String(40), default=now, index=True)
+    # Empty means an older publication still needs bounded UTC normalization.
+    expires_at: Mapped[str] = mapped_column(String(40), default="", server_default="")
     missing_count: Mapped[int] = mapped_column(Integer, default=0)
     updated_at: Mapped[str] = mapped_column(String(40), default=now)
 

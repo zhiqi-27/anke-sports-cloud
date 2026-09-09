@@ -42,7 +42,7 @@ def process_job(message: func.QueueMessage):
         raise RuntimeError("JOB_DISPATCH_FAILED_" + error_code(exc)) from None
 
 
-@app.timer_trigger(schedule="0 0 */6 * * *", arg_name="timer", use_monitor=True)
+@app.timer_trigger(schedule="0 * * * * *", arg_name="timer", use_monitor=True)
 def update_schedules(timer: func.TimerRequest):
     schedule_providers()
 
