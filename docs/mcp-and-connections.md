@@ -1,6 +1,6 @@
 # MCP 与应用连接
 
-当前为本地实现与验收，尚未通过真实 Firebase、Azure 或 Codex 客户端集成验收。Chrome 本地安装包已在客户端仓库生成，实际安装与授权仍待验收。
+当前为本地实现与验收。已用安装的 Codex CLI 0.153.4 完成真实 HTTP OAuth、工具发现和撤销后重新发现；Codex 实际工具调用、真实 Firebase 与 Azure 仍未验收。Chrome 本地安装包已在客户端仓库生成，实际安装与授权仍待验收。
 
 ## 使用入口
 
@@ -60,6 +60,49 @@ uv run python -m scripts.check_oauth_locally
 
 自动验收：`uv run pytest -q tests/test_oauth.py tests/test_mcp.py`。包含不同账号隔离、拒绝/过期/重放/撤销、API 与 MCP audience 隔离、跨传输同键重试、失败回滚、持久 block、导入预览和分页变化。
 
-云端仍需：独立 Firebase 实际登录、HTTPS 公网回调、Azure ASGI 启停与 MySQL 并发、限流/滥用测试、目标 MCP 客户端实际授权流程、Chrome 安装及 service worker 生命周期验证。当前注册数量和请求体上限不能代替生产限流。
+## 连接 Codex
+
+以下使用本机规范地址。长期使用时，在 Codex 设置的 MCP servers 中添加 Streamable HTTP 地址，或运行：
+
+```sh
+codex mcp add anke_sports --url http://localhost:8787/mcp
+codex mcp login anke_sports --scopes calendar:read
+```
+
+在浏览器确认 Anke Sports 账号、回调和读取权限。需要修改关注或链接时，重新授权并显式请求 `calendar:read,calendar:write`。只有确实需要读取私人订阅地址时才额外申请 `feed:read`；该地址不能放进公开记录。发现11个工具并不表示拥有全部权限，业务调用仍逐项检查 scope。Web 设置可以撤销连接；`codex mcp logout anke_sports` 清理客户端保存的凭据。
+
+Codex 的配置文件也可使用以下内容（选择用户配置或受信任项目的 `.codex/config.toml`；不要覆盖其他设置）：
+
+```toml
+[mcp_servers.anke_sports]
+url = "http://localhost:8787/mcp"
+```
+
+只读公开赛程可另设 `http://localhost:8787/mcp/public`，不需要登录。配置和 OAuth 支持依据：[OpenAI 官方 MCP 文档](https://learn.chatgpt.com/docs/extend/mcp?surface=cli)。本项目没有为当前用户自动写入长期 MCP 配置。
+
+### 临时检查，不改 Codex 配置文件
+
+先启动 Anke Sports API/Web。选择一个尚未配置过的独立名称，使用进程级覆盖发起登录：
+
+```sh
+codex -c 'mcp_servers.anke_sports_local_check.url="http://localhost:8787/mcp"' mcp login anke_sports_local_check --scopes calendar:read
+uv run python -m scripts.check_codex_discovery
+uv run python -m scripts.check_codex_discovery --name anke_sports_public_check --url http://localhost:8787/mcp/public
+```
+
+在 Web 设置中撤销刚才的 Codex 连接后，再检查并清理客户端凭据：
+
+```sh
+uv run python -m scripts.check_codex_discovery --expect unavailable
+codex -c 'mcp_servers.anke_sports_local_check.url="http://localhost:8787/mcp"' mcp logout anke_sports_local_check
+```
+
+脚本调用安装版本的 Codex App Server `config/read` 和 `mcpServerStatus/list`，只接受 loopback HTTP。它先读取有效配置，再通过本进程覆盖禁用其他已配置 MCP；不会创建任务、调用模型、执行业务工具、读取令牌或改配置文件。可用 `--codex` 指定可执行文件、`--output` 写入新的脱敏 JSON。CLI 登录会按 Codex 自身设置保存 OAuth 凭据，需按上述步骤清理。
+
+本机验证结果：私人11个工具、匿名3个；网页撤销后私人0个工具。撤销后 `authStatus` 仍可能是 `oAuth`，它表示客户端有已保存凭据，不能作为服务端仍接受授权的证据。退出登录后为 `notLoggedIn`。只有结合 Web 撤销、服务端健康和授权记录清理，才能把失败发现归因于本次撤销；单独的 `--expect unavailable` 也可能是网络或启动失败。
+
+本次 Chrome 回调最终页显示 `ERR_BLOCKED_BY_CLIENT`，未重试被拦截页面。Codex CLI 已明确报告登录成功，随后独立 Codex 进程发现11个工具；授权传输成功与浏览器完成页显示分别记录。详见 [Codex 实测证据](../evidence/codex-client-2026-09-10.md)。
+
+完整客户端验收仍需让目标客户端实际查询赛程、修改/重试关注、刷新令牌和观察连接过期。当前脚本不替代这些测试。云端还需独立 Firebase 实际登录、HTTPS 公网回调、Azure ASGI 启停与 MySQL 并发、限流/滥用、Chrome 安装及 service worker 生命周期验证。当前注册数量和请求体上限不能代替生产限流。
 
 依据：[MCP 官方 Python SDK](https://github.com/modelcontextprotocol/python-sdk)、[MCP 2026-07-28 授权规范](https://modelcontextprotocol.io/specification/2026-07-28/basic/authorization)、[OAuth 令牌撤销 RFC 7009](https://www.rfc-editor.org/rfc/rfc7009)。

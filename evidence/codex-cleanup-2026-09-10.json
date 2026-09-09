@@ -1,0 +1,14 @@
+{
+  "health": {
+    "status": "ok",
+    "product": "Anke Sports",
+    "environment": "local"
+  },
+  "grant_rows": 0,
+  "event_count": 163,
+  "user_count": 1,
+  "creators": 0,
+  "videos": 0,
+  "active_grants": 0,
+  "revoked_grants": 0
+}
