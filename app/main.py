@@ -1,6 +1,4 @@
 from contextlib import asynccontextmanager
-from datetime import datetime
-from email.utils import format_datetime, parsedate_to_datetime
 from uuid import uuid4
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request, Response
@@ -10,6 +8,8 @@ from fastapi.exceptions import RequestValidationError
 from sqlalchemy import delete, select
 
 from app import actions
+from app.feed_delivery import calendar_response
+from app.public_feeds import router as public_feed_router
 from app.broadcast_routes import router as broadcast_router
 from app.mcp_server import build_mcp
 from app.calendar import event_view
@@ -77,6 +77,7 @@ async def lifespan(app):
 
 app = FastAPI(title="Anke Sports API", version="0.1.0", lifespan=lifespan)
 app.include_router(broadcast_router)
+app.include_router(public_feed_router)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[settings().web_url],
@@ -499,30 +500,7 @@ def get_feed(token: str, request: Request, db=Depends(get_db)):
     feed = db.scalar(select(Feed).where(Feed.token_hash == digest(token), Feed.revoked.is_(False)))
     if not feed:
         problem("FEED_NOT_FOUND", "订阅地址不存在或已撤销", 404)
-    if not feed.body:
-        problem("FEED_BUILDING", "订阅源尚未发布，请稍后重试", 503)
-    etag = f'"{feed.etag}"'
-    changed = datetime.fromisoformat(feed.updated_at).replace(microsecond=0)
-    headers = {
-        "ETag": etag,
-        "Last-Modified": format_datetime(changed, usegmt=True),
-        "Cache-Control": "private, no-cache",
-        "X-Robots-Tag": "noindex, nofollow",
-    }
-    incoming = request.headers.get("if-none-match")
-    unmodified = incoming and any(x.strip().removeprefix("W/") in {etag, "*"} for x in incoming.split(","))
-    if not incoming and request.headers.get("if-modified-since"):
-        try:
-            unmodified = parsedate_to_datetime(request.headers["if-modified-since"]) >= changed
-        except (TypeError, ValueError):
-            pass
-    if unmodified:
-        return Response(status_code=304, headers=headers)
-    return Response(
-        "" if request.method == "HEAD" else feed.body,
-        media_type="text/calendar; charset=utf-8",
-        headers=headers,
-    )
+    return calendar_response(feed, request)
 
 
 @app.post("/api/v1/local/providers/{provider}/sync")

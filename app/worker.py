@@ -20,6 +20,10 @@ def execute_claim(db, claim):
             return
     if kind == "projection":
         rebuild_feed(db, payload["user_id"])
+    elif kind == "public_projection":
+        from app.public_feeds import rebuild_public_feed
+
+        rebuild_public_feed(db, payload["feed_id"])
     elif kind == "provider":
         sync_provider(db, payload["provider"])
         for user in db.scalars(select(User).where(User.deleted.is_(False))):
@@ -102,8 +106,15 @@ def run_maintenance():
     from app.oauth import clean_expired_connections
     from app.broadcasts import schedule_broadcasts
 
+    from app.public_feeds import schedule_public_feeds
+
     healthy = True
-    for operation in (schedule_content, clean_expired_connections, schedule_broadcasts):
+    for operation in (
+        schedule_content,
+        clean_expired_connections,
+        schedule_broadcasts,
+        schedule_public_feeds,
+    ):
         try:
             operation()
         except Exception as exc:

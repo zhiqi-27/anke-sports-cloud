@@ -107,6 +107,17 @@ class Feed(Base):
     updated_at: Mapped[str] = mapped_column(String(40), default=now)
 
 
+class PublicFeed(Base):
+    __tablename__ = "public_feeds"
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    source_id: Mapped[str] = mapped_column(String(160), unique=True)
+    revision: Mapped[int] = mapped_column(Integer, default=0)
+    body: Mapped[str] = mapped_column(Text().with_variant(LONGTEXT(), "mysql"), default="")
+    etag: Mapped[str] = mapped_column(String(64), default="")
+    updated_at: Mapped[str] = mapped_column(String(40), default=now)
+    scheduled_on: Mapped[str] = mapped_column(String(10), default="")
+
+
 class Projection(Base):
     __tablename__ = "projections"
     __table_args__ = (UniqueConstraint("feed_id", "event_id"),)

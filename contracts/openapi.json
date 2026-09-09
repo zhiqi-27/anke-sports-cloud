@@ -397,6 +397,47 @@
         }
       }
     },
+    "/api/v1/public-feed": {
+      "get": {
+        "summary": "Public Feed Info",
+        "operationId": "public_feed_info_api_v1_public_feed_get",
+        "parameters": [
+          {
+            "name": "source_key",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160,
+              "title": "Source Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicFeedView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/health": {
       "get": {
         "summary": "Health",
@@ -3512,6 +3553,80 @@
           "enabled"
         ],
         "title": "ProviderView"
+      },
+      "PublicFeedView": {
+        "properties": {
+          "source_id": {
+            "type": "string",
+            "title": "Source Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "demo": {
+            "type": "boolean",
+            "title": "Demo"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "unavailable",
+              "pending",
+              "updating",
+              "error",
+              "published"
+            ],
+            "title": "Status"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          },
+          "event_count": {
+            "type": "integer",
+            "title": "Event Count"
+          },
+          "local_only": {
+            "type": "boolean",
+            "title": "Local Only"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source_id",
+          "name",
+          "demo",
+          "status",
+          "url",
+          "revision",
+          "updated_at",
+          "event_count",
+          "local_only"
+        ],
+        "title": "PublicFeedView"
       },
       "ResolveCreator": {
         "properties": {

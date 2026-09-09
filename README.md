@@ -54,3 +54,5 @@ MCP 已提供匿名与私人 Streamable HTTP、网页授权、短期令牌和撤
 后台任务支持领取版本校验、Provider 串行处理/熔断和可审计的失败重放。复现真实子进程中断、SQLite 备份恢复及操作 CLI，见 [任务恢复手册](docs/job-recovery.md)。本地 `.env` 可配置独立 Provider key；正式云环境未验收。
 
 完整验收边界见 [STATE.md](STATE.md)、[当前架构](docs/architecture.md) 与 [验收证据](evidence/local-2026-09-09.md)。系统日历刷新、Firebase 真实登录、Azure 触发器、手机内容直达及目标 Agent 客户端均尚未验证。
+
+游客公共球队/赛事订阅已接入。后台发布公共快照，`GET /api/v1/public-feed?source_key=…`读取公开状态与地址；生产来源需先核验分发资格并配置。边界、迁移和重试见 [docs/public-feeds.md](docs/public-feeds.md)。

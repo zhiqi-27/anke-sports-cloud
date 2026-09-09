@@ -183,11 +183,11 @@ def event_view(db, event: Event, user: User | None = None) -> dict:
     }
 
 
-def serialize(projections: list[Projection]) -> bytes:
+def serialize(projections: list[Projection], calendar_name="Anke Sports") -> bytes:
     calendar = Calendar()
     calendar.add("prodid", "-//Anke Sports//Calendar 1.0//EN")
     calendar.add("version", "2.0")
-    calendar.add("x-wr-calname", "Anke Sports")
+    calendar.add("x-wr-calname", calendar_name)
     calendar.add("refresh-interval", "PT6H", parameters={"VALUE": "DURATION"})
     for projection in sorted(projections, key=lambda x: x.id):
         data = projection.data
@@ -232,6 +232,46 @@ def serialize(projections: list[Projection]) -> bytes:
     return calendar.to_ical()
 
 
+def projection_data(db, event, user, config):
+    links = chosen_links(db, event, user)
+    target = next(
+        (
+            x["url"]
+            for x in links
+            if x.get("broadcast") and x["broadcast"]["content_type"] in {"official_match", "reservation"}
+        ),
+        event.source_url,
+    )
+    data = {
+        "title": event.title,
+        "starts_at": event.starts_at,
+        "local_date": event.local_date,
+        "time_precision": event.time_precision,
+        "status": event.status,
+        "duration": event.duration,
+        "venue": event.venue,
+        "description": describe(event, links, config),
+        "transparent": config["preferences"]["transparent"],
+        "url": target,
+    }
+    return data
+
+
+def update_projection(db, feed, event, data, existing):
+    content_hash = digest(json.dumps(data, sort_keys=True, ensure_ascii=False))
+    projection = existing.get(event.id)
+    if not projection:
+        projection = Projection(feed_id=feed.id, event_id=event.id, version=0)
+        db.add(projection)
+        existing[event.id] = projection
+    if projection.content_hash != content_hash or projection.removed:
+        projection.data = data
+        projection.content_hash = content_hash
+        projection.version += 1
+        projection.updated_at = now()
+        projection.removed = False
+
+
 def rebuild_feed(db, owner_id: str):
     # Acquire the owner's write lock before taking the configuration snapshot.
     # A no-op UPDATE also serializes local SQLite, where FOR UPDATE is ignored.
@@ -262,39 +302,12 @@ def rebuild_feed(db, owner_id: str):
         if not (included(event, config) or retain_history) or not (lower <= date_key <= upper):
             continue
         wanted.add(event.id)
-        links = chosen_links(db, event, user)
-        target = next(
-            (
-                x["url"]
-                for x in links
-                if x.get("broadcast") and x["broadcast"]["content_type"] in {"official_match", "reservation"}
-            ),
-            event.source_url,
-        )
-        data = {
-            "title": event.title,
-            "starts_at": event.starts_at,
-            "local_date": event.local_date,
-            "time_precision": event.time_precision,
-            "status": event.status,
-            "duration": event.duration,
-            "venue": event.venue,
-            "description": describe(event, links, config),
-            "transparent": config["preferences"]["transparent"],
-            "url": target,
-        }
-        content_hash = digest(json.dumps(data, sort_keys=True, ensure_ascii=False))
-        projection = existing.get(event.id)
-        if not projection:
-            projection = Projection(feed_id=feed.id, event_id=event.id, version=0)
-            db.add(projection)
-            existing[event.id] = projection
-        if projection.content_hash != content_hash or projection.removed:
-            projection.data = data
-            projection.content_hash = content_hash
-            projection.version += 1
-            projection.updated_at = now()
-            projection.removed = False
+        data = projection_data(db, event, user, config)
+        update_projection(db, feed, event, data, existing)
+    publish_snapshot(db, feed, existing, wanted, lower)
+
+
+def publish_snapshot(db, feed, existing, wanted, lower, calendar_name="Anke Sports"):
     for event_id, projection in existing.items():
         if event_id not in wanted and not projection.removed:
             projection.removed = True
@@ -302,7 +315,7 @@ def rebuild_feed(db, owner_id: str):
             projection.updated_at = now()
     db.flush()
     keep = [p for p in existing.values() if not p.removed or p.updated_at[:10] >= lower]
-    body = serialize(keep)
+    body = serialize(keep, calendar_name)
     etag = digest(body.decode())
     if feed.etag != etag:
         feed.body = body.decode()

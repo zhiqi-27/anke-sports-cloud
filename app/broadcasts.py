@@ -69,6 +69,9 @@ def record_for(db, ident):
 def publish_event_change(db, event_id):
     event = db.get(Event, event_id)
     event.updated_at = now()
+    from app.public_feeds import enqueue_public_feeds
+
+    enqueue_public_feeds(db, event_keys(event), force=True)
     previous = set(db.scalars(select(Projection.feed_id).where(Projection.event_id == event_id)))
     from app.db import Feed
 

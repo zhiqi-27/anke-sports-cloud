@@ -311,3 +311,15 @@ class ConnectionView(BaseModel):
 
 class ConnectionList(BaseModel):
     items: list[ConnectionView]
+
+
+class PublicFeedView(BaseModel):
+    source_id: str
+    name: str
+    demo: bool
+    status: Literal["unavailable", "pending", "updating", "error", "published"]
+    url: str | None
+    revision: int
+    updated_at: str | None
+    event_count: int
+    local_only: bool

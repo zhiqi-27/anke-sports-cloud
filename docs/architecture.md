@@ -7,7 +7,7 @@
 | 产品 | Anke Sports；桌面 Web、Chrome 扩展、外部 MCP | 已确认 |
 | UI | Apple Sports 的克制色彩、紧凑卡片和文字层级；桌面月/周/日程及事件抽屉 | Web 本地实现 |
 | 身份 | Firebase Auth 客户端 ID Token，Admin 验证签名、发行方、有效期与撤销 | 入口已写，真实账号待验 |
-| 权威业务 | Python/FastAPI，HTTP/Queue/MCP 共用服务层 | HTTP 与任务处理已实现；MCP 待接 |
+| 权威业务 | Python/FastAPI，HTTP/Queue/MCP 共用服务层 | HTTP、任务处理与MCP本地实现；真实目标客户端待验 |
 | 数据 | Azure MySQL；SQLite 为显式本地适配 | SQLite 验证；MySQL 迁移与 TLS 待云实测 |
 | 后台任务 | SQL outbox 与业务变更同一事务；Azure Storage Queue/timer，重试/租约 | 本地验证；Azure 触发器待实测 |
 | 日历交付 | 发布时计算投影、保存 ICS；读取只返回稳定内容与条件请求响应 | 本地验证 |
@@ -15,8 +15,8 @@
 ```mermaid
 flowchart LR
   Web[桌面 Web] --> API[FastAPI / Azure Functions]
-  Extension[Chrome 扩展 · 待实现] --> API
-  MCP[MCP · 待实现] --> API
+  Extension[Chrome 扩展 · 本地实现] --> API
+  MCP[HTTP MCP · 本地实现] --> API
   Auth[Firebase Auth] --> API
   API --> SQL[(Azure MySQL)]
   SQL --> Outbox[事务 outbox]
@@ -41,7 +41,7 @@ flowchart LR
 
 M0：ICS 真日历变更、内容直达矩阵、三类 Provider、YouTube 推送 PoC。外部实验未通过前，不承诺手机自动更新时间或具体 App 唤起。
 
-M1：先让本地 Web → 关注 → 持久任务 → 个人 ICS 可操作，并补真实 Firebase 和 staging 验证。当前实现处于此阶段；实现结果不替代 M0 设备证据。
+M1：先让本地 Web → 关注 → 持久任务 → 个人 ICS 可操作，并补真实 Firebase 和 staging 验证。该路径已在本机实现，后续模块也已推进；实现结果不替代 M0 设备证据。
 
 M2：YouTube 通知/续订/补查、作者范围、明确匹配/待确认/人工纠错；补齐 NBA、足球、F1 适配器边界与覆盖证据。
 
@@ -58,3 +58,5 @@ M5：恢复演练、完整 QA、支持范围、许可与开源发布。M6：Goog
 用户已确认尚未创建独立资源，先完成本地实现；之后授权使用托管 Chrome 创建和配置，账户登录由用户完成。需独立 Anke Sports Firebase 项目、Azure 订阅/资源组/区域、Web 与 API HTTPS 地址、MySQL 与 Storage。部署前明确目标和费用边界，验证 MySQL 备份恢复与迁移回滚；无需改动现有 FormaLM。
 
 Firebase projectId 与加密 key 在非 local 模式强制要求，数据库连接验证 TLS。Feed 私密路径还需要验证 Azure 平台请求遥测与反向代理日志脱敏；目前仅关闭本机访问日志和降低 Functions 主机日志级别，尚不能声明云端秘密不落日志的验收通过。
+
+公共球队/赛事日历已使用独立 PublicFeed 和共用投影逻辑发布，匿名读取不创建账号或任务。生产分发按具体来源启用，详见 [公共日历](public-feeds.md)。

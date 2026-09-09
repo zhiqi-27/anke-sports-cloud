@@ -281,6 +281,11 @@ def sync_provider(db, provider):
         state = ProviderState(id=provider)
         db.add(state)
     state.last_success, state.error, state.enabled = now(), "", True
+    from app.public_feeds import enqueue_public_feeds
+
+    enqueue_public_feeds(
+        db, list(db.scalars(select(Source.id).where(Source.provider == provider))), force=True
+    )
 
 
 def youtube_request(endpoint, params):

@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     youtube_websub_enabled: bool = False
     maintainer_ids: list[str] = []
     broadcast_checks_enabled: bool = False
+    public_feed_source_keys: list[str] = []
     balldontlie_api_key: SecretStr = Field(
         default=SecretStr(""), validation_alias="BALLDONTLIE_API_KEY", repr=False
     )
