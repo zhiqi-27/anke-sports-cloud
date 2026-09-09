@@ -178,7 +178,10 @@ def health():
 
 @app.get("/api/v1/status", response_model=ServiceStatusView)
 def status(request: Request, db=Depends(get_db)):
+    from app.youtube_budget import status as budget_status
+
     return {
+        "youtube_budget": budget_status(db),
         "local_preview": local_allowed(request),
         "firebase_configured": bool(settings().firebase_project_id),
         "providers": provider_statuses(db),
@@ -324,7 +327,7 @@ def block(
 
 
 @app.post("/api/v1/me/creators/resolve", response_model=CreatorIdentity)
-def creator_resolve(data: ResolveCreator, user=Depends(me_write)):
+def creator_resolve(data: ResolveCreator, user=Depends(me)):
     details = resolve_creator(data.url.strip())
     return {
         "channel_id": details["channel_id"],
@@ -335,7 +338,7 @@ def creator_resolve(data: ResolveCreator, user=Depends(me_write)):
 
 @app.post("/api/v1/me/creators", response_model=CalendarUserView)
 def creator_add(
-    data: AddCreator, idempotency_key: str | None = Header(None), user=Depends(me_write), db=Depends(get_db)
+    data: AddCreator, idempotency_key: str | None = Header(None), user=Depends(me), db=Depends(get_db)
 ):
     result = actions.command(
         db,
@@ -343,7 +346,8 @@ def creator_add(
         "add_creator",
         idempotency_key,
         data.model_dump(),
-        lambda: actions.add_creator(db, user, data),
+        lambda details: actions.add_creator(db, user, data, details),
+        prepare=lambda: resolve_creator(data.url.strip()),
     )
     db.commit()
     return result

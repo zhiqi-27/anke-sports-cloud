@@ -193,6 +193,8 @@ def build_mcp():
     @private.tool(annotations=write)
     def add_creator(data: AddCreator, idempotency_key: Key) -> dict[str, Any]:
         """确认频道身份与关联范围后关注创作者；需可用的 YouTube API 配置。"""
+        from app.providers import resolve_creator
+
         return execute(
             "calendar:write",
             lambda db, user: actions.command(
@@ -201,7 +203,8 @@ def build_mcp():
                 "add_creator",
                 idempotency_key,
                 data.model_dump(),
-                lambda: actions.add_creator(db, user, data),
+                lambda details: actions.add_creator(db, user, data, details),
+                prepare=lambda: resolve_creator(data.url.strip()),
             ),
         )
 

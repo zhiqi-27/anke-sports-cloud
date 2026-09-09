@@ -10,6 +10,7 @@ from fastapi import HTTPException
 from sqlalchemy import or_, select, update
 
 from app.db import ChannelSync, ChannelWork, Creator, Job, JobReplay, ProviderState, now
+from app.youtube_budget import NETWORK_JOBS, WAIT_CODES
 
 MAX_ATTEMPTS = 5
 LEASE_SECONDS = 300
@@ -113,7 +114,7 @@ def claim_job(db, job_id=None):
         Job.due_at == job.due_at,
         Job.attempts == job.attempts,
     )
-    if job.attempts >= MAX_ATTEMPTS:
+    if job.attempts - job.quota_waits >= MAX_ATTEMPTS:
         expired = Claim(job.id, job.kind, dict(job.payload), job.attempts, job.due_at)
         if (
             job.state == "running"
@@ -135,6 +136,15 @@ def claim_job(db, job_id=None):
         job.attempts + 1,
         (datetime.fromisoformat(instant) + timedelta(seconds=LEASE_SECONDS)).isoformat(),
     )
+    if claim.kind in NETWORK_JOBS:
+        from app.youtube_budget import status as budget_status
+
+        budget = budget_status(db)
+        if budget["resume_at"] and budget["resume_at"] > instant:
+            changed = db.execute(
+                update(Job).where(*expected).values(state="pending", due_at=budget["resume_at"])
+            )
+            return None, bool(changed.rowcount)
     if claim.provider:
         state = db.get(ProviderState, claim.provider)
         if not state:
@@ -257,7 +267,15 @@ def error_code(exc):
 
 def retry_seconds(exc, attempt, instant):
     seconds = min(600, 2**attempt * 10)
-    if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code in {429, 503}:
+    if (
+        isinstance(exc, HTTPException)
+        and isinstance(exc.detail, dict)
+        and exc.detail.get("code") in WAIT_CODES
+    ):
+        delay = exc.detail.get("retry_after_seconds")
+        if isinstance(delay, (int, float)) and delay > 0:
+            seconds = max(seconds, min(delay, 30 * 86400))
+    if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code in {403, 429, 503}:
         value = exc.response.headers.get("Retry-After", "")
         try:
             requested = (
@@ -274,8 +292,15 @@ def retry_seconds(exc, attempt, instant):
 def fail_job(db, claim, exc):
     instant = datetime.fromisoformat(now())
     code = error_code(exc)
-    terminal = claim.attempt >= MAX_ATTEMPTS or code.endswith("KEY_REQUIRED")
-    seconds = retry_seconds(exc, claim.attempt, instant)
+    job = db.get(Job, claim.id)
+    if not job:
+        raise LeaseLost()
+    waiting = code in WAIT_CODES
+    effective_attempt = claim.attempt - job.quota_waits
+    terminal = not waiting and (
+        effective_attempt >= MAX_ATTEMPTS or code.endswith(("KEY_REQUIRED", "PROJECT_REQUIRED"))
+    )
+    seconds = retry_seconds(exc, effective_attempt, instant)
     if claim.provider:
         state = db.get(ProviderState, claim.provider)
         if not state:
@@ -307,8 +332,8 @@ def fail_job(db, claim, exc):
             raise LeaseLost()
         values = dict(lease_job_id=None, lease_attempt=None, lease_until=None)
         if claim.channel_network:
-            failures = state.consecutive_failures + 1
-            if failures >= 3 or code.endswith("KEY_REQUIRED"):
+            failures = state.consecutive_failures + (0 if waiting else 1)
+            if not waiting and (failures >= 3 or code.endswith(("KEY_REQUIRED", "PROJECT_REQUIRED"))):
                 seconds = max(
                     seconds,
                     6 * 3600
@@ -329,6 +354,7 @@ def fail_job(db, claim, exc):
         .where(*owned(claim))
         .values(
             state="failed" if terminal else "pending",
+            quota_waits=job.quota_waits + (1 if waiting else 0),
             error=code,
             due_at=deadline,
             finished_at=instant.isoformat() if terminal else None,

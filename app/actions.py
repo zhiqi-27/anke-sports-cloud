@@ -10,7 +10,7 @@ from sqlalchemy import and_, or_, select
 
 from app.calendar import event_view, inclusion_filter, load_links
 from app.config import settings
-from app.db import CommandReceipt, Event, Feed, Link, Source
+from app.db import CommandReceipt, Event, Feed, Link, Source, User
 from app.schemas import Config
 from app.security import digest, problem
 from app.service import active_user, attach_link, import_preview, save_config, user_view
@@ -161,20 +161,45 @@ def get_schedule(db, from_, to, dataset="real", followed=False, q="", user=None,
     }
 
 
-def command(db, user, operation, key, payload, perform):
+def command(db, user, operation, key, payload, perform, *, prepare=None):
     """Persist a retry receipt in the same transaction as the mutation and outbox.
 
     MySQL serializes per-owner commands. Config CAS remains active for all
     transports. Clients retain a key after uncertain responses, for 24 hours.
     """
+    prepared, did_prepare = None, False
+    if prepare:
+        # Network preparation cannot hold an owner write lock: request budget
+        # reservations commit independently before HTTP. Recheck identity and
+        # receipt under the owner lock afterwards, before any business mutation.
+        if not db.scalar(select(User.id).where(User.id == user.id, User.deleted.is_(False))):
+            problem("ACCOUNT_DELETED", "账号已删除", 403)
+        if key is not None and not re.fullmatch(r"[A-Za-z0-9._:-]{8,128}", key):
+            problem("INVALID_IDEMPOTENCY_KEY", "幂等键需要 8 至 128 个字母、数字或 ._:-")
+        cached = db.get(CommandReceipt, digest(user.id + ":" + key)) if key else None
+        if not cached or cached.expires_at <= int(time.time()):
+            prepared, did_prepare = prepare(), True
+
+    def invoke():
+        if prepare:
+            if not did_prepare:
+                problem("COMMAND_RETRY", "命令回执已变化，请使用原幂等键重试", 409)
+            return perform(prepared)
+        return perform()
+
     active_user(db, user.id)
     if key is None:
-        return perform()
+        return invoke()
     if not re.fullmatch(r"[A-Za-z0-9._:-]{8,128}", key):
         problem("INVALID_IDEMPOTENCY_KEY", "幂等键需要 8 至 128 个字母、数字或 ._:-")
     receipt_id = digest(user.id + ":" + key)
     fingerprint = digest(json.dumps(payload, sort_keys=True, ensure_ascii=False))
-    prior = db.get(CommandReceipt, receipt_id)
+    prior = db.scalar(
+        select(CommandReceipt)
+        .where(CommandReceipt.id == receipt_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
     if prior and prior.expires_at > int(time.time()):
         if prior.operation != operation or prior.payload_hash != fingerprint:
             problem("IDEMPOTENCY_CONFLICT", "此幂等键已用于不同操作", 409)
@@ -182,7 +207,7 @@ def command(db, user, operation, key, payload, perform):
     if prior:
         db.delete(prior)
         db.flush()
-    result = perform()
+    result = invoke()
     db.add(
         CommandReceipt(
             id=receipt_id,
@@ -226,11 +251,9 @@ def block_link(db, user, link_id):
     return {"blocked": True}
 
 
-def add_creator(db, user, data):
+def add_creator(db, user, data, details):
     from app.content import save_creator
-    from app.providers import resolve_creator
 
-    details = resolve_creator(data.url.strip())
     save_creator(db, user, details, data.scope_keys, data.preview, data.recap, True, data.expected_revision)
     return user_view(db, user)
 

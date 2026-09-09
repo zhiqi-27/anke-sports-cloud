@@ -53,3 +53,5 @@ uv run python -m experiments.worker_recovery --output evidence/worker-recovery-2
 本机本次迁移为 `6e9edd6daa17`，备份 `data/before-recovery-20260910-005423.db`（0600）。既有 21 表原列/行一致，新增状态字段不反填未知的历史完成时间。MySQL 只检查了离线 DDL。证据见 [恢复验收](../evidence/recovery-2026-09-10.md)。T13/T33 保持 in_progress。
 
 持续调度已改用持久时间判断及分批候选，手动/自动请求共用去重。最新迁移、行为和验收范围见 [持续更新调度](scheduling.md)。
+
+YouTube Data API 容量等待与业务失败分开：`attempts` 仍是递增的领取代数，五次失败阈值扣除 `quota_waits`；命令行预览/重放的 expected-attempts 始终使用原始 attempts。恢复/回退预算表前要禁用 YouTube 联网，避免旧账本回退当日计数。详见 [项目预算](youtube-budget.md)。

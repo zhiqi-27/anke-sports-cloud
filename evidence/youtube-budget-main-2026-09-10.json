@@ -1,0 +1,22 @@
+{
+  "adapter": "local SQLite; real loopback HTTP; no upstream requests",
+  "backup": "data/before-youtube-budget-20260909-205106.db",
+  "migration": "e42c08f771d3",
+  "original_business_tables_unchanged": 24,
+  "events": 163,
+  "local_preview": true,
+  "youtube_budget_state": "unconfigured",
+  "youtube_budget_rows": 0,
+  "account_config_unchanged": true,
+  "feed_bytes_unchanged": true,
+  "feed_http": [
+    200,
+    304
+  ],
+  "old_job_quota_waits_zero": true,
+  "api_session": 45462,
+  "api_pid": 34189,
+  "worker_session": 77294,
+  "worker_pid": 34200,
+  "final_readback_after_receipt_lock": true
+}

@@ -68,3 +68,5 @@ MCP 已提供匿名与私人 Streamable HTTP、网页授权、短期令牌和撤
 账号删除会撤销私人订阅与授权，防止删除前请求恢复个人数据；Firebase 身份清理由可重试任务执行。保留字段、失败重放与外部缓存边界见 [账号删除](docs/account-deletion.md)，真实云身份清理尚未验收。
 
 通知到1,000账号发布的本机容量、关注候选筛选、个人发布任务合并及重复通知验收见 [内容容量](docs/content-capacity.md)。真实YouTube项目配额与云端容量仍待完成。
+
+YouTube Data API 需要独立项目ID及Key，API与worker共用持久预算。默认9,000是本服务上限，不是Google实际余额。配置、迁移与恢复见 [项目预算](docs/youtube-budget.md)。

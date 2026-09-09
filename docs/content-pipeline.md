@@ -39,3 +39,5 @@ WebSub 默认关闭；开启需独立 API 配置与可达 HTTPS 回调。随机 
 - [PubSubHubbub 0.4](https://pubsubhubbub.github.io/PubSubHubbub/pubsubhubbub-core-0.4.html)：订阅意图、租约和通知签名。
 - [playlistItems.list](https://developers.google.com/youtube/v3/docs/playlistItems/list)：uploads 列表分页。
 - [YouTube Developer Policies](https://developers.google.com/youtube/terms/developer-policies)：API 数据刷新/删除要求。实现默认值不等同完整平台合规或授权验收。
+
+补查现按 uploads 分页与视频详情拆为独立任务，共用持久的项目请求预算；频道 `last_success` 仅表示 uploads 枚举完成，仍需视频任务及 Feed 发布成功才构成内容更新。等待状态、事务约束和真实验收边界见 [YouTube 项目预算](youtube-budget.md)。

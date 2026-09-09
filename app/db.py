@@ -304,6 +304,7 @@ class Job(Base):
     payload: Mapped[dict] = mapped_column(JSON, default=dict)
     state: Mapped[str] = mapped_column(String(24), default="pending", index=True)
     attempts: Mapped[int] = mapped_column(Integer, default=0)
+    quota_waits: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     due_at: Mapped[str] = mapped_column(String(40), default=now)
     error: Mapped[str] = mapped_column(String(80), default="")
     created_at: Mapped[str] = mapped_column(String(40), default=now)
@@ -316,6 +317,17 @@ class JobReplay(Base):
     new_job_id: Mapped[str] = mapped_column(String(64), unique=True)
     reason: Mapped[str] = mapped_column(String(500))
     created_at: Mapped[str] = mapped_column(String(40), default=now)
+
+
+class YouTubeBudget(Base):
+    __tablename__ = "youtube_budgets"
+    project_id: Mapped[str] = mapped_column(String(160), primary_key=True)
+    period: Mapped[str] = mapped_column(String(10))
+    daily_limit: Mapped[int] = mapped_column(Integer)
+    reserved_units: Mapped[int] = mapped_column(Integer, default=0)
+    blocked_until: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    reason: Mapped[str] = mapped_column(String(80), default="")
+    updated_at: Mapped[str] = mapped_column(String(40), default=now)
 
 
 class ProviderState(Base):

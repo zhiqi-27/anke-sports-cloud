@@ -18,6 +18,8 @@ class Settings(BaseSettings):
     firebase_project_id: str = ""
     encryption_key: str = ""
     youtube_websub_enabled: bool = False
+    youtube_project_id: str = Field(default="", max_length=160, pattern=r"^[a-zA-Z0-9_-]*$")
+    youtube_daily_budget: int = Field(default=9000, ge=1, le=1000000)
     maintainer_ids: list[str] = []
     broadcast_checks_enabled: bool = False
     public_feed_source_keys: list[str] = []

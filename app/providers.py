@@ -354,11 +354,47 @@ def youtube_request(endpoint, params):
     key = provider_key("YOUTUBE_API_KEY")
     if not key:
         problem("YOUTUBE_KEY_REQUIRED", "YouTube 频道服务尚未配置，暂时无法读取创作者", 503)
+    from app.youtube_budget import reserve, upstream_wait
+
+    ticket = reserve(endpoint)
     try:
         with httpx.Client(timeout=20, follow_redirects=False) as client:
-            return get_json(
-                client, "https://www.googleapis.com/youtube/v3/" + endpoint, params={**params, "key": key}
+            response = client.get(
+                "https://www.googleapis.com/youtube/v3/" + endpoint, params={**params, "key": key}
             )
+        try:
+            payload = response.json()
+        except ValueError:
+            if response.status_code < 400:
+                raise
+            payload = {}
+        if not isinstance(payload, dict):
+            if response.status_code < 400:
+                raise ValueError("INVALID_YOUTUBE_RESPONSE")
+            payload = {}
+        if response.status_code >= 400:
+            error = payload.get("error")
+            errors = error.get("errors") if isinstance(error, dict) else None
+            reasons = {
+                x.get("reason")
+                for x in (errors if isinstance(errors, list) else [])
+                if isinstance(x, dict) and isinstance(x.get("reason"), str)
+            }
+            if response.status_code == 403 and reasons.intersection({"quotaExceeded", "dailyLimitExceeded"}):
+                raise upstream_wait(ticket, "YOUTUBE_QUOTA_EXHAUSTED")
+            if response.status_code == 429 or reasons.intersection(
+                {"rateLimitExceeded", "userRateLimitExceeded"}
+            ):
+                from app.jobs import retry_seconds
+
+                delay = retry_seconds(
+                    httpx.HTTPStatusError("upstream", request=response.request, response=response),
+                    1,
+                    datetime.now(timezone.utc),
+                )
+                raise upstream_wait(ticket, "YOUTUBE_RATE_LIMITED", max(60, delay))
+            problem("YOUTUBE_API_UNAVAILABLE", "YouTube 暂时无法读取，请检查服务配置或稍后重试", 503)
+        return payload
     except (httpx.HTTPError, ValueError):
         problem("YOUTUBE_API_UNAVAILABLE", "YouTube 暂时无法读取，请检查服务配置或稍后重试", 503)
 

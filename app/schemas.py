@@ -307,7 +307,18 @@ class ProviderView(BaseModel):
     activity: Literal["idle", "queued", "running", "waiting"] = "idle"
 
 
+class YouTubeBudgetView(BaseModel):
+    configured: bool
+    state: Literal["unconfigured", "available", "waiting"]
+    daily_limit: int
+    reserved_units: int
+    available_units: int | None
+    reset_at: str | None
+    resume_at: str | None
+
+
 class ServiceStatusView(BaseModel):
+    youtube_budget: YouTubeBudgetView
     local_preview: bool
     firebase_configured: bool
     providers: list[ProviderView]

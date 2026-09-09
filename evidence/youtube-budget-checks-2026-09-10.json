@@ -1,0 +1,27 @@
+{
+  "date": "2026-09-10",
+  "suite": {
+    "passed": 174,
+    "warnings": 2,
+    "new_cases": 16
+  },
+  "ruff": "passed",
+  "mysql": "offline DDL only",
+  "google": "MockTransport only; no real requests",
+  "browser": "synthetic IPv6 fixture; waiting then polling recovery; console errors 0",
+  "sha256": {
+    "app/youtube_budget.py": "cf0abd9d67ecb2d7f3550cb7188c036be9ea4b53b982f2d03333cae2b1255829",
+    "app/actions.py": "d8047d2e6148341c09248753c34e43bfd8d56c83e723b2a612e9b20350b10ad0",
+    "app/config.py": "a6424ccf7913251dc922a803804a493185ba9ab95aec58bd2ee9bbddcce4385e",
+    "app/db.py": "d31133c4f3d5ead80d992db89361786c0a4367a78d029f2e4fec7fe9ca984b4b",
+    "app/jobs.py": "3f42f425a9195ac96ae9512cb3d2d54a6b22b48ab553431cafe341a3e7792ca8",
+    "app/providers.py": "232a0fec66aa4cb450acf8cf557bf7768016901701119cc6be2b9424d21d3067",
+    "app/content.py": "2b7139a999b33ca4c73df716771b7a14cd9bc4fd4562d86591a20ae8bcd06191",
+    "app/main.py": "9b2966777f223a00db47d7dc23a7dddee35d98f4f2edbb9bf4330fd09b220079",
+    "app/mcp_server.py": "8f9f5b8f8c48627fee3d14e904ecdef95cb0179cd1b7ebe6e6baa07079d34178",
+    "app/schemas.py": "4ddad889a823e344c0037a4573d7b1f7fa505f1e33426e61117c9acb0c389a81",
+    "tests/test_youtube_budget.py": "70c3e400458354c9e4f50ac6a310af0beaff29ecb580b3d59e2cb94d1950a37b",
+    "tests/test_youtube_budget_migration.py": "42d8576867878e0ecb1d768d2e16f15b2709f28c1b11abb0f8a5c88da5ffcebe",
+    "migrations/versions/e42c08f771d3_project_youtube_budget.py": "912e6eab18fbdf31b1507916998e51e9eb7bc269875cd9fa7438edc4cc610834"
+  }
+}

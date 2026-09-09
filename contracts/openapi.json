@@ -4117,6 +4117,9 @@
       },
       "ServiceStatusView": {
         "properties": {
+          "youtube_budget": {
+            "$ref": "#/components/schemas/YouTubeBudgetView"
+          },
           "local_preview": {
             "type": "boolean",
             "title": "Local Preview"
@@ -4142,6 +4145,7 @@
         },
         "type": "object",
         "required": [
+          "youtube_budget",
           "local_preview",
           "firebase_configured",
           "providers",
@@ -4285,6 +4289,75 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "YouTubeBudgetView": {
+        "properties": {
+          "configured": {
+            "type": "boolean",
+            "title": "Configured"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "unconfigured",
+              "available",
+              "waiting"
+            ],
+            "title": "State"
+          },
+          "daily_limit": {
+            "type": "integer",
+            "title": "Daily Limit"
+          },
+          "reserved_units": {
+            "type": "integer",
+            "title": "Reserved Units"
+          },
+          "available_units": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Available Units"
+          },
+          "reset_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reset At"
+          },
+          "resume_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resume At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "configured",
+          "state",
+          "daily_limit",
+          "reserved_units",
+          "available_units",
+          "reset_at",
+          "resume_at"
+        ],
+        "title": "YouTubeBudgetView"
       }
     }
   }

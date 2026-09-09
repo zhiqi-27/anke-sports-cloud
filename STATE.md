@@ -1,6 +1,6 @@
 # Anke Sports 服务端状态
 
-更新：2026-09-10。主 API 127.0.0.1:8787，session69237/PID29651；worker session84983/PID29664；显式启用本地体验并关闭访问日志。显式本地SQLite/体验身份。主库163条比赛（48演示+115 Jolpica F1分场次），无合成频道/视频或公共直播记录。
+更新：2026-09-10。主 API 127.0.0.1:8787，session45462/PID34189；worker session77294/PID34200；显式启用本地体验并关闭访问日志。显式本地SQLite/体验身份。主库163条比赛（48演示+115 Jolpica F1分场次），无合成频道/视频或公共直播记录。
 
 已实现账号验证入口、个人配置/链接、稳定投影与ICS、事务outbox、local worker/Azure触发器、体育Provider接口、共享YouTube发现/签名通知/补查/匹配/人工确认、PKCE/刷新/撤销和HTTP MCP（公开3、私人11工具）。真实Firebase/YouTube/云队列与触发器仍未验收。
 
@@ -104,7 +104,7 @@ ANKE_SPORTS_ENV=local ANKE_SPORTS_LOCAL_PREVIEW=true ANKE_SPORTS_PUBLIC_URL=http
 
 Provider启动即检查持久截止时间，之后每分钟检查；成功/执行六小时周期与冷却均保留，已有任务复用。手动与自动请求共用锁定去重。直播按到期/待查索引各取最多100个ID，逐条事务，关闭联网仍撤下到期入口；UTC审核期限、开赛前24小时切换每小时检查、改期唤醒和新URL检查已验证。
 
-后端141项pytest/ruff通过，新增15项包含独立SQLite连接并发与迁移回退。20,000条合成比赛/直播记录的一轮只加载10条，22.44ms；20轮空闲P95 0.44ms/2条SQL，完整候选查询计划命中新索引。两次全新worker进程第一次合成抓取1次，第二次0次。不是实际HEAD、真实上游、MySQL/Azure、大批积压或1,000用户发布证明。OpenAPI字节相同，客户端没有业务源码变化。
+后端141项pytest/ruff通过，新增16项包含独立SQLite连接并发与迁移回退。20,000条合成比赛/直播记录的一轮只加载10条，22.44ms；20轮空闲P95 0.44ms/2条SQL，完整候选查询计划命中新索引。两次全新worker进程第一次合成抓取1次，第二次0次。不是实际HEAD、真实上游、MySQL/Azure、大批积压或1,000用户发布证明。OpenAPI字节相同，客户端没有业务源码变化。
 
 本机0600备份data/before-scheduler-20260910-032643.db，迁移c72b961e430a已应用；24张原表原字段/行在迁移和重启后相同，163场、1个账号与原关注/订阅保留。主API session69237/PID29651、worker session84983/PID29664运行新代码，显式本地体验/loopback且关闭访问日志；旧API27052/worker84881已正常停止。真实HTTP健康/本地身份/原配置通过，9月匿名47条赛程JSON不变；未到下一轮的F1没有因启动而提前抓取。
 
@@ -139,3 +139,16 @@ Feed先按关注/显式加入/既有投影在SQL缩小候选，再应用原排�
 主API8787 session89340/PID32417，worker session88069/PID32428运行最终代码，四个显式local/preview/public/web参数、关闭访问日志保持。旧31467/31478正常停止。Web3000 session43940/PID53698、production3002 session73957/PID31177、旧维护夹具3001 session29715/PID92350、扩展预览18792 session25462/PID86801继续运行。原关注草稿16/公共订阅12/维护10保留。容量实验临时HTTP与数据库均已正常清理。
 
 T13/T15/T16/T18继续in_progress。项目级YouTube配额仍未实现（已核对官方成本/太平洋午夜规则）；后续继续配额、同时多频道/历史积压、Codex真实业务调用，以及Firebase/MySQL/Azure、Chrome安装和设备验收。托管Chrome创建配置独立云资源、用户负责登录的授权继续有效。无真实上游请求、push、部署或云资源变更；完整目标继续，本回合有代码与容量证据进展。
+
+
+## 最新批次：YouTube 项目预算（T13 / T14 / T15 / T33）
+
+HTTP/MCP/后台 Data API 请求在独立 SQL 短事务预留额度，按项目与太平洋日计数；失败/业务回滚不退额，换Key不重置。网络准备先于账号写锁，之后复查删除、版本、幂等回执。uploads 分页和视频详情分成独立任务；共享配额等待不耗尽五次真实失败上限，attempts 保持递增以拒绝旧worker提交。创作者页显示最早恢复时间，30秒轮询并自动退出等待；保留已有日历。
+
+后端174项全量pytest/ruff通过（2条既有弃用警告），新增16项覆盖独立连接并发、超时/业务回滚、HTTP与MCP回执、网络中删除/版本变化、夏令时、迟到响应、跨日限流、任务恢复及迁移。Web/扩展typecheck、最终production build通过，OpenAPI及客户端已更新。独立IPv6合成页面完成等待/恢复实际渲染，console error0；Google/Hub无真实调用。
+
+主库备份data/before-youtube-budget-20260909-205106.db（UTC文件名，0600），已迁移e42c08f771d3。24张原业务表旧列/行哈希相同（另有alembic_version更新），预算表为空、旧quota_waits均0。真实HTTP原配置/Feed正文不变，200/304通过；163场、原关注和浏览器会话保留。MySQL仅离线DDL。
+
+主API8787 session45462/PID34189、worker session77294/PID34200运行最终源码，四个显式local/preview/public/web参数与关闭访问日志保持。production Web3002 session65485/PID33834、主Web3000 session43940/PID53698。旧API32417/worker32428/production31177已停止；隔离配额API3004 session40885已停止并清理，临时22/23/24已关闭，原草稿16/公共订阅12/旧维护10保留，viewport已重置。
+
+说明anke-sports-cloud/docs/youtube-budget.md，证据evidence/youtube-budget-2026-09-10.md及youtube-budget-main-2026-09-10.json。预算为本服务预留值，不是Google真实额度/余额。T13/T14/T15/T33仍in_progress；下一步仍需同时多频道/积压、Codex真实业务调用，真实Firebase/MySQL/Azure/YouTube、Chrome安装和设备验收。M6 Google直连未实现。完整目标保持active，本回合有实现和验收进展。用户未来托管Chrome创建配置独立云资源、负责登录的授权有效；无push、部署或云资源变更。

@@ -330,11 +330,6 @@ def poll_channel(db, payload):
     creator = db.get(Creator, channel_id)
     if not creator or not channel_interest(db, channel_id):
         return
-    sync = db.get(ChannelSync, channel_id)
-    if not sync:
-        sync = ChannelSync(channel_id=channel_id)
-        db.add(sync)
-        db.flush()
     cutoff = payload.get("cutoff") or (datetime.now(timezone.utc) - timedelta(days=14)).isoformat()
     args = {"playlistId": creator.uploads_id, "part": "contentDetails", "maxResults": 50}
     if payload.get("cursor"):
@@ -351,7 +346,10 @@ def poll_channel(db, payload):
             reached_cutoff = True
             continue
         ids.append(details["videoId"])
-    refresh_videos(db, channel_id, ids)
+    # One upstream request per job. Video validation/matching is independent
+    # outbox work, so quota waits never roll back and repeat a paid playlist read.
+    if ids:
+        enqueue(db, "youtube_videos", {"channel_id": channel_id, "video_ids": list(dict.fromkeys(ids))})
     cursor = raw.get("nextPageToken")
     seen = payload.get("seen", [])
     if cursor and not reached_cutoff:
@@ -363,6 +361,10 @@ def poll_channel(db, payload):
             {"channel_id": channel_id, "cursor": cursor, "cutoff": cutoff, "seen": [*seen, cursor]},
         )
     else:
+        sync = db.get(ChannelSync, channel_id)
+        if not sync:
+            sync = ChannelSync(channel_id=channel_id)
+            db.add(sync)
         sync.last_success, sync.error, sync.next_poll_at = (
             now(),
             "",
@@ -370,7 +372,9 @@ def poll_channel(db, payload):
         )
         creator.last_error = ""
         # Refresh known retained videos: absence from uploads is never a deletion signal.
-        retained_ids = list(db.scalars(select(Video.id).where(Video.channel_id == channel_id)))
+        retained_ids = list(
+            db.scalars(select(Video.id).where(Video.channel_id == channel_id, Video.id.not_in(ids)))
+        )
         for offset in range(0, len(retained_ids), 50):
             enqueue(
                 db,
