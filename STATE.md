@@ -1,6 +1,6 @@
 # Anke Sports 服务端状态
 
-更新：2026-09-10。主 API 127.0.0.1:8787，session46872/PID28321；worker session1516/PID28335；关闭访问日志。显式本地SQLite/体验身份。主库163条比赛（48演示+115 Jolpica F1分场次），无合成频道/视频或公共直播记录。
+更新：2026-09-10。主 API 127.0.0.1:8787，session27052/PID28765；worker session84881/PID28778；显式启用本地体验并关闭访问日志。显式本地SQLite/体验身份。主库163条比赛（48演示+115 Jolpica F1分场次），无合成频道/视频或公共直播记录。
 
 已实现账号验证入口、个人配置/链接、稳定投影与ICS、事务outbox、local worker/Azure触发器、体育Provider接口、共享YouTube发现/签名通知/补查/匹配/人工确认、PKCE/刷新/撤销和HTTP MCP（公开3、私人11工具）。真实Firebase/YouTube/云队列与触发器仍未验收。
 
@@ -81,3 +81,20 @@ HTTP/MCP共用查询先按日期缩小候选，只读取筛选/游标字段，�
 主API已重启为session46872/PID28321，worker为session1516/PID28335，访问日志关闭；主Web3000 session43940、旧直播夹具3001、production预览3002和扩展预览18792仍保留。旧API88286/worker89692已确认正常终止。此前/tmp/anke-sports-codex-schema.To77Hv的安全钩子清理拒绝未重试，目录保留。
 
 说明anke-sports-cloud/docs/schedule-queries.md；证据evidence/schedule-queries-2026-09-10.md及6份JSON。上述任务保持in_progress；下一步继续广播有界调度/并发去重、通知到发布规模、项目级配额和隐私脱敏。真实MySQL/Azure/Firebase/YouTube与设备验收、Codex业务调用、Chrome实际安装仍未完成。未来托管Chrome云资源配置授权保留。本批无上游请求、云资源、push或部署，完整产品目标继续。
+
+## 2026-09-10 · 本地体验重启参数修正
+
+性能批次已提交：后端 `095e122`、客户端文档 `8e6d727`。随后发现重启时漏传 `ANKE_SPORTS_LOCAL_PREVIEW=true`，页面暂时退回游客；这是启动配置遗漏，未改生产认证默认值。旧 API session46872/PID28321、worker session1516/PID28335 已正常停止。
+
+当前 API session27052/PID28765，worker session84881/PID28778。两者从后端目录启动，必须显式带以下四个本地参数（无云凭据）：
+
+```sh
+ANKE_SPORTS_ENV=local ANKE_SPORTS_LOCAL_PREVIEW=true ANKE_SPORTS_PUBLIC_URL=http://localhost:8787 ANKE_SPORTS_WEB_URL=http://localhost:3000 uv run uvicorn app.main:app --host 127.0.0.1 --port 8787 --no-access-log
+ANKE_SPORTS_ENV=local ANKE_SPORTS_LOCAL_PREVIEW=true ANKE_SPORTS_PUBLIC_URL=http://localhost:8787 ANKE_SPORTS_WEB_URL=http://localhost:3000 uv run python -m app.worker
+```
+
+两条命令分别运行在独立终端。不要依赖缺省配置自动开启体验身份。
+
+真实HTTP读回：status.local_preview=true、firebase_configured=false；本地登录与读取个人日历均200，原配置逐项相同。仅注销验收脚本自己的临时cookie，原浏览器会话保留。七张业务表行哈希和9月47条演示赛程完整响应与性能改动前一致。浏览器新标签18读到本地账号及原湖人关注，全部48场、筛选12场、控制台error为0；已查看实际渲染后关闭18，原待确认草稿16、公共订阅12、维护10保留。
+
+其余服务与数据不变；本次修正只有运行参数和证据文档，没有业务源码、契约、迁移、云操作、push或部署。完整产品和外部验收仍继续。

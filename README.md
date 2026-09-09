@@ -11,16 +11,18 @@ Python/FastAPI + Firebase Authentication + Azure Functions + Azure MySQL + Azure
 ```sh
 uv sync --frozen
 cp .env.example .env
-uv run uvicorn app.main:app --host 127.0.0.1 --port 8787 --no-access-log
+ANKE_SPORTS_ENV=local ANKE_SPORTS_LOCAL_PREVIEW=true uv run uvicorn app.main:app --host 127.0.0.1 --port 8787 --no-access-log
 ```
 
 另开终端运行持久任务消费：
 
 ```sh
-uv run python -m app.worker
+ANKE_SPORTS_ENV=local ANKE_SPORTS_LOCAL_PREVIEW=true uv run python -m app.worker
 ```
 
 `.env.example` 明确启用本机体验模式：SQLite `data/anke-sports.db`、合成演示赛程、本机独立体验身份。启动仅监听 loopback；生产模式禁止 SQLite 和体验身份。不要将此命令作为公网部署方式。
+
+重启本地服务时同样保留上述两个显式参数；缺省配置关闭体验登录。当前运行的完整命令和进程见 [STATE.md](STATE.md)。
 
 前端通过同源 `/api/` 代理连接。Web 默认 127.0.0.1:3000。私人订阅地址通过已登录页面复制，服务访问日志应始终关闭。其令牌仅授权读取已发布的个人 Feed，不是写入凭据。
 

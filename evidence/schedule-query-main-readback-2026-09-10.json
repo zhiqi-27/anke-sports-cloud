@@ -1,4 +1,14 @@
 {
+  "local_auth": {
+    "login_http": 200,
+    "calendar_http": 200,
+    "local_account_verified": true,
+    "config_unchanged": true
+  },
+  "http_schedule": {
+    "rows": 47,
+    "unchanged": true
+  },
   "users": {
     "rows": 1,
     "unchanged": true
@@ -27,13 +37,28 @@
     "rows": 0,
     "unchanged": true
   },
-  "http_schedule": {
-    "rows": 47,
-    "unchanged": true
-  },
   "health": {
     "status": "ok",
     "product": "Anke Sports",
     "environment": "local"
+  },
+  "service_status": {
+    "local_preview": true,
+    "firebase_configured": false
+  },
+  "browser": {
+    "tab": 18,
+    "local_account_visible": true,
+    "original_lakers_follow_visible": true,
+    "all_events": 48,
+    "followed_events": 12,
+    "console_errors": 0,
+    "render_inspected": true,
+    "check_tab_closed": true,
+    "preserved_tabs": [
+      16,
+      12,
+      10
+    ]
   }
 }

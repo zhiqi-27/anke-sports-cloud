@@ -25,8 +25,10 @@
 - 批量读取验证个人固定/屏蔽、地区限制、自动链接条件、公开审核以及其他账号隔离。真实HTTP容量请求也断言所有返回私人链接属于当前合成账号，匿名响应没有私人链接。
 - 独立文件SQLite连接在候选读取后更改选中事件；重新加载时拒绝旧绑定并返回409。已有完整投影、UID/ETag、公开Feed、人工选择和MCP业务回归均通过。不是MySQL事务证明。
 - 重新生成OpenAPI/config schema后字节未变；没有客户端代码或依赖变化，因此未重复Web/扩展构建。
-- 主API与worker已更新：API session46872/PID28321，worker session1516/PID28335。重启前后users/events/feeds/projections/links/broadcast_records/creators七表完整行哈希一致；163场原比赛、1个用户和217个投影保留。主API健康local/ok，9月严格日期范围47条演示赛程的完整JSON相同。
+- 主API与worker已更新：API session27052/PID28765，worker session84881/PID28778。重启前后users/events/feeds/projections/links/broadcast_records/creators七表完整行哈希一致；163场原比赛、1个用户和217个投影保留。主API健康local/ok，9月严格日期范围47条演示赛程的完整JSON相同。
 - 浏览器新游客页实际加载48场月历（包含8月31日），9月10日GSW/BOS抽屉显示10:00、Asia/Shanghai、场馆与演示标识，控制台error为0。检查标签17已关闭，原关注待确认草稿16、公共订阅12、维护10保留。
+
+重启后另发现本地体验参数遗漏，首次浏览器检查确为游客。已停止漏参的API session46872/PID28321及worker session1516/PID28335，并显式携带本地参数重新启动为上述当前进程。真实HTTP本地登录和个人配置读取均200，配置逐项不变，status.local_preview=true。浏览器新标签18显示原本地账号和湖人关注；全部48场、我的关注12场，实际渲染正常、控制台error为0。18已关闭，16/12/10保留。更新后的JSON包含这次身份和状态读回，Firebase仍未配置。
 
 ## 证据文件与范围
 
