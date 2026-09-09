@@ -1,0 +1,213 @@
+{
+  "$defs": {
+    "CreatorFollow": {
+      "additionalProperties": false,
+      "properties": {
+        "channel_id": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "Channel Id",
+          "type": "string"
+        },
+        "scope_keys": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 500,
+          "title": "Scope Keys",
+          "type": "array"
+        },
+        "preview": {
+          "default": true,
+          "title": "Preview",
+          "type": "boolean"
+        },
+        "recap": {
+          "default": true,
+          "title": "Recap",
+          "type": "boolean"
+        },
+        "enabled": {
+          "default": true,
+          "title": "Enabled",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "channel_id"
+      ],
+      "title": "CreatorFollow",
+      "type": "object"
+    },
+    "EventOverride": {
+      "additionalProperties": false,
+      "properties": {
+        "event_key": {
+          "maxLength": 220,
+          "minLength": 1,
+          "title": "Event Key",
+          "type": "string"
+        },
+        "state": {
+          "enum": [
+            "include",
+            "exclude"
+          ],
+          "title": "State",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_key",
+        "state"
+      ],
+      "title": "EventOverride",
+      "type": "object"
+    },
+    "Follow": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "enum": [
+            "team",
+            "competition",
+            "event",
+            "series"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "source_key": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Source Key",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "source_key"
+      ],
+      "title": "Follow",
+      "type": "object"
+    },
+    "LinkOverride": {
+      "additionalProperties": false,
+      "properties": {
+        "event_key": {
+          "title": "Event Key",
+          "type": "string"
+        },
+        "url": {
+          "maxLength": 2000,
+          "title": "Url",
+          "type": "string"
+        },
+        "state": {
+          "enum": [
+            "block",
+            "pin"
+          ],
+          "title": "State",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_key",
+        "url",
+        "state"
+      ],
+      "title": "LinkOverride",
+      "type": "object"
+    },
+    "Preferences": {
+      "additionalProperties": false,
+      "properties": {
+        "timezone": {
+          "default": "Asia/Shanghai",
+          "title": "Timezone",
+          "type": "string"
+        },
+        "locale": {
+          "default": "zh-CN",
+          "enum": [
+            "zh-CN",
+            "en"
+          ],
+          "title": "Locale",
+          "type": "string"
+        },
+        "watch_region": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Watch Region"
+        },
+        "spoiler_free": {
+          "default": true,
+          "title": "Spoiler Free",
+          "type": "boolean"
+        },
+        "transparent": {
+          "default": true,
+          "title": "Transparent",
+          "type": "boolean"
+        }
+      },
+      "title": "Preferences",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "follows": {
+      "items": {
+        "$ref": "#/$defs/Follow"
+      },
+      "maxItems": 500,
+      "title": "Follows",
+      "type": "array"
+    },
+    "creators": {
+      "items": {
+        "$ref": "#/$defs/CreatorFollow"
+      },
+      "maxItems": 200,
+      "title": "Creators",
+      "type": "array"
+    },
+    "preferences": {
+      "$ref": "#/$defs/Preferences"
+    },
+    "event_overrides": {
+      "items": {
+        "$ref": "#/$defs/EventOverride"
+      },
+      "maxItems": 2000,
+      "title": "Event Overrides",
+      "type": "array"
+    },
+    "link_overrides": {
+      "items": {
+        "$ref": "#/$defs/LinkOverride"
+      },
+      "maxItems": 2000,
+      "title": "Link Overrides",
+      "type": "array"
+    }
+  },
+  "title": "Config",
+  "type": "object"
+}

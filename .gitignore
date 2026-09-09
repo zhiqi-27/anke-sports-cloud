@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.env
+.env.*
+!.env.example
+local.settings.json
+data/
+*.db
+*.pyc
+service-account*.json
+.DS_Store

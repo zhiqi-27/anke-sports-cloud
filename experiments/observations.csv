@@ -1,0 +1,8 @@
+case,client,client_version,device,source_published_at,source_fetched_at,phone_visible_at,expected,observed,result
+T01-description,,,,,,,same UID and updated description,,not_tested
+T01-reschedule,,,,,,,same UID and start plus two hours,,not_tested
+T01-cancel,,,,,,,same UID and cancelled state,,not_tested
+T01-past-recap,,,,,,,past event receives recap,,not_tested
+T02-content-match,,,,,,,correct match content,,not_tested
+T02-app-content,,,,,,,specific native app content,,not_tested
+T02-playback,,,,,,,authorized account plays content,,not_tested

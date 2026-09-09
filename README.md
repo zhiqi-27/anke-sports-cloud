@@ -1,0 +1,50 @@
+# Anke Sports Cloud
+
+体育日历、个人配置与原始观看链接的业务服务。原产品名 SportsCal 已更名为 **Anke Sports**。
+
+Python/FastAPI + Firebase Authentication + Azure Functions + Azure MySQL + Azure Storage Queue。参考 FormaLM 的服务分层，使用独立账号、密钥与资源。`anke-sports` 为独立客户端仓库。
+
+## 本地运行
+
+需要 Python 3.12 与 uv。
+
+```sh
+uv sync --frozen
+cp .env.example .env
+uv run uvicorn app.main:app --host 127.0.0.1 --port 8787 --no-access-log
+```
+
+另开终端运行持久任务消费：
+
+```sh
+uv run python -m app.worker
+```
+
+`.env.example` 明确启用本机体验模式：SQLite `data/anke-sports.db`、合成演示赛程、本机独立体验身份。启动仅监听 loopback；生产模式禁止 SQLite 和体验身份。不要将此命令作为公网部署方式。
+
+前端通过同源 `/api/` 代理连接。Web 默认 127.0.0.1:3000。私人订阅地址通过已登录页面复制，服务访问日志应始终关闭。其令牌仅授权读取已发布的个人 Feed，不是写入凭据。
+
+在设置页手动获取 F1；首次成功后，本地 worker 每 6 小时调度已启用的数据源。NBA、足球和 YouTube 的 key 只配置于服务端；不复制 FormaLM 凭据。当前 YouTube 只实现频道解析入口，自动发现、推送、匹配与审核尚未交付。
+
+## 检查与契约
+
+```sh
+uv run ruff check .
+uv run pytest -q
+uv run python -m scripts.export_contracts
+```
+
+`contracts/openapi.json` 与 `contracts/config.schema.json` 从 Pydantic 生成。客户端在自己的仓库运行 `npm run contracts`。两仓分别检查、提交、发布，不假定共享 Git 历史。
+
+数据库：本机演示可自动建表；正式环境必须使用迁移。
+
+```sh
+uv run alembic upgrade head
+uv run alembic check
+```
+
+迁移前应明确连接的目标环境，备份并确认恢复方式。以上命令未在 Azure 数据库执行。初始迁移在独立 SQLite 校验库通过；MySQL 仅生成并检查了离线 DDL。锁定依赖由 `uv.lock` 管理，Functions 构建使用导出的 `requirements.txt`。
+
+## 当前状态
+
+完整验收边界见 [STATE.md](STATE.md)、[当前架构](docs/architecture.md) 与 [验收证据](evidence/local-2026-09-09.md)。系统日历刷新、Firebase 真实登录、Azure 触发器、手机内容直达均尚未验证。Chrome 扩展与 MCP 为后续交付，不因库已安装而视为完成。

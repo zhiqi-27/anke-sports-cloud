@@ -1,0 +1,1994 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Anke Sports API",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/v1/health": {
+      "get": {
+        "summary": "Health",
+        "operationId": "health_api_v1_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/status": {
+      "get": {
+        "summary": "Status",
+        "operationId": "status_api_v1_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceStatusView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/local": {
+      "post": {
+        "summary": "Login Local",
+        "operationId": "login_local_api_v1_auth_local_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarUserView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "summary": "Logout",
+        "operationId": "logout_api_v1_auth_logout_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sources": {
+      "get": {
+        "summary": "Sources",
+        "operationId": "sources_api_v1_sources_get",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Q"
+            }
+          },
+          {
+            "name": "dataset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "real",
+              "title": "Dataset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceList"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/events": {
+      "get": {
+        "summary": "Events",
+        "operationId": "events_api_v1_events_get",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "To"
+            }
+          },
+          {
+            "name": "dataset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "real",
+              "title": "Dataset"
+            }
+          },
+          {
+            "name": "followed",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Followed"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Q"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventList"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/events/{event_id}": {
+      "get": {
+        "summary": "Event Detail",
+        "operationId": "event_detail_api_v1_events__event_id__get",
+        "parameters": [
+          {
+            "name": "event_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Event Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/calendar": {
+      "get": {
+        "summary": "Calendar",
+        "operationId": "calendar_api_v1_me_calendar_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarUserView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/follows": {
+      "put": {
+        "summary": "Follows",
+        "operationId": "follows_api_v1_me_follows_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveFollows"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarUserView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/preferences": {
+      "patch": {
+        "summary": "Preferences",
+        "operationId": "preferences_api_v1_me_preferences_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SavePreferences"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarUserView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/events/{event_id}/selection": {
+      "put": {
+        "summary": "Selection",
+        "operationId": "selection_api_v1_events__event_id__selection_put",
+        "parameters": [
+          {
+            "name": "event_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Event Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OverrideInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/events/{event_id}/links": {
+      "post": {
+        "summary": "Add Link",
+        "operationId": "add_link_api_v1_events__event_id__links_post",
+        "parameters": [
+          {
+            "name": "event_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Event Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddLink"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LinkAddedView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/links/{link_id}/block": {
+      "post": {
+        "summary": "Block",
+        "operationId": "block_api_v1_me_links__link_id__block_post",
+        "parameters": [
+          {
+            "name": "link_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Link Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/creators": {
+      "post": {
+        "summary": "Creator Add",
+        "operationId": "creator_add_api_v1_me_creators_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddCreator"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarUserView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/creators/{channel_id}": {
+      "delete": {
+        "summary": "Creator Delete",
+        "operationId": "creator_delete_api_v1_me_creators__channel_id__delete",
+        "parameters": [
+          {
+            "name": "channel_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Channel Id"
+            }
+          },
+          {
+            "name": "expected_revision",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Expected Revision"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarUserView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/config/export": {
+      "get": {
+        "summary": "Export Config",
+        "operationId": "export_config_api_v1_me_config_export_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Config-Output"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/config/import": {
+      "post": {
+        "summary": "Import Config",
+        "operationId": "import_config_api_v1_me_config_import_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportPreviewView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/feed/address": {
+      "get": {
+        "summary": "Address",
+        "operationId": "address_api_v1_me_feed_address_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/feed/rotate": {
+      "post": {
+        "summary": "Rotate",
+        "operationId": "rotate_api_v1_me_feed_rotate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeedAction"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/feed/pause": {
+      "post": {
+        "summary": "Pause",
+        "operationId": "pause_api_v1_me_feed_pause_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeedAction"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/feed/preview": {
+      "get": {
+        "summary": "Feed Preview",
+        "operationId": "feed_preview_api_v1_me_feed_preview_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/local/providers/{provider}/sync": {
+      "post": {
+        "summary": "Trigger Sync",
+        "operationId": "trigger_sync_api_v1_local_providers__provider__sync_post",
+        "parameters": [
+          {
+            "name": "provider",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Provider"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me": {
+      "delete": {
+        "summary": "Delete Account",
+        "operationId": "delete_account_api_v1_me_delete",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeedAction"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AddCreator": {
+        "properties": {
+          "url": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 3,
+            "title": "Url"
+          },
+          "scope_keys": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 500,
+            "title": "Scope Keys"
+          },
+          "preview": {
+            "type": "boolean",
+            "title": "Preview",
+            "default": true
+          },
+          "recap": {
+            "type": "boolean",
+            "title": "Recap",
+            "default": true
+          },
+          "expected_revision": {
+            "type": "integer",
+            "title": "Expected Revision"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "url",
+          "expected_revision"
+        ],
+        "title": "AddCreator"
+      },
+      "AddLink": {
+        "properties": {
+          "url": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 8,
+            "title": "Url"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 300,
+            "title": "Title",
+            "default": ""
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "live",
+              "preview",
+              "recap",
+              "watch_along"
+            ],
+            "title": "Kind"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "url",
+          "kind"
+        ],
+        "title": "AddLink"
+      },
+      "CalendarUserView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          },
+          "config": {
+            "$ref": "#/components/schemas/Config-Output"
+          },
+          "creators": {
+            "items": {
+              "$ref": "#/components/schemas/CreatorView"
+            },
+            "type": "array",
+            "title": "Creators"
+          },
+          "feed": {
+            "$ref": "#/components/schemas/FeedView"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "display_name",
+          "revision",
+          "config",
+          "creators",
+          "feed"
+        ],
+        "title": "CalendarUserView"
+      },
+      "Config-Input": {
+        "properties": {
+          "schema_version": {
+            "type": "integer",
+            "const": 1,
+            "title": "Schema Version",
+            "default": 1
+          },
+          "follows": {
+            "items": {
+              "$ref": "#/components/schemas/Follow"
+            },
+            "type": "array",
+            "maxItems": 500,
+            "title": "Follows"
+          },
+          "creators": {
+            "items": {
+              "$ref": "#/components/schemas/CreatorFollow-Input"
+            },
+            "type": "array",
+            "maxItems": 200,
+            "title": "Creators"
+          },
+          "preferences": {
+            "$ref": "#/components/schemas/Preferences-Input"
+          },
+          "event_overrides": {
+            "items": {
+              "$ref": "#/components/schemas/EventOverride"
+            },
+            "type": "array",
+            "maxItems": 2000,
+            "title": "Event Overrides"
+          },
+          "link_overrides": {
+            "items": {
+              "$ref": "#/components/schemas/LinkOverride"
+            },
+            "type": "array",
+            "maxItems": 2000,
+            "title": "Link Overrides"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "Config"
+      },
+      "Config-Output": {
+        "properties": {
+          "schema_version": {
+            "type": "integer",
+            "const": 1,
+            "title": "Schema Version",
+            "default": 1
+          },
+          "follows": {
+            "items": {
+              "$ref": "#/components/schemas/Follow"
+            },
+            "type": "array",
+            "maxItems": 500,
+            "title": "Follows"
+          },
+          "creators": {
+            "items": {
+              "$ref": "#/components/schemas/CreatorFollow-Output"
+            },
+            "type": "array",
+            "maxItems": 200,
+            "title": "Creators"
+          },
+          "preferences": {
+            "$ref": "#/components/schemas/Preferences-Output"
+          },
+          "event_overrides": {
+            "items": {
+              "$ref": "#/components/schemas/EventOverride"
+            },
+            "type": "array",
+            "maxItems": 2000,
+            "title": "Event Overrides"
+          },
+          "link_overrides": {
+            "items": {
+              "$ref": "#/components/schemas/LinkOverride"
+            },
+            "type": "array",
+            "maxItems": 2000,
+            "title": "Link Overrides"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "schema_version",
+          "follows",
+          "creators",
+          "preferences",
+          "event_overrides",
+          "link_overrides"
+        ],
+        "title": "Config"
+      },
+      "CoverageView": {
+        "properties": {
+          "dataset": {
+            "type": "string",
+            "title": "Dataset"
+          },
+          "complete": {
+            "type": "boolean",
+            "title": "Complete"
+          },
+          "note": {
+            "type": "string",
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "dataset",
+          "complete",
+          "note"
+        ],
+        "title": "CoverageView"
+      },
+      "CreatorFollow-Input": {
+        "properties": {
+          "channel_id": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Channel Id"
+          },
+          "scope_keys": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 500,
+            "title": "Scope Keys"
+          },
+          "preview": {
+            "type": "boolean",
+            "title": "Preview",
+            "default": true
+          },
+          "recap": {
+            "type": "boolean",
+            "title": "Recap",
+            "default": true
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled",
+            "default": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "channel_id"
+        ],
+        "title": "CreatorFollow"
+      },
+      "CreatorFollow-Output": {
+        "properties": {
+          "channel_id": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Channel Id"
+          },
+          "scope_keys": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 500,
+            "title": "Scope Keys"
+          },
+          "preview": {
+            "type": "boolean",
+            "title": "Preview",
+            "default": true
+          },
+          "recap": {
+            "type": "boolean",
+            "title": "Recap",
+            "default": true
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled",
+            "default": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "channel_id",
+          "scope_keys",
+          "preview",
+          "recap",
+          "enabled"
+        ],
+        "title": "CreatorFollow"
+      },
+      "CreatorView": {
+        "properties": {
+          "channel_id": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Channel Id"
+          },
+          "scope_keys": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 500,
+            "title": "Scope Keys"
+          },
+          "preview": {
+            "type": "boolean",
+            "title": "Preview",
+            "default": true
+          },
+          "recap": {
+            "type": "boolean",
+            "title": "Recap",
+            "default": true
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled",
+            "default": true
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "last_error": {
+            "type": "string",
+            "title": "Last Error"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "channel_id",
+          "scope_keys",
+          "preview",
+          "recap",
+          "enabled",
+          "name",
+          "last_error"
+        ],
+        "title": "CreatorView"
+      },
+      "EventList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/EventView"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "coverage": {
+            "$ref": "#/components/schemas/CoverageView"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "coverage",
+          "next_cursor"
+        ],
+        "title": "EventList"
+      },
+      "EventOverride": {
+        "properties": {
+          "event_key": {
+            "type": "string",
+            "maxLength": 220,
+            "minLength": 1,
+            "title": "Event Key"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "include",
+              "exclude"
+            ],
+            "title": "State"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "event_key",
+          "state"
+        ],
+        "title": "EventOverride"
+      },
+      "EventView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "source_key": {
+            "type": "string",
+            "title": "Source Key"
+          },
+          "competition_id": {
+            "type": "string",
+            "title": "Competition Id"
+          },
+          "sport": {
+            "type": "string",
+            "title": "Sport"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "starts_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Starts At"
+          },
+          "local_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Local Date"
+          },
+          "time_precision": {
+            "type": "string",
+            "title": "Time Precision"
+          },
+          "timezone": {
+            "type": "string",
+            "title": "Timezone"
+          },
+          "duration": {
+            "type": "integer",
+            "title": "Duration"
+          },
+          "venue": {
+            "type": "string",
+            "title": "Venue"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "participants": {
+            "items": {
+              "$ref": "#/components/schemas/ParticipantView"
+            },
+            "type": "array",
+            "title": "Participants"
+          },
+          "provider": {
+            "type": "string",
+            "title": "Provider"
+          },
+          "source_url": {
+            "type": "string",
+            "title": "Source Url"
+          },
+          "updated_at": {
+            "type": "string",
+            "title": "Updated At"
+          },
+          "demo": {
+            "type": "boolean",
+            "title": "Demo"
+          },
+          "included": {
+            "type": "boolean",
+            "title": "Included"
+          },
+          "links": {
+            "items": {
+              "$ref": "#/components/schemas/LinkView"
+            },
+            "type": "array",
+            "title": "Links"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "description_in_feed": {
+            "type": "boolean",
+            "title": "Description In Feed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "source_key",
+          "competition_id",
+          "sport",
+          "title",
+          "starts_at",
+          "local_date",
+          "time_precision",
+          "timezone",
+          "duration",
+          "venue",
+          "status",
+          "participants",
+          "provider",
+          "source_url",
+          "updated_at",
+          "demo",
+          "included",
+          "links",
+          "description",
+          "description_in_feed"
+        ],
+        "title": "EventView"
+      },
+      "FeedAction": {
+        "properties": {
+          "confirmed": {
+            "type": "boolean",
+            "title": "Confirmed"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "confirmed"
+        ],
+        "title": "FeedAction"
+      },
+      "FeedView": {
+        "properties": {
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          },
+          "updated_at": {
+            "type": "string",
+            "title": "Updated At"
+          },
+          "paused": {
+            "type": "boolean",
+            "title": "Paused"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "event_count": {
+            "type": "integer",
+            "title": "Event Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "revision",
+          "updated_at",
+          "paused",
+          "status",
+          "event_count"
+        ],
+        "title": "FeedView"
+      },
+      "Follow": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "team",
+              "competition",
+              "event",
+              "series"
+            ],
+            "title": "Type"
+          },
+          "source_key": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Source Key"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "type",
+          "source_key"
+        ],
+        "title": "Follow"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "ImportInput": {
+        "properties": {
+          "config": {
+            "$ref": "#/components/schemas/Config-Input"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "merge",
+              "replace"
+            ],
+            "title": "Mode",
+            "default": "merge"
+          },
+          "dry_run": {
+            "type": "boolean",
+            "title": "Dry Run",
+            "default": true
+          },
+          "expected_revision": {
+            "type": "integer",
+            "title": "Expected Revision"
+          },
+          "confirmation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confirmation"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "config",
+          "expected_revision"
+        ],
+        "title": "ImportInput"
+      },
+      "ImportPreviewView": {
+        "properties": {
+          "added": {
+            "type": "integer",
+            "title": "Added"
+          },
+          "removed": {
+            "type": "integer",
+            "title": "Removed"
+          },
+          "unresolved": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Unresolved"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          },
+          "confirmation": {
+            "type": "string",
+            "title": "Confirmation"
+          },
+          "applied": {
+            "type": "boolean",
+            "title": "Applied"
+          }
+        },
+        "type": "object",
+        "required": [
+          "added",
+          "removed",
+          "unresolved",
+          "revision",
+          "confirmation",
+          "applied"
+        ],
+        "title": "ImportPreviewView"
+      },
+      "LinkAddedView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "event": {
+            "$ref": "#/components/schemas/EventView"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "event"
+        ],
+        "title": "LinkAddedView"
+      },
+      "LinkOverride": {
+        "properties": {
+          "event_key": {
+            "type": "string",
+            "title": "Event Key"
+          },
+          "url": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Url"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "block",
+              "pin"
+            ],
+            "title": "State"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "event_key",
+          "url",
+          "state"
+        ],
+        "title": "LinkOverride"
+      },
+      "LinkView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "platform": {
+            "type": "string",
+            "title": "Platform"
+          },
+          "creator": {
+            "type": "string",
+            "title": "Creator"
+          },
+          "origin": {
+            "type": "string",
+            "title": "Origin"
+          },
+          "access": {
+            "type": "string",
+            "title": "Access"
+          },
+          "regions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Regions"
+          },
+          "pinned": {
+            "type": "boolean",
+            "title": "Pinned"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "url",
+          "title",
+          "kind",
+          "platform",
+          "creator",
+          "origin",
+          "access",
+          "regions",
+          "pinned",
+          "created_at"
+        ],
+        "title": "LinkView"
+      },
+      "OverrideInput": {
+        "properties": {
+          "expected_revision": {
+            "type": "integer",
+            "title": "Expected Revision"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "include",
+              "exclude",
+              "reset"
+            ],
+            "title": "State"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "expected_revision",
+          "state"
+        ],
+        "title": "OverrideInput"
+      },
+      "ParticipantView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "short_name": {
+            "type": "string",
+            "title": "Short Name"
+          },
+          "color": {
+            "type": "string",
+            "title": "Color"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "short_name",
+          "color"
+        ],
+        "title": "ParticipantView"
+      },
+      "Preferences-Input": {
+        "properties": {
+          "timezone": {
+            "type": "string",
+            "title": "Timezone",
+            "default": "Asia/Shanghai"
+          },
+          "locale": {
+            "type": "string",
+            "enum": [
+              "zh-CN",
+              "en"
+            ],
+            "title": "Locale",
+            "default": "zh-CN"
+          },
+          "watch_region": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Watch Region"
+          },
+          "spoiler_free": {
+            "type": "boolean",
+            "title": "Spoiler Free",
+            "default": true
+          },
+          "transparent": {
+            "type": "boolean",
+            "title": "Transparent",
+            "default": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "Preferences"
+      },
+      "Preferences-Output": {
+        "properties": {
+          "timezone": {
+            "type": "string",
+            "title": "Timezone",
+            "default": "Asia/Shanghai"
+          },
+          "locale": {
+            "type": "string",
+            "enum": [
+              "zh-CN",
+              "en"
+            ],
+            "title": "Locale",
+            "default": "zh-CN"
+          },
+          "watch_region": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Watch Region"
+          },
+          "spoiler_free": {
+            "type": "boolean",
+            "title": "Spoiler Free",
+            "default": true
+          },
+          "transparent": {
+            "type": "boolean",
+            "title": "Transparent",
+            "default": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "timezone",
+          "locale",
+          "watch_region",
+          "spoiler_free",
+          "transparent"
+        ],
+        "title": "Preferences"
+      },
+      "ProviderView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "last_success": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Success"
+          },
+          "error": {
+            "type": "string",
+            "title": "Error"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "last_success",
+          "error",
+          "enabled"
+        ],
+        "title": "ProviderView"
+      },
+      "SaveFollows": {
+        "properties": {
+          "expected_revision": {
+            "type": "integer",
+            "title": "Expected Revision"
+          },
+          "follows": {
+            "items": {
+              "$ref": "#/components/schemas/Follow"
+            },
+            "type": "array",
+            "maxItems": 500,
+            "title": "Follows"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "expected_revision",
+          "follows"
+        ],
+        "title": "SaveFollows"
+      },
+      "SavePreferences": {
+        "properties": {
+          "expected_revision": {
+            "type": "integer",
+            "title": "Expected Revision"
+          },
+          "preferences": {
+            "$ref": "#/components/schemas/Preferences-Input"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "expected_revision",
+          "preferences"
+        ],
+        "title": "SavePreferences"
+      },
+      "ServiceStatusView": {
+        "properties": {
+          "local_preview": {
+            "type": "boolean",
+            "title": "Local Preview"
+          },
+          "firebase_configured": {
+            "type": "boolean",
+            "title": "Firebase Configured"
+          },
+          "providers": {
+            "items": {
+              "$ref": "#/components/schemas/ProviderView"
+            },
+            "type": "array",
+            "title": "Providers"
+          },
+          "integrations": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Integrations"
+          }
+        },
+        "type": "object",
+        "required": [
+          "local_preview",
+          "firebase_configured",
+          "providers",
+          "integrations"
+        ],
+        "title": "ServiceStatusView"
+      },
+      "SourceList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SourceView"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "SourceList"
+      },
+      "SourceView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "short_name": {
+            "type": "string",
+            "title": "Short Name"
+          },
+          "color": {
+            "type": "string",
+            "title": "Color"
+          },
+          "sport": {
+            "type": "string",
+            "title": "Sport"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "demo": {
+            "type": "boolean",
+            "title": "Demo"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "short_name",
+          "color",
+          "sport",
+          "kind",
+          "demo"
+        ],
+        "title": "SourceView"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}
