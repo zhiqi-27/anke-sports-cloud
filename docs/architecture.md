@@ -8,8 +8,8 @@
 | UI | Apple Sports 的克制色彩、紧凑卡片和文字层级；桌面月/周/日程及事件抽屉 | Web 本地实现 |
 | 身份 | Firebase Auth 客户端 ID Token，Admin 验证签名、发行方、有效期与撤销 | 独立开发项目真实Google登录、验签与偏好读写通过；云部署待验 |
 | 权威业务 | Python/FastAPI，HTTP/Queue/MCP 共用服务层 | HTTP、任务处理与MCP本地实现；真实目标客户端待验 |
-| 数据 | Azure MySQL；SQLite 为显式本地适配 | SQLite及本机MySQL 8.4.11测试/迁移通过；Azure TLS与运行待验 |
-| 后台任务 | SQL outbox 与业务变更同一事务；Azure Storage Queue/timer，重试/租约 | 本地验证；Azure 触发器待实测 |
+| 数据 | Azure Cosmos DB for NoSQL Serverless，Periodic 备份 | 用户已确认；现有 SQL/SQLite/MySQL 代码作为迁移基线，Cosmos 实现与验收进行中 |
+| 后台任务 | 业务变更与 outbox 同分区事务；Azure Storage Queue/timer，重试/租约 | 现有 SQL 路径已验证；Cosmos 事务与云触发器待实测 |
 | 日历交付 | 发布时计算投影、保存 ICS；读取只返回稳定内容与条件请求响应 | 本地验证 |
 
 ```mermaid
@@ -18,7 +18,7 @@ flowchart LR
   Extension[Chrome 扩展 · 本地实现] --> API
   MCP[HTTP MCP · 本地实现] --> API
   Auth[Firebase Auth] --> API
-  API --> SQL[(Azure MySQL)]
+  API --> SQL[(Cosmos DB Serverless · 迁移目标)]
   SQL --> Outbox[事务 outbox]
   Outbox --> Queue[Azure Queue / Timer]
   Queue --> Worker[赛程 / 内容 / 投影 worker]
@@ -55,8 +55,11 @@ M5：恢复演练、完整 QA、支持范围、许可与开源发布。M6：Goog
 
 ## 云环境准备
 
-用户授权使用托管Chrome创建配置独立云资源，并再次确认后端使用Azure Functions。Firebase开发项目anke-sports-dev已创建，真实Google登录通过。Azure账号已登录；独立资源组/Functions/MySQL/Storage以及Web/API HTTPS目标尚待配置。已知资源与验收边界见 cloud-development.md。部署前明确目标和费用边界，验证 MySQL 备份恢复与迁移回滚；无需改动现有 FormaLM。
+用户授权使用托管Chrome创建配置独立云资源，并再次确认后端使用Azure Functions。Firebase开发项目anke-sports-dev已创建，真实Google登录通过。Azure账号已登录；独立资源组/Functions/Cosmos Serverless + Periodic/Storage以及Web/API HTTPS目标尚待配置。已知资源与验收边界见 cloud-development.md。部署前明确目标和费用边界，验证 Cosmos 周期备份恢复与迁移回滚；无需改动现有 FormaLM。
 
 Firebase projectId 与加密 key 在非 local 模式强制要求，数据库连接验证 TLS。Feed 私密路径还需要验证 Azure 平台请求遥测与反向代理日志脱敏；目前仅关闭本机访问日志和降低 Functions 主机日志级别，尚不能声明云端秘密不落日志的验收通过。
 
 公共球队/赛事日历已使用独立 PublicFeed 和共用投影逻辑发布，匿名读取不创建账号或任务。生产分发按具体来源启用，详见 [公共日历](public-feeds.md)。
+
+
+用户已选择 Cosmos Serverless + Periodic。目标模板和分区事务/发布迁移合同见 [Cosmos 存储设计](cosmos-storage-design.md)；当前部署模式中的 SQL 校验仍属于原实现，尚未完成 Cosmos 运行时接入，不应将新模板与旧源码包混用。

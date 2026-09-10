@@ -1,12 +1,12 @@
-# Azure 低成本开发环境候选
+# Azure 低成本开发环境选择
 
-2026-09-10。用户要求参考 Anke Money，重新评估成本；先前 MySQL / US$40 月预算方案未获批准。本文是候选方案，不是数据库变更决定或收费资源创建授权。现有 SQL 实现和本机数据保持原状。
+2026-09-10。用户要求参考 Anke Money，重新评估成本；先前 MySQL / US$40 月预算方案未获批准。用户随后明确选择 **Serverless + Periodic**：采用独立 Cosmos DB for NoSQL Serverless 与周期备份，取代 Azure MySQL 目标。现有 SQL 实现和本机数据作为迁移基线保留，尚未改造成 Cosmos；资源还未创建。
 
 ## 建议采用的组合
 
-保留 Firebase Google 登录、Python/FastAPI、Azure Functions Flex、Storage Queue、Key Vault 和托管身份；数据库候选改为**独立 Cosmos DB for NoSQL Serverless，East Asia 单区域**。Functions 无常驻实例。初期仅准备一个独立开发环境，公测/生产环境另行评估。
+保留 Firebase Google 登录、Python/FastAPI、Azure Functions Flex、Storage Queue、Key Vault 和托管身份；数据库选为**独立 Cosmos DB for NoSQL Serverless，East Asia 单区域**。Functions 无常驻实例。初期仅准备一个独立开发环境，公测/生产环境另行评估。
 
-本次只读核对确认：Anke Money 开发环境采用 Serverless；生产环境使用 autoscale，最大吞吐 1,000 RU/s，并未启用免费层。参考的是开发环境的计费方式与分区事务设计，不复制它的生产规格、账号体系、数据、凭据或云资源。实际账单仅保存在 Git 忽略的 `data/money-cost-summary.md`，不进入开源资料。
+早先只读快照曾记录 Anke Money 开发为 Serverless、生产为 Autoscale。用户最新说明生产也已改为 **Serverless + Periodic**，并计划流量增长后原地转 Provisioned，再调整 Autoscale；以该说明更新参考基准，本批未重新读取或修改 Money 资源。只参考计费、升级路径与分区事务设计，不复制账号、数据、凭据或资源；历史账单保持在 Git 忽略文件，不进入开源资料。
 
 ## 可核对的价格
 
@@ -36,4 +36,9 @@ MySQL B1s 已在区域规格清单中出现，但补查其价格遇到零售 API
 4. 大型 Feed 发布不能假定无限事务大小。需先写不可变版本及完整清单，再用受条件保护的发布指针切换，读端只读取完成版本；失败继续提供上一有效版本。清理与账号撤销需验证竞态，私人 Feed 令牌仍不进入日志或导出。
 5. Cosmos 适配器的真实事务、RU、429 重试、备份恢复、MI/RBAC 和云端 Timer/Queue 需要独立证据。当前 191 项通过的后端测试属于现有 SQL 实现，不算 Cosmos 验收。
 
-确认采用该数据库候选后，先更新架构约定和隔离本地实现，再制作相应 Bicep、权限和恢复计划。原 MySQL 模板暂存用于比较，不部署；新的 Cosmos 模板尚未实现。远端资源规格及费用需落实到可审查计划后，才进入对应开发环境创建步骤。
+选型已确认，正在更新架构约定和部署模板；原 MySQL 创建方案停止推进。Periodic 采用开发环境默认每4小时一次、保留8小时（两份），并显式保留 Geo 冗余；这是实现默认值，可后续调整。周期备份的恢复需要向 Azure 请求并恢复到新账号，不把它当作即时回滚；恢复后重建网络/RBAC并重放删除决定。官方说明：[周期备份与恢复](https://learn.microsoft.com/en-us/azure/cosmos-db/periodic-backup-restore-introduction)。
+
+完整 Cosmos 存储实现、RU/并发/恢复和真实云运行仍待验收；不会把已经通过的 SQL 测试改名为 Cosmos 测试。
+
+
+新模板、分区/投影迁移合同、Periodic 默认值及后续原地升级约束见 [Cosmos 存储设计](cosmos-storage-design.md)。

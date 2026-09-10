@@ -1,10 +1,10 @@
 # Anke Sports 服务端状态
 
-当前摘要：2026-09-10，YouTube 独立受限 Key 已创建，Cloud Shell 频道/上传列表/视频详情三次真实请求均200；本机尚未收到密钥，用户暂时无法解锁 Mac，暂停下载窗口检查。应用/Hub/Feed真实联调仍待完成。Firebase Chrome登录、Codex MCP隔离业务证据保留；Azure低成本选型待决定，未创建收费资源。本批只新增证据和文档，历史批次保留当时状态。
+当前摘要：2026-09-10，用户确认 Cosmos NoSQL Serverless + Periodic，未来原地转手动 Provisioned 后调整 Autoscale；Anke Money 生产最新参考由用户说明更新。新 Bicep 编译与 Azure validate 通过，资源组不存在、尚未创建；业务仍为 SQL，Cosmos 适配未完成。Mac 已解锁，YouTube 专用 Key 已安全保存并清理临时明文，隔离 API/worker 两轮各 11 项通过、读取 69 条视频；183 待审/15 拒绝、0 自动附链。专用真实 Firebase 测试身份撤销/删除/后台清理 27 项通过，账号和临时库已移除。以下历史批次保留当时状态，以本摘要和最新批次为准。
 
 更新：2026-09-10。主 API 127.0.0.1:8787，session43380/PID44497；worker session62679/PID44496；显式启用本地体验并关闭访问日志。显式本地SQLite/体验身份。主库163条比赛（48演示+115 Jolpica F1分场次），无合成频道/视频或公共直播记录。
 
-已实现账号验证入口、个人配置/链接、稳定投影与ICS、事务outbox、local worker/Azure触发器、体育Provider接口、共享YouTube发现/签名通知/补查/匹配/人工确认、PKCE/刷新/撤销和HTTP MCP（公开3、私人11工具）。真实Firebase/YouTube/云队列与触发器仍未验收。
+已实现账号验证入口、个人配置/链接、稳定投影与ICS、事务outbox、local worker/Azure触发器、体育Provider接口、共享YouTube发现/签名通知/补查/匹配/人工确认、PKCE/刷新/撤销和HTTP MCP（公开3、私人11工具）。真实 Firebase 登录与专用身份清理、YouTube 小规模本机发现已有证据；Hub、真实内容到ICS、Cosmos、云队列与触发器仍未验收。
 
 新增直播审核、候选URL注册表、地区/条件、草稿与发布版本分离、版本冲突、到期/撤回、HEAD检查和设备观察。业务变化、审计与outbox原子提交。维护者白名单默认空，自动联网检查默认关闭；到期处理独立。直播批68项pytest、ruff通过，2项已有弃用警告。OpenAPI与客户端类型同步。说明：docs/broadcasts.md；证据：evidence/local-2026-09-10.md。
 
@@ -255,3 +255,19 @@ Cloud Shell 重连后于01:43:12 UTC实际执行三次只读 Data API：@Formula
 Chrome标签210263789保留Firebase Cloud Shell，URL为https://console.firebase.google.com/u/1/project/anke-sports-dev/overview?cloudshell=true，iframe I0_1789003549632；原生窗口待用户可解锁后恢复。独立Cloud Console标签曾遇证书名称错误，没有绕过TLS。用户已停止的Codex内置浏览器Google登录排查未恢复。
 
 本批没有应用源码、契约、依赖、数据库、运行配置变化或服务重启。8787/8788健康与3000/3002/3003日历页均200；只是原服务可达证据，未重复全量测试/构建。原主API session43380/PID44497、worker62679/PID44496、Web43940/PID53698；Firebase API92869/PID44563、worker24522/PID44564、Web91087/PID38482；构建预览31276/PID44147、合成匹配63263/PID44193按原记录保留，本轮未逐个核对PID。真实应用频道/worker/预算、Hub及长期续订、匹配质量、Feed/手机仍未验收。Azure低成本选型未改变、未创建收费资源，无push/部署；完整目标继续。
+
+## 2026-09-10 · Cosmos 选择、Firebase 生命周期与 YouTube 本机发现
+
+用户确定 Azure 数据层为 Cosmos NoSQL Serverless + Periodic；Anke Money 生产也已改成该组合，未来流量增长后原地转手动 Provisioned、再调整 Autoscale。Money 的最新状态来自本次用户说明，没有重新读取/修改其资源。当前设计 docs/cosmos-storage-design.md、当前 infra 模板和根/后端 AGENTS 已更新；旧 MySQL 模板移至 infra/legacy-mysql。Bicep 编译无警告，订阅级 Provider validate 为 Succeeded，独立资源组读回不存在；首次 validate 的本机50秒超时重试后通过。没有创建、部署或迁移 Azure。Cosmos 业务适配仍未实现，现有 SQL 测试、Functions 包和演示不能代表新存储可用。
+
+Mac 解锁后将精确专用 JSON 排他存入 Git 忽略 data/youtube-dev.json（0600），校验项目/资源/字节一致，删除下载原件、Cloud Shell 临时明文和错误下载归档；未解包该归档，云 Key 保留。浏览器解锁/下载不再是阻塞。Firebase Cloud Shell 原标签可供用户检查，不需要再下载或创建 Key；本轮未恢复用户已停止的 IAB 登录排查。
+
+experiments.firebase_lifecycle 使用新建无 Google 提供商绑定的专用真实身份、loopback HTTP 和临时 SQLite，真实 ID/refresh 撤销、恢复认证、关注/链接/ICS、HTTP consent/PKCE、确认删除、立即撤销 Feed/下游授权、独立 worker Admin 清理、远端不存在与重复清理均通过，共27项。首次实验脚本误读REST响应字段导致 KeyError，已修正为验证签名ID token；首轮账号也已独立读回不存在，清理记录/临时目录移除。最终测试账号和临时API/库清理均成功，没有操作已有 Google 用户。不是 Google 浏览器删除、设备、Codex/Firebase组合或 Cosmos/Azure 验收。
+
+experiments.youtube_live 只复制原库115条公共 Jolpica缓存事件到临时库，以实际 API/worker/预算完成两轮各11项检查，每轮69条真实视频、198个视频/场次组合。第二轮明确183待审、15拒绝、0个人链接；85个窗口内ICS保持UID、条件请求304，但没有真实视频进入ICS，人工标注数0。主要原因是类型/场次不明确等，没有放宽规则。两轮各8单位，加先前Cloud Shell3，已知19估算/预留单位；实验账本独立，不是Google余额。两轮临时API/库已清理。
+
+最终新增安全边界及删除相关25项pytest、ruff通过；两项已有弃用警告。最终两个探测器和相关应用源哈希与证据一致。客户端只有README/STATE变化，无源码/契约/依赖修改，未重复构建。证据（相对于服务仓）：evidence/firebase-lifecycle-2026-09-10.md及JSON、evidence/youtube-live-2026-09-10.md及JSON、evidence/azure-cosmos-template-2026-09-10.json。
+
+原主API43380/PID44497、worker62679/PID44496、Web43940/PID53698；Firebase API92869/PID44563、worker24522/PID44564、Web91087/PID38482；构建预览31276/PID44147、匹配验收63263/PID44193按原记录保留，本轮未重启或逐项核对PID。没有为这些常驻实例配置YouTube Key/创作者，不声称页面已持续发现真实视频；现有用户数据没有迁移。实验和ARM验证进程均已退出。
+
+下一步优先实现 Cosmos 仓储的 Firebase→关注→同分区outbox→Queue→已发布ICS纵向路径，再覆盖原SQL业务；持续YouTube配置需共用同一项目预算，真实Hub/续订、人工标注到ICS、云身份/RU/429/恢复与设备验收继续。T04/T07/T14–T18等保持in_progress，完整目标未完成。两仓本批分别本地提交，不push/部署。

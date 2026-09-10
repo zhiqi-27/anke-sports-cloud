@@ -1,0 +1,160 @@
+{
+  "date": "2026-09-10T02:13:14.110603+00:00",
+  "success": true,
+  "identity": "explicit isolated local fixture",
+  "provider": "real YouTube Data API",
+  "websub_tested": false,
+  "matching_accuracy_verified": false,
+  "device_calendar_tested": false,
+  "prior_cloud_shell_calls_outside_this_ledger": 3,
+  "checks": [
+    "isolated_owner_follows_cached_real_f1",
+    "baseline_real_f1_http_feed",
+    "http_resolves_real_youtube_channel",
+    "http_adds_real_creator",
+    "idempotent_add_has_no_extra_google_reservation",
+    "worker_stores_real_public_video_metadata",
+    "uploads_and_channel_metadata_completed",
+    "api_and_fresh_worker_share_project_budget",
+    "discovery_preserves_original_feed_uids",
+    "idle_worker_no_google_calls_and_feed_304",
+    "real_creator_visible_in_calendar_api"
+  ],
+  "public_schedule": {
+    "provider": "jolpica",
+    "cached_events": 115,
+    "copied_rows_sha256": "68407af6d7d2ffacd5a482d16ed29ee5eaf9c8cf7ae54c9e164416d2275882a0",
+    "fresh_upstream_fetch": false
+  },
+  "unfinished_jobs": [],
+  "matching_observation": {
+    "decisions": {
+      "needs_review": 183,
+      "reject": 15
+    },
+    "reason_counts": {
+      "RACE_FOUND": 198,
+      "SESSION_AMBIGUOUS": 188,
+      "NO_EXPLICIT_DATE": 183,
+      "PHASE_UNKNOWN": 193,
+      "TITLE_SUBJECT_UNCLEAR": 74,
+      "MULTIPLE_CANDIDATES": 146,
+      "SESSION_FOUND": 10,
+      "DATE_CONFLICT": 15
+    },
+    "samples": [
+      {
+        "video_title": "Drivers React After The Race | 2026 Italian Grand Prix",
+        "event_title": "Italian Grand Prix · 自由练习 3",
+        "kind": "unknown",
+        "decision": "needs_review",
+        "reason_codes": [
+          "RACE_FOUND",
+          "SESSION_AMBIGUOUS",
+          "NO_EXPLICIT_DATE",
+          "PHASE_UNKNOWN"
+        ]
+      },
+      {
+        "video_title": "Drivers React After The Race | 2026 Italian Grand Prix",
+        "event_title": "Italian Grand Prix · 排位赛",
+        "kind": "unknown",
+        "decision": "needs_review",
+        "reason_codes": [
+          "RACE_FOUND",
+          "SESSION_AMBIGUOUS",
+          "NO_EXPLICIT_DATE",
+          "PHASE_UNKNOWN"
+        ]
+      },
+      {
+        "video_title": "Drivers React After The Race | 2026 Italian Grand Prix",
+        "event_title": "Italian Grand Prix · 正赛",
+        "kind": "unknown",
+        "decision": "needs_review",
+        "reason_codes": [
+          "RACE_FOUND",
+          "SESSION_FOUND",
+          "NO_EXPLICIT_DATE",
+          "PHASE_UNKNOWN"
+        ]
+      },
+      {
+        "video_title": "Drivers React After The Race | 2026 Italian Grand Prix",
+        "event_title": "Italian Grand Prix · 自由练习 1",
+        "kind": "unknown",
+        "decision": "needs_review",
+        "reason_codes": [
+          "RACE_FOUND",
+          "SESSION_AMBIGUOUS",
+          "NO_EXPLICIT_DATE",
+          "PHASE_UNKNOWN"
+        ]
+      },
+      {
+        "video_title": "Drivers React After The Race | 2026 Italian Grand Prix",
+        "event_title": "Italian Grand Prix · 自由练习 2",
+        "kind": "unknown",
+        "decision": "needs_review",
+        "reason_codes": [
+          "RACE_FOUND",
+          "SESSION_AMBIGUOUS",
+          "NO_EXPLICIT_DATE",
+          "PHASE_UNKNOWN"
+        ]
+      },
+      {
+        "video_title": "Race Highlights | 2026 Italian Grand Prix",
+        "event_title": "Italian Grand Prix · 自由练习 3",
+        "kind": "unknown",
+        "decision": "needs_review",
+        "reason_codes": [
+          "RACE_FOUND",
+          "SESSION_AMBIGUOUS",
+          "NO_EXPLICIT_DATE",
+          "PHASE_UNKNOWN"
+        ]
+      }
+    ],
+    "human_labels": 0
+  },
+  "youtube": {
+    "channel_id": "UCB_qr75-ydFVKSF9Dmo6izg",
+    "channel_name": "FORMULA 1",
+    "videos_stored": 69,
+    "available_videos": 69,
+    "match_rows": 198,
+    "personal_links": 0,
+    "last_success": "2026-09-10T02:13:20.129582+00:00",
+    "next_poll_at": "2026-09-10T08:13:20.129591+00:00",
+    "completed_job_kinds": [
+      "projection",
+      "youtube_channel_metadata",
+      "youtube_poll",
+      "youtube_rematch",
+      "youtube_videos"
+    ]
+  },
+  "budget": {
+    "project_id": "anke-sports-dev",
+    "period": "2026-09-09",
+    "reserved_units": 8,
+    "daily_limit": 20,
+    "google_remaining_balance_verified": false
+  },
+  "feed": {
+    "events": 85,
+    "events_with_added_content": 0,
+    "events_with_youtube_url": 0
+  },
+  "real_video_to_ics_verified": false,
+  "temporary_api_and_db_removed": true,
+  "source_sha256": {
+    "experiments/youtube_live.py": "fa4a94602a48426af4f839d9517717b0dfbfc001c013e58c1fc70b0485621095",
+    "experiments/codex_business.py": "2a1430e11bfeae9590edfcb8502071babfc423f2b01fa3b37f774603d8fd7de9",
+    "app/providers.py": "232a0fec66aa4cb450acf8cf557bf7768016901701119cc6be2b9424d21d3067",
+    "app/content.py": "2b7139a999b33ca4c73df716771b7a14cd9bc4fd4562d86591a20ae8bcd06191",
+    "app/worker.py": "c439417726f125e3631a4a4c3556bb90690e322dc90948b23ffdad7698a922d2",
+    "app/youtube_budget.py": "f80241af31d5a6a43e50d15c9288f1443c5ba0ccd1e9fcd46a20f15ceedb14c9"
+  }
+}

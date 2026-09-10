@@ -16,7 +16,9 @@
 
 删除响应的 `identity_cleanup: queued` 只表示已排队。账号立即被 Anke Sports 的撤销记录拒绝，外部身份可能仍在重试。Worker 的项目配置变化时拒绝执行，不能把队列中的 UID 发往另一个项目。普通失败遵循现有重试/失败机制；修正原项目配置后按 [任务恢复手册](job-recovery.md) dry-run、重放。只有 `identity_cleanup` 可以为已删除账号重放，其他个人任务仍拒绝。已完成的清理任务和最小撤销记录目前保留在数据库，需要部署时纳入备份保留与恢复规程。
 
-当前没有真实 Firebase 项目；项目不符、失败、重放、远端用户已不存在均使用合成适配器验证。Azure Queue、真实 Firebase 权限、生产清理告警未验收。
+独立真实项目 `anke-sports-dev` 已完成专用临时身份的撤销、刷新和删除验收：真实 HTTP 删除写入 outbox，另一进程执行实际 Firebase Admin 清理，读回远端身份不存在；旧 ID/refresh、私人 Feed 与下游授权均被拒绝。27 项检查和临时数据清理通过，见 [真实身份生命周期证据](../evidence/firebase-lifecycle-2026-09-10.md)。项目不符、故障与重放的测试另有合成适配器覆盖。
+
+本次使用新建的无邮箱、无 Google 提供商绑定的测试身份和临时 SQLite；没有删除用户已有的 Google 账号。Google 浏览器重新认证/删除、多设备缓存、Cosmos 分区事务、Azure Queue 与云清理告警仍未验收。
 
 ## 浏览器和外部缓存
 
@@ -34,3 +36,14 @@ uv run python -m experiments.privacy_ui
 ```
 
 网页夹具需客户端 production server 在 3002，浏览器访问 `http://[::1]:3004/fixture/login`。IPv6 主机隔离主体验 cookie。仅夹具的 status 响应关闭共享体验 UI 保护，并以“隔离删除验收（合成账号）”标识；身份仍为本地适配器，无 Firebase 请求。退出进程后临时库清理。证据见 [删除验收](../evidence/privacy-2026-09-10.md)。
+
+独立真实身份实验（会创建并清理本项目专用测试账号）：
+
+```sh
+uv run python -m experiments.firebase_lifecycle \
+  --service-account data/firebase-dev-service-account.json \
+  --web-config data/firebase-dev-web.json \
+  --output data/firebase-lifecycle-new-run.json
+```
+
+两个配置必须属于 `anke-sports-dev`，为权限 0600 的普通文件。脚本只接受新输出路径，在创建远端身份前建立排他清理记录；拒绝已有用户、提供商绑定或所有权标记不符的清理对象，异常仅输出安全错误类别。中断后先检查对应 `*.cleanup.json` 的项目/UID/标记并读回 Firebase，不要重复创建或对其他账号执行清理。

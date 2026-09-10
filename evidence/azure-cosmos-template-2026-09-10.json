@@ -1,0 +1,49 @@
+{
+  "date": "2026-09-10",
+  "observed_at": "2026-09-10T02:25:08.369175+00:00",
+  "subscription_id": "a1187bf2-2e2f-4e05-aaea-407163a009f5",
+  "tenant_id": "5ba85645-4c35-4efd-93ea-11c0890472d8",
+  "target_account_verified": true,
+  "region": "eastasia",
+  "resource_group": "anke-sports-dev",
+  "capacity": "Serverless",
+  "backup": {
+    "type": "Periodic",
+    "interval_minutes": 240,
+    "retention_hours": 8,
+    "redundancy": "Geo"
+  },
+  "containers": [
+    "state",
+    "indexes"
+  ],
+  "partition_key": "/pk",
+  "local_auth_disabled": true,
+  "managed_identity_database_scope": true,
+  "bicep_compile": {
+    "exit_code": 0,
+    "warnings": 0
+  },
+  "arm_validation": {
+    "command": "az deployment sub validate",
+    "name": "anke-sports-cosmos-validate",
+    "level": "Provider (default)",
+    "provisioning_state": "Succeeded",
+    "exit_code": 0,
+    "first_attempt": "local subprocess timeout at 50 seconds; validation-only retry succeeded",
+    "web_url_parameter": "https://anke-sports-dev.invalid",
+    "web_url_is_validation_placeholder": true
+  },
+  "resources_created": false,
+  "runtime_cosmos_implemented": false,
+  "runtime_deployed": false,
+  "money_configuration_source": "user states production now Serverless + Periodic; not reread or changed in this batch",
+  "future_growth": "in-place Serverless to manual Provisioned, then adjust Autoscale; no upgrade performed",
+  "source_sha256": {
+    "infra/main.bicep": "2f31d14d34e2875aca0c612c3c76fe2ed940d6e17c0e45eb24fae5e2abb28f16",
+    "infra/resources.bicep": "72cf70608f8fd4e6ee422b13d1bf6005dc881a4ab9e777049838305320906701"
+  },
+  "compiled_template_sha256": "c884fad7d7d1a8a2d32bab43dde71dad9c8fb9a5e9b0a1d2f11afd81f8baeea8",
+  "official_capacity_reference": "https://learn.microsoft.com/en-us/azure/cosmos-db/how-to-change-capacity-mode",
+  "resource_group_exists_readback": false
+}

@@ -2,7 +2,7 @@
 
 体育日历、个人配置与原始观看链接的业务服务。原产品名 SportsCal 已更名为 **Anke Sports**。
 
-Python/FastAPI + Firebase Authentication + Azure Functions + Azure MySQL + Azure Storage Queue。参考 FormaLM 的服务分层，使用独立账号、密钥与资源。`anke-sports` 为独立客户端仓库。
+目标架构：Python/FastAPI + Firebase Authentication + Azure Functions + Cosmos DB for NoSQL **Serverless + Periodic** + Azure Storage Queue。参考 FormaLM 的服务分层，使用独立账号、密钥与资源。当前业务代码仍运行 SQL，Cosmos 适配尚未完成；`anke-sports` 为独立客户端仓库。
 
 ## 本地运行
 
@@ -26,7 +26,7 @@ ANKE_SPORTS_ENV=local ANKE_SPORTS_LOCAL_PREVIEW=true uv run python -m app.worker
 
 前端通过同源 `/api/` 代理连接。Web 默认 127.0.0.1:3000。私人订阅地址通过已登录页面复制，服务访问日志应始终关闭。其令牌仅授权读取已发布的个人 Feed，不是写入凭据。
 
-在设置页手动获取 F1；首次成功后，本地 worker 按数据库中的时间每 6 小时更新已启用的数据源；启动即检查，重启不会重新等待六小时或提前抓取。NBA、足球和 YouTube 的 key 只配置于服务端；不复制 FormaLM 凭据。YouTube 频道确认、后台补查、匹配、人工确认与移除/固定已接入本地流程；专用 Key 已在 Cloud Shell 完成三次真实 API 读取；本机下载/应用联调、Hub 与 Azure 仍待完成，见 [YouTube 接入进度](docs/youtube-development.md)。详见 [内容链路](docs/content-pipeline.md)。
+在设置页手动获取 F1；首次成功后，本地 worker 按数据库中的时间每 6 小时更新已启用的数据源；启动即检查，重启不会重新等待六小时或提前抓取。NBA、足球和 YouTube 的 key 只配置于服务端；不复制 FormaLM 凭据。YouTube 频道确认、后台补查、匹配、人工确认与移除/固定已接入本地流程；专用 Key 已安全保存，本机隔离 API/worker 读取 69 条真实视频并共用预算；自动附链、Hub 和 Azure 验收仍待完成，见 [YouTube 接入进度](docs/youtube-development.md)。详见 [内容链路](docs/content-pipeline.md)。
 
 ## 检查与契约
 
@@ -53,7 +53,7 @@ uv run alembic check
 
 Functions 的安全源码打包和真实 Core Tools/Azurite 本机宿主已验证 HTTP、队列、定时器、MCP 及 Feed 发布；复现命令和云端待验边界见 [Functions 运行验收](docs/functions-runtime.md)。不要直接打包整个工作目录。
 
-独立Azure开发模板、托管身份/Key Vault配置、费用和创建前验收状态见 [Azure开发环境计划](docs/azure-development-plan.md)。当前只有模板validate通过，收费资源尚未创建。
+独立 Azure 开发模板已改为 Cosmos Serverless + Periodic，并通过 Bicep 编译和 Azure 服务端 validate；资源尚未创建，运行时迁移尚未完成。分区/事务/发布合同与后续 Provisioned → Autoscale 路径见 [Cosmos 存储设计](docs/cosmos-storage-design.md)。原 MySQL 计划和模板只保留为历史基线。
 
 MCP 已提供匿名与私人 Streamable HTTP、网页授权、短期令牌和撤销；入口、权限、重试约定与本地验收命令见 [MCP 与应用连接](docs/mcp-and-connections.md)。Chrome 本地安装包位于客户端仓库，实际 Chrome 运行仍待验收。
 
@@ -71,8 +71,8 @@ MCP 已提供匿名与私人 Streamable HTTP、网页授权、短期令牌和撤
 
 定时截止、手动/自动去重、直播分批到期与巡检、迁移和复现命令见 [持续更新调度](docs/scheduling.md)。
 
-账号删除会撤销私人订阅与授权，防止删除前请求恢复个人数据；Firebase 身份清理由可重试任务执行。保留字段、失败重放与外部缓存边界见 [账号删除](docs/account-deletion.md)，真实云身份清理尚未验收。
+账号删除会撤销私人订阅与授权，防止删除前请求恢复个人数据；Firebase 身份清理由可重试任务执行。真实专用 Firebase 测试身份已完成 27 项撤销/刷新/HTTP 删除/后台清理检查；这不是 Google 浏览器删除、Cosmos 或设备缓存验收。保留字段与复现见 [账号删除](docs/account-deletion.md)。
 
-通知到1,000账号发布的本机容量、关注候选筛选、个人发布任务合并及重复通知验收见 [内容容量](docs/content-capacity.md)。真实YouTube项目配额与云端容量仍待完成。
+通知到1,000账号发布的本机容量、关注候选筛选、个人发布任务合并及重复通知验收见 [内容容量](docs/content-capacity.md)。真实 YouTube 小规模 API/worker 预算已验证，长期多频道、Google 实际余额与云端容量仍待完成。
 
 YouTube Data API 需要独立项目ID及Key，API与worker共用持久预算。默认9,000是本服务上限，不是Google实际余额。配置、迁移与恢复见 [项目预算](docs/youtube-budget.md)。

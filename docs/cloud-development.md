@@ -6,11 +6,11 @@
 | --- | --- | --- |
 | Firebase | `anke-sports-dev`，项目显示名称Anke Sports Dev；Google登录 | 已创建，真实登录/验签/个人设置读写/退出通过 |
 | Firebase Web | Anke Sports Web Dev；`anke-sports-dev.firebaseapp.com` | 已注册，localhost与127.0.0.1已授权 |
-| YouTube Data API | 独立 `anke-sports-youtube-dev` Key，仅允许 YouTube API | Cloud Shell 三次真实公共读取通过；本机安装/应用联调与 Hub 待完成 |
-| Firebase服务账号 | Anke Sports Auth Dev；独立认证验签和身份清理 | 已创建，赋予Firebase Authentication Admin；实际Admin读取通过 |
+| YouTube Data API | 独立 `anke-sports-youtube-dev` Key，仅允许 YouTube API | 已安全保存；隔离 API/worker 读取 69 条真实视频与预算通过；自动附链/Hub 待验 |
+| Firebase服务账号 | Anke Sports Auth Dev；独立认证验签和身份清理 | Authentication Admin；专用真实测试身份撤销、删除及远端清理 27 项检查通过 |
 | Azure Functions | 新建Anke Sports独立Function App；Python3.12/FastAPI、HTTP/MCP/Queue/Timer | `function_app.py`入口已实现；Azure资源尚未创建 |
-| Azure MySQL | 独立业务数据库；公共比赛、个人配置、投影与事务outbox | 本机MySQL8.4.11测试及迁移通过；云资源/网络/TLS待配置与验证 |
-| Azure Storage Queue | `anke-sports-jobs`任务分发，与SQL任务状态共用业务处理器 | 本地处理器通过；云触发器待验证 |
+| Azure Cosmos DB | 独立 NoSQL Serverless + Periodic；公共比赛、个人分区、投影/outbox | 用户已选定，Bicep/ARM validate 通过；资源及存储适配未完成，SQL 留作迁移基线 |
+| Azure Storage Queue | `anke-sports-jobs` 任务分发；与权威存储的 outbox 共用处理器 | SQL 本地处理器通过；Cosmos 适配与云触发器待验证 |
 
 Firebase保持Spark免费计划；未启用Analytics、Gemini、Hosting、Firestore或Firebase Storage。Google登录提供商展示名称为Anke Sports Dev，使用项目所属账号的支持邮箱。服务账号不是项目Owner/Editor，不复用其他产品身份。
 
@@ -36,12 +36,12 @@ uv run python data/run-firebase-dev.py worker
 
 当前浏览器已登录Azure，看到Azure subscription 1；曾打开的`speech`资源组属于已有语音/头像资源，仅作只读核对。尚未将其选为Anke Sports部署目标。继续使用独立资源组和独立数据库、队列及身份。
 
-1. 核定开发环境的订阅、区域、Functions计划与MySQL规格、费用边界、Web/API HTTPS地址，并保存具体资源清单。
-2. 根据现有Functions入口生成资源配置，保留Firebase验签与SQL事务边界；为凭据选择受控配置/身份方案，验证平台日志不会记录私人Feed地址。
-3. 对独立目标执行迁移前备份与恢复检查，验证Azure MySQL TLS、Functions HTTP、Queue与Timer、重试和服务端到Feed的完整路径。
-4. 真实YouTube API/Hub和设备日历验收在各自条件具备后继续；不把Firebase登录通过视作这些项目已通过。
+1. 已确认 Cosmos Serverless + Periodic；按 [分区与迁移合同](cosmos-storage-design.md) 实现仓储和同分区事务，先走通 Firebase → 关注 → outbox → Queue → 已发布 ICS。不可直接把 SQL 实现连接到 Cosmos。
+2. 完成所有既有业务模块适配，核对目标费用与 Web/API HTTPS 地址、独立身份/RBAC、平台日志脱敏，再构建对应的 Functions 包。
+3. 在独立 Cosmos 验证 RU、并发/429、稳定身份、完整投影、删除和恢复；验收 Functions HTTP、Queue/Timer 与重试。Periodic 恢复至新账号，需重建网络/RBAC并重放删除决定。
+4. 真实 YouTube Hub、长期续订和设备日历各自验收；流量增长时评估原地转手动 Provisioned，再调整 Autoscale。
 
-目前没有Azure资源创建、部署、数据库迁移或Git推送。Firebase账号删除/撤销清理、多设备、部署域名回调仍未验收。Azure Prepare当前安装版本仅适用于显式azd或已有azure.yaml的项目，本项目未选择azd；不因该技能自动引入部署工具或额外审批流程。
+目前没有 Azure 资源创建、部署、远端数据库迁移或 Git 推送。Firebase 专用真实测试身份的删除/撤销清理已通过；Google 浏览器删除、多设备与部署域名回调尚未验收。Azure Prepare 当前安装版本仅适用于显式 azd 或已有 azure.yaml 的项目，本项目未选择 azd；不因该技能自动引入部署工具或额外审批流程。
 
 
 ## 浏览器验收补充（2026-09-10）
@@ -53,11 +53,13 @@ uv run python data/run-firebase-dev.py worker
 
 Functions已完成真实Core Tools/Azurite本机宿主验收与安全源码打包，参见[复现与边界](functions-runtime.md)。Azure资源和远端部署状态仍为未执行。
 
-独立Azure开发Bicep已通过本机编译和订阅级validate；托管身份队列适配、Firebase JSON凭据及真实Admin只读验证已完成。具体资源与费用已提交确认，详见[Azure开发环境计划](azure-development-plan.md)。未创建收费资源，未把模板验证记为部署。
+独立 Azure 开发 Bicep 已替换为 Cosmos Serverless + Periodic，并通过编译及订阅级 validate，详见 [当前设计](cosmos-storage-design.md) 与 [模板证据](../evidence/azure-cosmos-template-2026-09-10.json)。原 [MySQL 计划](azure-development-plan.md) 仅作历史记录。未创建收费资源，未把模板验证记为部署。
 
 
 ## YouTube 接入进展（2026-09-10）
 
-已在同一独立项目启用 YouTube Data API/API Keys API，创建专用受限 Key；未修改 Firebase Browser key，Spark 计划保持。Cloud Shell 真实频道、uploads、视频详情请求均200，合计三次读取。Mac 暂时无法解锁，专用密钥文件尚未确认落到本机；完整资源读回、脱敏结果与安全恢复步骤见 [YouTube 开发接入](youtube-development.md)。真实应用/worker、Hub、匹配/Feed和手机验收仍待执行。
+已在同一独立项目启用 YouTube Data API/API Keys API，创建专用受限 Key；未修改 Firebase Browser key，Spark 计划保持。用户解锁 Mac 后已安全保存并清理临时明文。本机隔离 API/worker 两轮各 11 项通过，每轮预留 8 单位、读取 69 条视频。实际没有自动附链，183 条待审核/15 条拒绝；Hub、真实视频到 ICS、手机仍待验收。见 [YouTube 开发接入](youtube-development.md)。
 
-Azure 原 MySQL 创建方案未获费用批准；参考 Anke Money 的低成本候选仍待选型，见 [成本方案](azure-low-cost-proposal.md)。本次没有创建收费 Azure 资源或改变 SQL 架构。
+用户已确定 Serverless + Periodic，并说明 Anke Money 生产也采用同样配置，未来原地转 Provisioned → Autoscale；本批没有重新读取或修改 Money 资源。见 [成本选择](azure-low-cost-proposal.md)。当前 SQL 业务运行时还未迁移，Azure 资源未创建。
+
+真实 Firebase 专用测试身份通过实际 ID/refresh 撤销、HTTP 删除、独立 worker 清理、旧 Feed/下游授权拒绝和远端不存在读回，共 27 项。测试账号与临时 API/库已清理，没有操作已有 Google 用户；完整范围见 [生命周期证据](../evidence/firebase-lifecycle-2026-09-10.md)。

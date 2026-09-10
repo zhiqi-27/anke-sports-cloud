@@ -1,13 +1,14 @@
 param location string
 param tags object
 param webUrl string
-param developerIpRules array
+@secure()
+param mysqlAdministratorPassword string
 
 var suffix = take(uniqueString(subscription().id, resourceGroup().name), 8)
 var appName = 'anke-sports-dev-${suffix}'
 var storageName = 'ankesportsdev${suffix}'
 var vaultName = 'ankesports-dev-${suffix}'
-var cosmosName = 'anke-sports-dev-${suffix}'
+var mysqlName = 'anke-sports-dev-${suffix}'
 
 resource identity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
   name: 'anke-sports-dev-runtime'
@@ -27,106 +28,67 @@ resource network 'Microsoft.Network/virtualNetworks@2024-05-01' = {
         properties: {
           addressPrefix: '10.87.0.0/26'
           delegations: [{ name: 'flex', properties: { serviceName: 'Microsoft.App/environments' } }]
-          serviceEndpoints: [{ service: 'Microsoft.AzureCosmosDB' }]
+        }
+      }
+      {
+        name: 'mysql'
+        properties: {
+          addressPrefix: '10.87.1.0/27'
+          delegations: [{ name: 'mysql', properties: { serviceName: 'Microsoft.DBforMySQL/flexibleServers' } }]
         }
       }
     ]
   }
 }
 
-// Selected by the owner: Serverless capacity and Periodic backups.
-resource cosmos 'Microsoft.DocumentDB/databaseAccounts@2025-04-15' = {
-  name: cosmosName
+resource mysqlDns 'Microsoft.Network/privateDnsZones@2024-06-01' = {
+  name: 'anke-sports-dev.private.mysql.database.azure.com'
+  location: 'global'
+  tags: tags
+}
+
+resource mysqlDnsLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2024-06-01' = {
+  parent: mysqlDns
+  name: 'anke-sports-dev'
+  location: 'global'
+  properties: {
+    registrationEnabled: false
+    virtualNetwork: { id: network.id }
+  }
+}
+
+resource mysql 'Microsoft.DBforMySQL/flexibleServers@2024-12-30' = {
+  name: mysqlName
   location: location
   tags: tags
-  kind: 'GlobalDocumentDB'
+  sku: { name: 'Standard_B1ms', tier: 'Burstable' }
   properties: {
-    databaseAccountOfferType: 'Standard'
-    capabilities: [{ name: 'EnableServerless' }]
-    enableFreeTier: false
-    enableAutomaticFailover: false
-    enableMultipleWriteLocations: false
-    enableAnalyticalStorage: false
-    locations: [{ locationName: location, failoverPriority: 0, isZoneRedundant: false }]
-    consistencyPolicy: { defaultConsistencyLevel: 'Session' }
-    backupPolicy: {
-      type: 'Periodic'
-      periodicModeProperties: {
-        backupIntervalInMinutes: 240
-        backupRetentionIntervalInHours: 8
-        backupStorageRedundancy: 'Geo'
-      }
-    }
-    disableLocalAuth: true
-    disableKeyBasedMetadataWriteAccess: true
-    minimalTlsVersion: 'Tls12'
-    publicNetworkAccess: 'Enabled'
-    isVirtualNetworkFilterEnabled: true
-    virtualNetworkRules: [{ id: '${network.id}/subnets/functions', ignoreMissingVNetServiceEndpoint: false }]
-    ipRules: [for address in developerIpRules: { ipAddressOrRange: address }]
-    networkAclBypass: 'None'
-  }
-}
-
-resource database 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases@2025-04-15' = {
-  parent: cosmos
-  name: 'anke-sports'
-  properties: { resource: { id: 'anke-sports' } }
-}
-
-// Business state, receipts, tombstones and outbox share their aggregate partition.
-resource state 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2025-04-15' = {
-  parent: database
-  name: 'state'
-  properties: {
-    resource: {
-      id: 'state'
-      partitionKey: { paths: ['/pk'], kind: 'Hash', version: 2 }
-      defaultTtl: -1
-      indexingPolicy: {
-        automatic: true
-        indexingMode: 'consistent'
-        includedPaths: [{ path: '/*' }]
-        excludedPaths: [{ path: '/payload/*' }, { path: '/ciphertext/?' }, { path: '/body/?' }]
-        compositeIndexes: [
-          [{ path: '/kind', order: 'ascending' }, { path: '/state', order: 'ascending' }, { path: '/due_at', order: 'ascending' }]
-        ]
-      }
+    version: '8.4'
+    createMode: 'Default'
+    administratorLogin: 'anke_migrator'
+    administratorLoginPassword: mysqlAdministratorPassword
+    storage: { storageSizeGB: 20, autoGrow: 'Disabled', autoIoScaling: 'Disabled' }
+    backup: { backupRetentionDays: 7, geoRedundantBackup: 'Disabled' }
+    highAvailability: { mode: 'Disabled' }
+    network: {
+      delegatedSubnetResourceId: '${network.id}/subnets/mysql'
+      privateDnsZoneResourceId: mysqlDns.id
+      publicNetworkAccess: 'Disabled'
     }
   }
+  dependsOn: [mysqlDnsLink]
 }
 
-// Rebuildable routes/indexes never grant authority without reading owner state.
-resource indexes 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2025-04-15' = {
-  parent: database
-  name: 'indexes'
-  properties: {
-    resource: {
-      id: 'indexes'
-      partitionKey: { paths: ['/pk'], kind: 'Hash', version: 2 }
-      defaultTtl: -1
-      indexingPolicy: {
-        automatic: true
-        indexingMode: 'consistent'
-        includedPaths: [{ path: '/*' }]
-        excludedPaths: [{ path: '/payload/*' }]
-        compositeIndexes: [
-          [{ path: '/starts_at', order: 'ascending' }, { path: '/event_id', order: 'ascending' }]
-        ]
-      }
-    }
-  }
+resource database 'Microsoft.DBforMySQL/flexibleServers/databases@2023-12-30' = {
+  parent: mysql
+  name: 'anke_sports'
+  properties: { charset: 'utf8mb4', collation: 'utf8mb4_0900_bin' }
 }
 
-// Cosmos-native data-plane role, scoped to this database only; no account keys.
-resource cosmosRole 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2025-04-15' = {
-  parent: cosmos
-  name: guid(cosmos.id, database.id, identity.id, 'data-contributor')
-  properties: {
-    principalId: identity.properties.principalId
-    roleDefinitionId: '${cosmos.id}/sqlRoleDefinitions/00000000-0000-0000-0000-000000000002'
-    scope: '${cosmos.id}/dbs/${database.name}'
-  }
+resource requireTls 'Microsoft.DBforMySQL/flexibleServers/configurations@2023-12-30' = {
+  parent: mysql
+  name: 'require_secure_transport'
+  properties: { value: 'ON', source: 'user-override' }
 }
 
 resource storage 'Microsoft.Storage/storageAccounts@2024-01-01' = {
@@ -250,7 +212,7 @@ resource app 'Microsoft.Web/sites@2024-11-01' = {
 
     }
   }
-  dependsOn: [blobRole, queueRole, vaultRole, cosmosRole, jobs, tables, state, indexes]
+  dependsOn: [blobRole, queueRole, vaultRole, jobs, tables]
 }
 
 resource appSettings 'Microsoft.Web/sites/config@2024-11-01' = {
@@ -270,13 +232,7 @@ resource appSettings 'Microsoft.Web/sites/config@2024-11-01' = {
     ANKE_SPORTS_FIREBASE_PROJECT_ID: 'anke-sports-dev'
     ANKE_SPORTS_WEB_URL: webUrl
     ANKE_SPORTS_PUBLIC_URL: 'https://${app.properties.defaultHostName}'
-    // Runtime adapter is being migrated; do not deploy the existing SQL package here.
-    ANKE_SPORTS_STORAGE_BACKEND: 'cosmos'
-    ANKE_SPORTS_COSMOS_ENDPOINT: cosmos.properties.documentEndpoint
-    ANKE_SPORTS_COSMOS_DATABASE: database.name
-    ANKE_SPORTS_COSMOS_STATE_CONTAINER: state.name
-    ANKE_SPORTS_COSMOS_INDEX_CONTAINER: indexes.name
-    ANKE_SPORTS_COSMOS_CLIENT_ID: identity.properties.clientId
+    ANKE_SPORTS_DATABASE_URL: '@Microsoft.KeyVault(SecretUri=${vault.properties.vaultUri}secrets/database-url)'
     ANKE_SPORTS_ENCRYPTION_KEY: '@Microsoft.KeyVault(SecretUri=${vault.properties.vaultUri}secrets/feed-encryption-key)'
     ANKE_SPORTS_FIREBASE_CREDENTIALS_JSON: '@Microsoft.KeyVault(SecretUri=${vault.properties.vaultUri}secrets/firebase-credentials)'
     ANKE_SPORTS_YOUTUBE_WEBSUB_ENABLED: 'false'
@@ -290,10 +246,8 @@ output resources object = {
   apiUrl: 'https://${app.properties.defaultHostName}'
   storageAccount: storage.name
   keyVault: vault.name
-  cosmosAccount: cosmos.name
-  cosmosEndpoint: cosmos.properties.documentEndpoint
-  capacityMode: 'Serverless'
-  backupMode: 'Periodic'
+  mysqlServer: mysql.name
+  mysqlHost: mysql.properties.fullyQualifiedDomainName
   database: database.name
   identityClientId: identity.properties.clientId
   virtualNetwork: network.name

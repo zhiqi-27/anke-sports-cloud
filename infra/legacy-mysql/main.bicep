@@ -9,8 +9,10 @@ param resourceGroupName string = 'anke-sports-dev'
 @description('Confirmed HTTPS desktop Web origin; no trailing slash. Required before deployment.')
 param webUrl string
 
-@description('Optional explicit developer public IPv4 rules; empty by default. Runtime uses its own VNet service endpoint.')
-param developerIpRules array = []
+@secure()
+@minLength(20)
+@description('New independent database migration administrator password; never used by the API.')
+param mysqlAdministratorPassword string
 
 var tags = { product: 'Anke Sports', environment: 'development', managedBy: 'bicep' }
 
@@ -27,7 +29,7 @@ module services 'resources.bicep' = {
     location: location
     tags: tags
     webUrl: webUrl
-    developerIpRules: developerIpRules
+    mysqlAdministratorPassword: mysqlAdministratorPassword
   }
 }
 

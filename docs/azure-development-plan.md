@@ -1,5 +1,7 @@
 # Azure 开发环境：原 MySQL 方案暂缓
 
+> 2026-09-10 更新：本文的 MySQL 规格已被用户选择的 Cosmos Serverless + Periodic 取代，停止创建。旧 Bicep 已归档至 `infra/legacy-mysql/`；当前目标与尚未完成的存储迁移见 [Cosmos 存储设计](cosmos-storage-design.md)。以下保留原提案及当时证据。
+
 **最新状态（2026-09-10）：用户未批准此费用方案，要求参考 Anke Money 寻找更便宜的组合。已提出 [Cosmos Serverless 低成本候选](azure-low-cost-proposal.md)。下文保留原 MySQL 方案和验证记录供比较，不代表当前获准创建的范围。**
 
 2026-09-10。Bicep已通过本机编译和Azure订阅级`validate`（Succeeded），没有创建资源。验证使用明确标识的HTTPS占位域名；真实Web域名、私网迁移和部署后验收仍未完成。
