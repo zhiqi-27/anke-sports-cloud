@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     web_url: str = "http://localhost:3000"
     local_preview: bool = False
     firebase_project_id: str = ""
+    firebase_credentials_json: SecretStr = Field(default=SecretStr(""), repr=False)
     encryption_key: str = ""
     youtube_websub_enabled: bool = False
     youtube_project_id: str = Field(default="", max_length=160, pattern=r"^[a-zA-Z0-9_-]*$")

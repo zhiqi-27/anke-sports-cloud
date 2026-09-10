@@ -32,6 +32,8 @@ def local_allowed(request: Request) -> bool:
 
 def firebase_app():
     import firebase_admin
+    from firebase_admin import credentials
+    import json
 
     project = settings().firebase_project_id
     if not project:
@@ -39,8 +41,22 @@ def firebase_app():
     try:
         app = firebase_admin.get_app("anke-sports-auth")
     except ValueError:
+        credential = None
+        if value := settings().firebase_credentials_json.get_secret_value():
+            try:
+                payload = json.loads(value)
+                if not isinstance(payload, dict) or payload.get("type") != "service_account":
+                    raise ValueError()
+                if payload.get("project_id") != project:
+                    raise ValueError("IDENTITY_TARGET_MISMATCH")
+                credential = credentials.Certificate(payload)
+            except Exception:
+                # Do not include JSON parser excerpts or private-key diagnostics in host logs.
+                raise ValueError("FIREBASE_CREDENTIALS_INVALID_OR_WRONG_PROJECT") from None
         try:
-            app = firebase_admin.initialize_app(options={"projectId": project}, name="anke-sports-auth")
+            app = firebase_admin.initialize_app(
+                credential=credential, options={"projectId": project}, name="anke-sports-auth"
+            )
         except ValueError:
             app = firebase_admin.get_app("anke-sports-auth")
     if app.project_id != project:

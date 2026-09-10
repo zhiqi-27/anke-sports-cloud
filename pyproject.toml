@@ -17,6 +17,7 @@ dependencies = [
     "defusedxml>=0.7",
     "alembic>=1.15,<2",
     "mcp==1.30.0",
+    "azure-identity>=1.25,<2",
 ]
 
 [dependency-groups]

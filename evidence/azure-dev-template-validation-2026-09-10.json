@@ -1,0 +1,16 @@
+{
+  "date": "2026-09-10",
+  "operation": "subscription deployment validate only",
+  "web_origin": "placeholder, not a deployed domain",
+  "returncode": 0,
+  "resource_creation": false,
+  "provisioning_state": "Succeeded",
+  "error": null,
+  "template_sha256": "afd50fca47c401e35ba73b6629653cb76ccba59fa1fb754b6f9e73003be7ffbc",
+  "source_hashes": {
+    "infra/main.bicep": "1a808be2f93242b2c2e8958d59d763bba55e54d778d65dfe10ad6a59f9746aef",
+    "infra/resources.bicep": "7407d807f8c4a87a8e7c5e1cfa36508585eedf98fb9794e8f2525530fecbe7e0"
+  },
+  "bicep_version": "0.46.1",
+  "anke_resource_group_readback": []
+}

@@ -1,0 +1,66 @@
+{
+  "checked_at": "2026-09-10T00:34:33.727016+00:00",
+  "source": "https://prices.azure.com/api/retail/prices",
+  "region": "eastasia",
+  "currency": "USD",
+  "mode": "Consumption",
+  "items": [
+    {
+      "currencyCode": "USD",
+      "tierMinimumUnits": 0.0,
+      "retailPrice": 0.25,
+      "unitPrice": 0.25,
+      "armRegionName": "eastasia",
+      "location": "AP East",
+      "effectiveStartDate": "2016-04-01T00:00:00Z",
+      "meterId": "0dc2fd3e-fe0b-4172-8c53-297851a3d2d1",
+      "meterName": "Data Stored",
+      "productId": "DZH318Z0BPJH",
+      "skuId": "DZH318Z0BPJH/0045",
+      "productName": "Azure Cosmos DB",
+      "skuName": "RUs",
+      "serviceName": "Azure Cosmos DB",
+      "serviceId": "DZH317DL9CC7",
+      "serviceFamily": "Databases",
+      "unitOfMeasure": "1 GB/Month",
+      "type": "Consumption",
+      "isPrimaryMeterRegion": true,
+      "armSkuName": ""
+    },
+    {
+      "currencyCode": "USD",
+      "tierMinimumUnits": 0.0,
+      "retailPrice": 0.31,
+      "unitPrice": 0.31,
+      "armRegionName": "eastasia",
+      "location": "AP East",
+      "effectiveStartDate": "2023-04-01T00:00:00Z",
+      "meterId": "3b09ae21-3230-5a7d-a655-67af5ca0ff7f",
+      "meterName": "1M RUs",
+      "productId": "DZH318Z0D20N",
+      "skuId": "DZH318Z0D20N/0004",
+      "productName": "Azure Cosmos DB serverless",
+      "skuName": "RUs",
+      "serviceName": "Azure Cosmos DB",
+      "serviceId": "DZH317DL9CC7",
+      "serviceFamily": "Databases",
+      "unitOfMeasure": "1M",
+      "type": "Consumption",
+      "isPrimaryMeterRegion": true,
+      "armSkuName": ""
+    }
+  ],
+  "assumptions": {
+    "storage_gb": 1,
+    "monthly_ru_examples": [
+      1000000,
+      10000000
+    ]
+  },
+  "database_monthly_usd_examples": [
+    0.56,
+    3.35
+  ],
+  "not_measured_workload": true,
+  "not_a_bill_cap": true
+}

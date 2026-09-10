@@ -1,0 +1,39 @@
+# Azure 低成本开发环境候选
+
+2026-09-10。用户要求参考 Anke Money，重新评估成本；先前 MySQL / US$40 月预算方案未获批准。本文是候选方案，不是数据库变更决定或收费资源创建授权。现有 SQL 实现和本机数据保持原状。
+
+## 建议采用的组合
+
+保留 Firebase Google 登录、Python/FastAPI、Azure Functions Flex、Storage Queue、Key Vault 和托管身份；数据库候选改为**独立 Cosmos DB for NoSQL Serverless，East Asia 单区域**。Functions 无常驻实例。初期仅准备一个独立开发环境，公测/生产环境另行评估。
+
+本次只读核对确认：Anke Money 开发环境采用 Serverless；生产环境使用 autoscale，最大吞吐 1,000 RU/s，并未启用免费层。参考的是开发环境的计费方式与分区事务设计，不复制它的生产规格、账号体系、数据、凭据或云资源。实际账单仅保存在 Git 忽略的 `data/money-cost-summary.md`，不进入开源资料。
+
+## 可核对的价格
+
+币种 USD，区域 East Asia，查询日 2026-09-10。[Azure 零售价格 API](https://prices.azure.com/api/retail/prices) 的选取记录见 [价格证据](../evidence/azure-cosmos-pricing-2026-09-10.json)。
+
+| 选项 | 假设 | 数据库月费用 |
+| --- | --- | ---: |
+| 原 MySQL B1ms | 全月 730 小时 + 20 GB | US$23.88 基础费用 |
+| Cosmos Serverless 轻用量示例 | 100 万 RU + 1 GB 数据及索引 | US$0.56 |
+| Cosmos Serverless 较高用量示例 | 1,000 万 RU + 1 GB 数据及索引 | US$3.35 |
+
+Serverless 单价为 **US$0.31 / 百万 RU**，存储 **US$0.25 / GB/月**。RU 是数据库工作量单位，不等于 HTTP 请求次数；查询、写入、跨分区扫描和后台任务均计入。它按实际使用收费，没有预留吞吐的最低费用。[官方计费说明](https://learn.microsoft.com/en-us/azure/cosmos-db/serverless)
+
+Functions 若假设**包含 HTTP、Timer 和 Queue 的总量**为 5 万次/月，平均每次 2 GB × 0.3 秒，按已查询的付费单价且不扣免费额度，约 US$1.13。与上面两个数据库示例合计分别为 US$1.69 / US$4.48，再加 Storage、Key Vault、日志、备份、出站流量和税费。实际调度可能超过该调用假设，需要测量后修订。建议以 **US$5–10/月作为早期低流量的设计目标**，不是报价、实测结果或自动停机上限；体育数据授权和其他第三方服务不包含在内。
+
+Functions 的免费额度按订阅共享，不能替每个产品重复计算。[官方价格](https://azure.microsoft.com/en-us/pricing/details/functions/) Cosmos 免费层与 Serverless 不能叠加；当前订阅的免费层资格已被既有账号使用，不为本产品占用或迁移它。[免费层规则](https://learn.microsoft.com/en-us/azure/cosmos-db/free-tier)
+
+MySQL B1s 已在区域规格清单中出现，但补查其价格遇到零售 API 429；未将未核实的价格列入对比。该选项仍保留常驻数据库费用，优势是保留现有 SQL 实现。
+
+## 实现影响和验收入口
+
+当前 `app/db.py`、`service.py`、`actions.py`、`content.py` 和 `jobs.py` 直接使用 SQLAlchemy、唯一约束、行锁与跨表事务。因此 Cosmos 需要一轮存储与事务边界改造，不能只换连接地址。HTTP/OpenAPI、Web、扩展、MCP 的产品契约尽量保留。
+
+1. 定义个人分区：将同一用户的配置、命令回执、审计和 outbox 意图放在同一容器、同一分区；通过 ETag 条件写入维护版本与并发。公共赛事及共享频道单独分区，公共变更与其 outbox 意图一起提交，再以可重放任务更新个人投影。不能把跨分区更新描述为同一事务。[事务范围](https://learn.microsoft.com/en-us/azure/cosmos-db/transactional-batch)
+2. 先完成最小纵向验证：Firebase 账号 → 关注更新 → 原子 outbox → Queue 重复投递 → 已发布 ICS；验证改期和令牌轮换的 UID 稳定、相同内容的 ETag 稳定、冲突拒绝与删除决定保留。
+3. 再处理公共赛程索引、创作者反向订阅、项目级配额、任务租约、账号删除和公开/私人 MCP。避免分钟定时器无条件扫描全部分区；记录每个操作的实际 RU。
+4. 大型 Feed 发布不能假定无限事务大小。需先写不可变版本及完整清单，再用受条件保护的发布指针切换，读端只读取完成版本；失败继续提供上一有效版本。清理与账号撤销需验证竞态，私人 Feed 令牌仍不进入日志或导出。
+5. Cosmos 适配器的真实事务、RU、429 重试、备份恢复、MI/RBAC 和云端 Timer/Queue 需要独立证据。当前 191 项通过的后端测试属于现有 SQL 实现，不算 Cosmos 验收。
+
+确认采用该数据库候选后，先更新架构约定和隔离本地实现，再制作相应 Bicep、权限和恢复计划。原 MySQL 模板暂存用于比较，不部署；新的 Cosmos 模板尚未实现。远端资源规格及费用需落实到可审查计划后，才进入对应开发环境创建步骤。

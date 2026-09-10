@@ -51,3 +51,5 @@ uv run python data/run-firebase-dev.py worker
 
 
 Functions已完成真实Core Tools/Azurite本机宿主验收与安全源码打包，参见[复现与边界](functions-runtime.md)。Azure资源和远端部署状态仍为未执行。
+
+独立Azure开发Bicep已通过本机编译和订阅级validate；托管身份队列适配、Firebase JSON凭据及真实Admin只读验证已完成。具体资源与费用已提交确认，详见[Azure开发环境计划](azure-development-plan.md)。未创建收费资源，未把模板验证记为部署。

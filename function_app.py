@@ -1,25 +1,20 @@
 import json
-import os
 
 import azure.functions as func
-from azure.storage.queue import QueueClient
 from sqlalchemy import select
 
 from app.db import Job, SessionLocal, now
 from app.main import app as fastapi_app
 from app.worker import run_maintenance, run_one, schedule_providers
 from app.jobs import error_code
+from app.azure_queue import outbox_queue
 
 app = func.AsgiFunctionApp(app=fastapi_app, http_auth_level=func.AuthLevel.ANONYMOUS)
 
 
 @app.timer_trigger(schedule="0 * * * * *", arg_name="timer", use_monitor=True)
 def dispatch_outbox(timer: func.TimerRequest):
-    # Pin the REST contract supported by both Azure and the Azurite 3.36 local adapter.
-    client = QueueClient.from_connection_string(
-        os.environ["AzureQueueConnection"], "anke-sports-jobs", api_version="2025-11-05"
-    )
-    with SessionLocal() as db:
+    with outbox_queue() as client, SessionLocal() as db:
         jobs = db.scalars(
             select(Job).where(Job.state.in_(["pending", "running"]), Job.due_at <= now()).limit(100)
         ).all()
