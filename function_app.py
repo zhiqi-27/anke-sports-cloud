@@ -15,7 +15,10 @@ app = func.AsgiFunctionApp(app=fastapi_app, http_auth_level=func.AuthLevel.ANONY
 
 @app.timer_trigger(schedule="0 * * * * *", arg_name="timer", use_monitor=True)
 def dispatch_outbox(timer: func.TimerRequest):
-    client = QueueClient.from_connection_string(os.environ["AzureQueueConnection"], "anke-sports-jobs")
+    # Pin the REST contract supported by both Azure and the Azurite 3.36 local adapter.
+    client = QueueClient.from_connection_string(
+        os.environ["AzureQueueConnection"], "anke-sports-jobs", api_version="2025-11-05"
+    )
     with SessionLocal() as db:
         jobs = db.scalars(
             select(Job).where(Job.state.in_(["pending", "running"]), Job.due_at <= now()).limit(100)

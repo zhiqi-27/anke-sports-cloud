@@ -1,5 +1,7 @@
 # Anke Sports 服务端状态
 
+当前摘要：2026-09-10，真实Firebase登录在Chrome通过；Core Tools/Azurite本机宿主通过，Azure尚未部署。最新进程与证据见文末；下列旧批次保留当时状态。
+
 更新：2026-09-10。主 API 127.0.0.1:8787，session45462/PID34189；worker session77294/PID34200；显式启用本地体验并关闭访问日志。显式本地SQLite/体验身份。主库163条比赛（48演示+115 Jolpica F1分场次），无合成频道/视频或公共直播记录。
 
 已实现账号验证入口、个人配置/链接、稳定投影与ICS、事务outbox、local worker/Azure触发器、体育Provider接口、共享YouTube发现/签名通知/补查/匹配/人工确认、PKCE/刷新/撤销和HTTP MCP（公开3、私人11工具）。真实Firebase/YouTube/云队列与触发器仍未验收。
@@ -172,3 +174,21 @@ HTTP/MCP/后台 Data API 请求在独立 SQL 短事务预留额度，按项目�
 用户明确确认Azure Functions后端；Azure账号已登录，查看过Azure subscription 1与speech资源组，仅只读。独立Anke Sports Functions/MySQL/Storage、区域/规格/费用与HTTPS域名尚未配置或部署。安装的Azure Prepare已更新1.2.44，限定显式azd/已有azure.yaml，本项目尚未选择azd，因此不套用其流程。资源分工和接入顺序已写docs/cloud-development.md。任务T07仍in_progress，缺失云权限/设备只影响对应验收。完整产品目标未完成；当前goal工具状态为usageLimited，未擅自修改。
 
 MySQL后端本地提交5ef0118；客户端状态提交b70ef07。Firebase本批为本地配置与真实外部验收，无客户端业务源码变化；后端/客户端相关文档另行本地提交。没有push或Azure部署。
+
+
+## 2026-09-10 · 登录反馈收尾，转入 Functions 验证
+
+Codex内置浏览器未完成Google弹窗，曾返回auth/popup-closed-by-user；确切宿主原因未定位，不能认定Google拦截。Chrome实际账号状态刷新后保留，标签210263706保留给用户；两个浏览器不共享登录状态。用户明确停止排查内置浏览器。已完成的前端调整保留：登录错误显示在对话框内、等待时仍可复制地址、收到后端/me/calendar身份结果才进入成功回调；MCP/扩展网页授权共用组件。实际Chrome关闭弹窗后出现中文错误，重试可用；内置浏览器复制地址通过系统剪贴板核对。Web/扩展typecheck和production build通过。
+
+主3000预览保留；真实Firebase实例仍Web3003 session91087/PID38482、API8788 session85403/PID38459、worker73541/PID38782，五个修改过的客户端文件已同步到隔离源码副本。无后端身份逻辑、云配置或数据库变更。下一批继续Functions安全打包与真实Core Tools/Azurite宿主验证，云部署与设备验收仍未完成。无push/部署。
+
+
+## 2026-09-10 · Functions 本机真实宿主与安全打包（T05/T13/T28/T33）
+
+已用Core Tools4.13.0、Python3.12、Azurite3.36.0运行43文件的实际源码归档；独立SQLite、一次性模拟器账号和合成比赛，无云凭据/真实上游。真实分钟Timer→Queue→outbox→ICS通过，重复消息不重做、304/正文/ETag保持；公共MCP工具发现与get_event调用通过，经宿主管理接口触发内容维护后过期请求实际删除。测试日志不含Feed令牌/存储密钥；不等同Azure平台日志证明。脚本正常退出，临时进程、数据和日志已清理。
+
+补充.funcignore和显式运行时白名单打包脚本，拒绝符号链接与缺失入口；归档SHA256为0a54a4a8d9fb14d67e1c1d785eb3cb48ee7962bba63fa901b190e67b4df6552c。修复SDK默认请求版本高于Azurite的400问题，固定双方支持的2025-11-05；未关闭版本检查。180项pytest通过/2项MySQL条件跳过，ruff通过，依赖导出一致。CI新增打包检查，未push/远程运行。docs/functions-runtime.md及evidence/functions-runtime-2026-09-10.json保留证据。
+
+主API8787 session27072/PID37845、worker29987/PID37859、Web3000 session43940/PID53698继续；本批仅Functions投递入口变化，主uvicorn/worker无需重启。production构建预览3002已重启为session20042/PID40149；真实FirebaseWeb3003 session91087/PID38482、API8788 session85403/PID38459、worker73541/PID38782保留。用户明确停止Codex内置浏览器登录排查，Chrome现有登录页保留。
+
+下一批继续独立Azure开发资源与费用边界、远端Linux构建、MySQL TLS、Functions真实Firebase、Queue死信/告警/遥测，再推进YouTube/真实日历设备。Azure未创建/部署，无push，任务保持in_progress，完整产品尚未完成。

@@ -49,6 +49,8 @@ uv run alembic check
 
 ## 当前状态
 
+Functions 的安全源码打包和真实 Core Tools/Azurite 本机宿主已验证 HTTP、队列、定时器、MCP 及 Feed 发布；复现命令和云端待验边界见 [Functions 运行验收](docs/functions-runtime.md)。不要直接打包整个工作目录。
+
 MCP 已提供匿名与私人 Streamable HTTP、网页授权、短期令牌和撤销；入口、权限、重试约定与本地验收命令见 [MCP 与应用连接](docs/mcp-and-connections.md)。Chrome 本地安装包位于客户端仓库，实际 Chrome 运行仍待验收。
 
 官方直播草稿、审核发布、地区/观看条件、撤回、到期和 HEAD 检查已接入；维护者白名单默认空，自动联网检查默认关闭。使用与证据边界见 [直播入口维护](docs/broadcasts.md)。

@@ -41,3 +41,13 @@ uv run python data/run-firebase-dev.py worker
 4. 真实YouTube API/Hub和设备日历验收在各自条件具备后继续；不把Firebase登录通过视作这些项目已通过。
 
 目前没有Azure资源创建、部署、数据库迁移或Git推送。Firebase账号删除/撤销清理、多设备、部署域名回调仍未验收。Azure Prepare当前安装版本仅适用于显式azd或已有azure.yaml的项目，本项目未选择azd；不因该技能自动引入部署工具或额外审批流程。
+
+
+## 浏览器验收补充（2026-09-10）
+
+上述真实Google身份验收在Chrome完成。Codex内置浏览器曾返回`auth/popup-closed-by-user`，再次发起时未出现可完成登录的弹窗；具体宿主原因未定位。Chrome当前账号刷新后保留，两个浏览器不共享会话。用户决定停止内置浏览器排查；不得据此宣称该浏览器登录通过。
+
+前端将登录失败放入对话框，提供复制当前页面地址的恢复操作，并在Firebase成功后等待后端个人日历读回再完成登录。Chrome实际关闭Google弹窗后，中文错误和重试入口可见；复制地址实际系统剪贴板读回正确。Web和扩展类型检查、生产构建通过。尚未新做真实MCP授权、多设备或Firebase删除验收。
+
+
+Functions已完成真实Core Tools/Azurite本机宿主验收与安全源码打包，参见[复现与边界](functions-runtime.md)。Azure资源和远端部署状态仍为未执行。

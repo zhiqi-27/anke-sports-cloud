@@ -1,0 +1,30 @@
+{
+  "scope": "local Core Tools + Azurite + SQLite, synthetic event",
+  "core_tools": "4.13.0",
+  "azurite": "3.36.0",
+  "package_sha256": "0a54a4a8d9fb14d67e1c1d785eb3cb48ee7962bba63fa901b190e67b4df6552c",
+  "package_files": 43,
+  "http_status": 200,
+  "anonymous_personal": 401,
+  "local_identity": 404,
+  "real_minute_timer_to_queue_to_feed": true,
+  "event_count": 1,
+  "conditional_feed": 304,
+  "duplicate_messages_unchanged": true,
+  "job_attempts": 1,
+  "maintenance_host_accepted": 202,
+  "expired_request_removed": true,
+  "public_mcp_tools": [
+    "get_event",
+    "get_schedule",
+    "search_sources"
+  ],
+  "public_mcp_get_event": true,
+  "local_logs_no_feed_token_or_storage_key": true,
+  "not_verified": [
+    "Azure cloud resources/network/TLS",
+    "Firebase through Functions",
+    "device calendar refresh",
+    "poison queue and cloud telemetry"
+  ]
+}
