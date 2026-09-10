@@ -1,31 +1,18 @@
 """YouTube WebSub transport. Notifications are hints; only Data API metadata is authoritative."""
 
-import hashlib
-import hmac
-import json
-import re
 import secrets
 from datetime import datetime, timedelta, timezone
-from urllib.parse import urlencode
 
 import httpx
-from defusedxml import ElementTree
 from sqlalchemy import delete, select, update
 
 from app.config import settings
 from app.content import channel_users, enqueue_channel, expire_metadata
 from app.db import ChannelSync, Creator, NotificationReceipt, SessionLocal, now
 from app.jobs import guard_channel_claim
-from app.security import digest, problem
+from app.security import problem
 from app.service import enqueue
-
-HUB = "https://pubsubhubbub.appspot.com/subscribe"
-ATOM = "{http://www.w3.org/2005/Atom}"
-YT = "{http://www.youtube.com/xml/schemas/2015}"
-
-
-def topic(channel_id):
-    return "https://www.youtube.com/feeds/videos.xml?" + urlencode({"channel_id": channel_id})
+from app.websub_rules import HUB, notification_entries, topic, verification_digest
 
 
 def lock_sync(db, predicate):
@@ -95,12 +82,7 @@ def verify_subscription(db, callback_id, params):
         problem("NOT_FOUND", "未找到订阅", 404)
     active = bool(list(channel_users(db, sync.channel_id)))
     challenge = params.get("hub.challenge", "")
-    verification = digest(
-        json.dumps(
-            [params.get(k, "") for k in ("hub.mode", "hub.topic", "hub.challenge", "hub.lease_seconds")],
-            ensure_ascii=False,
-        )
-    )
+    verification = verification_digest(params)
     if (
         challenge
         and len(challenge) <= 2048
@@ -163,37 +145,16 @@ def notification(db, callback_id, body, signature):
     if not list(channel_users(db, sync.channel_id)):
         return False
     secret = settings().cipher().decrypt(sync.secret_ciphertext.encode())
-    algorithm, _, supplied = (signature or "").partition("=")
-    if algorithm not in {"sha1", "sha256"}:
-        return False
-    if not re.fullmatch(r"[0-9a-f]{40}" if algorithm == "sha1" else r"[0-9a-f]{64}", supplied):
-        return False
-    expected = hmac.new(secret, body, getattr(hashlib, algorithm)).hexdigest()
-    if not hmac.compare_digest(supplied, expected):
-        return False
-    # Signature failures are acknowledged and ignored, per the Hub protocol.
-    if len(body) > 65536:
-        return False
-    try:
-        root = ElementTree.fromstring(body)
-    except Exception:
-        return False
-    entries = root.findall(ATOM + "entry")
-    if len(entries) > 50:
+    entries = notification_entries(sync.channel_id, body, signature, secret)
+    if not entries:
         return False
     ids = []
     for entry in entries:
-        ident = entry.findtext(YT + "videoId", "")
-        channel = entry.findtext(YT + "channelId", "")
-        if channel != sync.channel_id or not re.fullmatch(r"[A-Za-z0-9_-]{11}", ident):
-            return False
-        ids.append(ident)
+        if not db.get(NotificationReceipt, entry["key"]):
+            db.add(NotificationReceipt(id=entry["key"], channel_id=sync.channel_id))
+            ids.append(entry["video_id"])
     if not ids:
-        return False
-    receipt_id = digest(sync.channel_id + ":" + hashlib.sha256(body).hexdigest())
-    if db.get(NotificationReceipt, receipt_id):
         return True
-    db.add(NotificationReceipt(id=receipt_id, channel_id=sync.channel_id))
     enqueue(db, "youtube_videos", {"channel_id": sync.channel_id, "video_ids": list(dict.fromkeys(ids))})
     sync.last_notification_at = now()
     return True

@@ -1,0 +1,99 @@
+{
+  "date": "2026-09-10",
+  "scope": "document WebSub local implementation; real loopback callbacks with synthetic Hub and YouTube",
+  "capacity_target": {
+    "development": "Serverless + Periodic",
+    "production": "Serverless + Periodic"
+  },
+  "validation": {
+    "new_websub_tests": 18,
+    "related_after_initial_fixture_correction": {
+      "passed": 51,
+      "seconds": 14.59
+    },
+    "full_suite": {
+      "passed": 361,
+      "skipped": 2,
+      "warnings": 2,
+      "seconds": 31.75
+    },
+    "skips": "conditional MySQL tests",
+    "warnings": "existing Starlette/AnyIO deprecations",
+    "ruff_passed": true,
+    "full_openapi_unchanged": true,
+    "config_schema_unchanged": true
+  },
+  "http": {
+    "started_at": "2026-09-10T06:02:26.185881+00:00",
+    "checks": [
+      "persisted_intent_and_actual_http_verification",
+      "signed_notification_to_api_metadata_to_same_ics_event",
+      "restart_preserves_verified_lease_and_semantic_receipt",
+      "pause_stops_notifications_and_verifies_unsubscribe"
+    ],
+    "fixture": "synthetic Hub, YouTube and schedules; actual loopback API and independent worker",
+    "browser_used": false,
+    "external_network_used": false,
+    "source_sha256": {
+      "app/document_api.py": "08c9f4617557fb9e269effa354b9a2c2f63ec3bafcc7b5ccc2c03bad2d135ede",
+      "app/document_channels.py": "59fde7ace2e2db9fa5208d85e4c0431c3f0b6d602e4fc03e28162eac89a8cbc9",
+      "app/document_creators.py": "a944cedd6489a7ff2299cfe88d3527a8db94e071b8b86b3304db08855628070e",
+      "app/document_runtime.py": "6dbb8277f5ddb92a2f998f47103fd7fca602b8376af2718d99980844872b797f",
+      "app/document_worker.py": "a816ac5d5eb63ccc030452ea2123283cada9623c4a9bade4af6c4c9968244b26",
+      "app/document_websub.py": "85cb7d11285da6b140b56c4008041e95c4d73696b918f7bfebb5a0ee53570965",
+      "app/document_matches.py": "e5cf3c81d065cf7f99f8885bd0f8189b30f2166c63e0a3ffe12c1d08eca49880",
+      "app/websub_rules.py": "4539b3f2a10d572eb16ca59804f99c0f441acc73ed49f32c55e8ef91176861cb",
+      "experiments/document_websub_verify.py": "6019840edd5422f1eb585b9b73eabeb5bc36b2e88a8707351b0f86f53cd89e1b"
+    },
+    "sequence": [
+      2,
+      3
+    ],
+    "youtube_calls": {
+      "channels": 2,
+      "playlistItems": 1,
+      "videos": 2
+    },
+    "hub_calls": {
+      "subscribe": 1,
+      "unsubscribe": 1
+    },
+    "worker_restarts": 1,
+    "feed_sha256": "09b5f9ffc4718943e21aa2f63219616468fdef8d1ad9d3904776c9c255a8be75",
+    "processes_stopped": true,
+    "temporary_data_removed": true,
+    "finished_at": "2026-09-10T06:02:34.051718+00:00"
+  },
+  "browser_or_native_ui_used": false,
+  "real_hub_youtube_api_firebase_azure_calls": false,
+  "official_protocol_docs_read": true,
+  "client_source_contract_dependencies_changed": false,
+  "client_build_repeated": false,
+  "existing_preview_restarted": false,
+  "main_data_migrated": false,
+  "azure_resources_created": false,
+  "pushed_or_deployed": false,
+  "remaining": [
+    "real Hub signature and public HTTPS callbacks",
+    "natural long lease renewal and missed notifications",
+    "expired video metadata cleanup and orphan block GC",
+    "real labeled videos and video-to-ICS",
+    "Cosmos auth/RU/429/Periodic recovery",
+    "Azure Queue and Timer",
+    "browser/device calendar checks",
+    "broadcast/public feed/OAuth/MCP/account deletion document migration"
+  ],
+  "source_sha256": {
+    "app/document_api.py": "08c9f4617557fb9e269effa354b9a2c2f63ec3bafcc7b5ccc2c03bad2d135ede",
+    "app/document_channels.py": "59fde7ace2e2db9fa5208d85e4c0431c3f0b6d602e4fc03e28162eac89a8cbc9",
+    "app/document_creators.py": "a944cedd6489a7ff2299cfe88d3527a8db94e071b8b86b3304db08855628070e",
+    "app/document_runtime.py": "6dbb8277f5ddb92a2f998f47103fd7fca602b8376af2718d99980844872b797f",
+    "app/document_worker.py": "a816ac5d5eb63ccc030452ea2123283cada9623c4a9bade4af6c4c9968244b26",
+    "app/document_websub.py": "85cb7d11285da6b140b56c4008041e95c4d73696b918f7bfebb5a0ee53570965",
+    "app/document_matches.py": "e5cf3c81d065cf7f99f8885bd0f8189b30f2166c63e0a3ffe12c1d08eca49880",
+    "app/websub_rules.py": "4539b3f2a10d572eb16ca59804f99c0f441acc73ed49f32c55e8ef91176861cb",
+    "experiments/document_websub_verify.py": "6019840edd5422f1eb585b9b73eabeb5bc36b2e88a8707351b0f86f53cd89e1b",
+    "app/websub.py": "bfac7fb022d22885e178ef481d36ac1f4d18a364056649d2309170583a37408f",
+    "tests/test_document_websub.py": "3326add0586f9fda825ce14074835316d1498c953b5a9f6c4b8ffecf6bda40cf"
+  }
+}

@@ -83,12 +83,16 @@ class Channels:
                     return True
         return False
 
-    def enqueue(self, ident, *, scheduled=False):
+    def enqueue(self, ident, *, scheduled=False, notifications=False):
         old = self.get(ident)
         if not old:
             raise StoreError("CHANNEL_NOT_FOUND")
         value = old["payload"]
         if scheduled and value["next_poll_at"] and value["next_poll_at"] > now():
+            if not self.store.page("state", old["pk"], "youtube_notice_pending", limit=1):
+                return False
+            notifications = True
+        if notifications and not self.store.page("state", old["pk"], "youtube_notice_pending", limit=1):
             return False
         if not self.interested(ident):
             return False
@@ -102,7 +106,7 @@ class Channels:
         job["payload"].update(
             operation="channel_sync",
             channel_id=ident,
-            stage="poll",
+            stage="notices" if notifications else "poll",
             seen=[],
             cursor=None,
             cutoff=(datetime.now(timezone.utc) - timedelta(days=14)).isoformat(),
@@ -203,6 +207,8 @@ class Channels:
             failed["payload"]["next_poll_at"] = max(
                 resume, (datetime.now(timezone.utc) + timedelta(hours=6)).isoformat()
             )
+            # Notification wakeups must honor terminal cooldown as well as polling.
+            failed["payload"]["retry_at"] = failed["payload"]["next_poll_at"]
         self.store.batch(
             "state",
             old["pk"],
@@ -281,7 +287,16 @@ class Channels:
                     )
                 )
                 changed_ids.append(video["id"])
-            write = next_job(self.outbox, claim, stage=payload["next_stage"], video_ids=[])
+            for item in payload.get("notices", []):
+                notice = self.store.get("state", pk, item["id"])
+                if not notice or notice["_etag"] != item["etag"]:
+                    raise StoreError("NOTICE_CHANGED", retryable=True)
+                completed = clean(notice)
+                completed.update(kind="youtube_notice_done", finished_at=now())
+                writes.append(Write("replace", notice["id"], completed, notice["_etag"]))
+            if payload.get("notices"):
+                updated["payload"]["last_success"] = now()
+            write = next_job(self.outbox, claim, stage=payload["next_stage"], video_ids=[], notices=[])
         elif stage == "metadata":
             channels = items(
                 self.rt.youtube_request("channels", {"id": ident, "part": "snippet,contentDetails"})
@@ -292,12 +307,26 @@ class Channels:
                 channel_details(channels[0], ident),
                 updated_at=now(),
                 last_success=now(),
-                pending_job_id=None,
                 failures=0,
                 next_poll_at=(datetime.now(timezone.utc) + timedelta(hours=6)).isoformat(),
             )
-            write = self.outbox.completion(claim)
+            write = next_job(self.outbox, claim, stage="notices")
             changed_ids = None  # Reconcile all known videos when the creator's metadata changes.
+        elif stage == "notices":
+            # <=45 references + 45 receipt updates + channel/job/fanout stay below 100 writes.
+            notices = self.store.page("state", pk, "youtube_notice_pending", limit=45)
+            if notices:
+                write = next_job(
+                    self.outbox,
+                    claim,
+                    stage="videos",
+                    next_stage="notices",
+                    video_ids=sorted({row["payload"]["video_id"] for row in notices}),
+                    notices=[{"id": row["id"], "etag": row["_etag"]} for row in notices],
+                )
+            else:
+                updated["payload"]["pending_job_id"] = None
+                write = self.outbox.completion(claim)
         else:
             raise StoreError("CHANNEL_STAGE_INVALID")
         if changed_ids is None or changed_ids:
@@ -311,5 +340,8 @@ class Channels:
     def schedule(self):
         count = 0
         for row in partition_items(self.store, "indexes", "channels", "channel_route"):
-            count += self.enqueue(row["payload"]["channel_id"], scheduled=True)
+            ident = row["payload"]["channel_id"]
+            count += self.enqueue(ident, scheduled=True)
+            count += self.rt.websub.schedule_channel(ident)
+            self.rt.websub.prune(ident)
         return count

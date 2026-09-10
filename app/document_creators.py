@@ -62,7 +62,7 @@ class Creators:
                     if value["last_success"]
                     else "pending",
                     "last_synced_at": value["last_success"],
-                    "websub_status": "disabled",
+                    "websub_status": self.rt.websub.status(follow["channel_id"]),
                 }
             )
         return result
@@ -180,6 +180,7 @@ class Creators:
         for ident in channels[:10]:
             self.rt.channels.register(ident, account["pk"])
             self.rt.channels.enqueue(ident, scheduled=ident != claim["payload"].get("force_channel"))
+            self.rt.websub.schedule_channel(ident)
             job = projection_job(account["pk"], account["payload"]["revision"])
             job["payload"].update(operation="match_channel", channel_id=ident)
             writes.append(Write("create", job["id"], job))

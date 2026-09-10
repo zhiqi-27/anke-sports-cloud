@@ -2,6 +2,9 @@
 
 2026-09-10。本地实现已接入桌面；独立 Key 的 Cloud Shell 真实 API 读取已通过，本机应用接入、真实 Hub、Azure 与设备验收待执行。见 [YouTube 开发接入](youtube-development.md)。
 
+
+文档模式的当前实现另见 [创作者](document-creators.md) 与 [WebSub](document-websub.md)。本页SQL基线的28天元数据清理尚未迁移到文档存储；两个模式已共用通知签名/条目校验和按频道、视频、上游版本的去重键。以下历史容量与平台证据不自动扩展为新存储证据。
+
 ## 数据与处理
 
 `Creator` / `Video` 保存共享频道和元数据；`ChannelSync` 为活跃频道保存一份检查时间与租约；`VideoMatch`、链接、block/pin 属于个人账号。相同频道供多人使用时共用发现任务，个人范围与确认结果互不共享。

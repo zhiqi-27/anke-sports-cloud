@@ -10,6 +10,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request, Res
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from starlette.concurrency import run_in_threadpool
 
 from app.config import settings
 from app.document_accounts import document
@@ -215,6 +216,23 @@ def create_app(store=None, cfg=None):
     @app.post("/api/v1/me/reviews/{match_id}")
     def review_decide(match_id: str, data: ReviewDecision, user=Depends(me), rt=Depends(runtime)):
         return rt.matches.decide(user["user_id"], match_id, data)
+
+    @app.get("/webhooks/youtube/{callback_id}", include_in_schema=False)
+    def youtube_verify(callback_id: str, request: Request, rt=Depends(runtime)):
+        challenge = rt.websub.verify(callback_id, request.query_params)
+        return Response(challenge, media_type="text/plain", headers={"Cache-Control": "no-store"})
+
+    @app.post("/webhooks/youtube/{callback_id}", include_in_schema=False)
+    async def youtube_notification(callback_id: str, request: Request, rt=Depends(runtime)):
+        body = bytearray()
+        async for part in request.stream():
+            if len(body) + len(part) > 65536:
+                return Response(status_code=413)
+            body.extend(part)
+        await run_in_threadpool(
+            rt.websub.notification, callback_id, bytes(body), request.headers.get("x-hub-signature")
+        )
+        return Response(status_code=204)
 
     @app.post("/api/v1/auth/local", response_model=CalendarUserView)
     def local_login(request: Request, response: Response, rt=Depends(runtime)):

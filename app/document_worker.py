@@ -155,6 +155,9 @@ def run_job(runtime, message):
     if claim["payload"]["operation"] == "channel_sync":
         runtime.channels.process(claim)
         return True
+    if claim["payload"]["operation"] == "youtube_subscribe":
+        runtime.websub.process(claim)
+        return True
     try:
         operation = claim["payload"]["operation"]
         if operation == "projection" and claim["pk"].startswith("user:"):
@@ -163,6 +166,9 @@ def run_job(runtime, message):
             fanout(runtime, claim)
         elif operation == "channel_changed" and claim["pk"].startswith("channel:"):
             runtime.creators.fanout(claim)
+        elif operation == "channel_notice" and claim["pk"].startswith("channel:"):
+            runtime.channels.enqueue(claim["payload"]["channel_id"], notifications=True)
+            runtime.store.batch("state", claim["pk"], [outbox.completion(claim)])
         elif operation == "creator_reconcile" and claim["pk"].startswith("user:"):
             runtime.creators.reconcile(claim)
         elif operation == "match_channel" and claim["pk"].startswith("user:"):

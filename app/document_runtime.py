@@ -26,6 +26,7 @@ class Runtime:
         from app.document_channels import Channels
         from app.document_creators import Creators
         from app.document_matches import Matches
+        from app.document_websub import WebSub
 
         self.store, self.cfg = store, cfg
         self.accounts = Accounts(store, cfg.cipher())
@@ -37,12 +38,15 @@ class Runtime:
         self.channels = Channels(self)
         self.creators = Creators(self)
         self.matches = Matches(self)
+        self.websub = WebSub(self)
 
     def youtube_request(self, endpoint, params):
         from app.provider_adapters import provider_key
         from app.youtube_transport import request
 
-        return request(endpoint, params, key=provider_key("YOUTUBE_API_KEY", self.cfg), budget=self.youtube_budget)
+        return request(
+            endpoint, params, key=provider_key("YOUTUBE_API_KEY", self.cfg), budget=self.youtube_budget
+        )
 
     def resolve_creator(self, value):
         from app.youtube_transport import resolve_creator
@@ -130,7 +134,9 @@ class Runtime:
         )
         link_rows = self.content.rows(payload["user_id"]) if payload else []
         result = {
-            "items": [self.event_view(row, payload, link_rows=link_rows, content_validated=True) for row in page],
+            "items": [
+                self.event_view(row, payload, link_rows=link_rows, content_validated=True) for row in page
+            ],
             "next_cursor": next_cursor,
             "coverage": {
                 "dataset": dataset,

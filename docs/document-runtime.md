@@ -12,7 +12,7 @@
 
 文档模式已接入YouTube额度记录、频道解析、创作者保存/范围与类型设置/暂停/删除、共享频道轮询、规则匹配和人工确认，见 [创作者链路](document-creators.md)。共享视频与个人链接分区独立，跨分区依靠持久任务收敛。频道资料缺失时拒绝发布，不能静默生成空链接日历。状态页标记 `youtube_discovery=polling_available`；实际是否有配置、额度和成功时间分别读回。
 
-尚未接入：WebSub通知/续订、元数据到期物理清理、直播、公共 Feed、账号删除、OAuth/MCP、Google直连。未迁移接口明确返回 `DOCUMENT_FEATURE_UNAVAILABLE`，创作者websub_status保持disabled。
+尚未接入：元数据到期物理清理、直播、公共 Feed、账号删除、OAuth/MCP、Google直连。未迁移接口明确返回 `DOCUMENT_FEATURE_UNAVAILABLE`，创作者websub_status在默认关闭时为disabled；启用后的订阅/续订/退订和通知处理已有本地证据，见 [WebSub说明](document-websub.md)。
 
 完整客户端合同继续以 SQL 基线导出，并已核对未变化。导出脚本拒绝在文档模式下覆盖完整合同，避免误把当前接口子集作为产品全部接口。新路径不是完整 Cosmos 迁移，也不是可直接公测的部署包。
 
@@ -67,3 +67,5 @@ ANKE_DOCUMENT_UI_PORT=3007 uv run python -m experiments.document_ui
 其后频道解析与额度批次完整327项回归通过，真实YouTube双次读取和持久账本共6项检查通过，见 [新证据](../evidence/document-youtube-2026-09-10.md)。3007预览保留Provider批次运行代码，本批没有重启常驻服务。
 
 最新创作者批次完整342项回归通过，最后旧关联ID兼容修正后16项相关检查通过；[独立3008创作者预览](http://localhost:3008/creators)绑定最终源码，以合成上游及独立worker完成6项HTTP检查。12个UID保持不变、屏蔽后SEQUENCE 3→4，再抓取内容不变、GET304/HEAD通过。运行 `uv run python -m experiments.document_creators_ui` 可另建临时实例；见 [本批证据](../evidence/document-creators-2026-09-10.md)。没有浏览器渲染或真实上游/云/设备证据。
+
+最新WebSub批次：订阅意图/签名通知/续订/退订、共享频道收件记录与处理完成标记已接入。完整361项回归及独立HTTP/进程重启4组检查通过，见 [当前证据](../evidence/document-websub-2026-09-10.md)。3008未重启，仍保留上一批创作者演示；真实Hub与云/设备未验收。

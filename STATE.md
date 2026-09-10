@@ -1,6 +1,6 @@
 # Anke Sports 服务端状态
 
-当前摘要：2026-09-10，新存储已接入创作者保存/暂停/删除、共享频道轮询、规则匹配/待确认、个人屏蔽与固定到稳定ICS；SQL/文档共用YouTube请求和内容规范化。完整342 passed/2 skipped/2既有警告；最后旧关联ID兼容修正后16项相关测试通过，最终源码绑定的独立HTTP/worker完成6项检查（12个UID不变，屏蔽SEQUENCE 3→4，重新抓取无变化，304/HEAD通过）。新合成预览localhost:3008/creators，session71956/API PID1760、worker PID1761。WebSub/元数据清理、真实内容/云/设备和剩余存储迁移继续。开发、生产目标均为Cosmos Serverless + Periodic，Azure资源未创建。3007及主SQL/Firebase实例未重启，本批未复核其历史句柄。用户Mac锁定，需解锁/登录/电脑确认的操作暂停；没有浏览器、主数据迁移、push或部署。以下历史批次保留当时状态，以本摘要和最新批次为准。
+当前摘要：2026-09-10，新存储已补齐WebSub订阅意图/验证、签名通知、持久去重收件记录、续订/退订与共享频道后台处理；通知和轮询共用元数据校验、匹配及稳定ICS。18项新增用例，完整361 passed/2 skipped/2既有警告（31.75秒），Ruff与完整OpenAPI/config schema一致。合成Hub/YouTube配合独立API/worker完成4组真实loopback HTTP检查：UID不变、SEQUENCE 2→3、重启不重复订阅/抓取、暂停退订及304/HEAD。实验API/两代worker及临时数据已清理；3008创作者、3007 F1、主SQL/Firebase实例未重启，本批未复核历史句柄。真实Hub/长租约、元数据清理、云/设备和剩余存储迁移继续。开发、生产均以Cosmos Serverless + Periodic为目标，Azure资源未创建。用户Mac锁定，需解锁/登录/电脑确认的操作继续暂停；无浏览器、主数据迁移、push或部署。以下历史批次保留当时状态，以本摘要和最新批次为准。
 
 更新：2026-09-10。主 API 127.0.0.1:8787，session43380/PID44497；worker session62679/PID44496；显式启用本地体验并关闭访问日志。显式本地SQLite/体验身份。主库163条比赛（48演示+115 Jolpica F1分场次），无合成频道/视频或公共直播记录。
 
@@ -355,3 +355,21 @@ SQL与文档共用YouTube传输，Key进入X-Goog-Api-Key请求头，不跟随�
 下一步：WebSub通知/续订、过期元数据物理清理与不可变孤立块GC、真实200条标注/准确率和视频到ICS；继续直播/公共Feed/OAuth/MCP/账号删除等文档迁移与SQL迁移工具；真实Cosmos身份/RU/429/Periodic恢复、Azure Queue/Timer及手机日历/内容直达验收。当前websub_status=disabled，youtube_discovery=polling_available不代表Hub或手机同步完成。T13/T14/T15/T16/T17/T18/T24/T30保持in_progress，原开发包任务JSON未改写。完整产品目标继续，不能把本批本地链路等同完整迁移或最终发布。
 
 说明：anke-sports-cloud/docs/document-creators.md；证据：anke-sports-cloud/evidence/document-creators-2026-09-10.md及JSON。代码和客户端状态分别本地提交，提交编号记录在根STATE.md。
+
+## 2026-09-10 · 文档WebSub通知、续订与退订
+
+本轮为progress：文档模式实现每频道共享WebSub状态、随机callback/加密签名密钥、摘要路由、持久请求意图、验证/重复挑战、续订/退订、签名通知和持久收件记录。频道、视频、upstream updated共同生成去重键，保留原始纳秒精度；SQL与文档共用签名/条目规范化，通知标题只作提示，实际资料继续通过同一项目预算读取Data API。
+
+外发前提交意图并检查租约，Hub验证先于外发返回时，晚到失败不能覆盖确认结果。超时保留15分钟意图，早醒不联网、不耗尽尝试；五次失败/未确认后冷却，拒绝已确认租约会撤销接收资格。续订沿用callback与secret，旧租约有效时接收通知；最后活跃关注停止后忽略新通知并调度退订。Hub不可用保留轮询补查。
+
+有效通知最多50条，与唤醒任务及WebSub状态同频道分区提交；存储失败返回非成功，不先回应再丢任务。通知与轮询共用一个活动抓取任务，最多45条通知/93项原子写，资料验证成功才同事务标记处理完成。修复通知唤醒绕过频道终止失败冷却的问题。7天后仅删除已处理提示，每次最多100项；待处理工作保留。此项不是元数据到期清理或孤立块GC，真实规模/RU仍需验证。
+
+新增18项WebSub用例。初轮相关测试的3个失败来自队列夹具缺version、更新请求多传channel_id，修正后51项相关测试通过（14.59秒）；随后完善拒绝与故障边界。最终完整361 passed/2 skipped/2既有Starlette/AnyIO弃用警告（31.75秒），Ruff、完整SQL OpenAPI/config schema和diff检查通过。客户端只有README/STATE变更，无源码、依赖或契约变化，没有重复构建。
+
+独立实验 experiments.document_websub_verify 以正常HTTP保存关注/创作者，后台与合成Hub交互，Hub经真实loopback GET/POST回调独立API；实际元数据校验后同UID的SEQUENCE 2→3。4组检查通过：持久意图及HTTP验证、签名通知到原ICS事件、重启保留租约/语义回执、暂停并完成退订。相同显式版本的不同提示文字不重复抓取，GET304/HEAD通过；模拟Data API调用channels2/playlistItems1/videos2，Hub订阅1/退订1。先确认自己拥有的旧worker退出再启动新进程，没有重置库或预算。实验API、两代worker和临时文档/合成密钥/日志全部清理，最终源码摘要前后一致。
+
+本批仅查阅官方协议文档，没有真实Hub、YouTube API、Firebase或Azure调用。3008创作者和3007 F1预览保留原运行代码，主SQL/Firebase/其他产品实例未重启，也未复核历史PID。Mac仍锁定，需要解锁、登录或电脑确认的操作暂停；没有浏览器/原生UI或提醒，没有恢复已取消的Codex浏览器登录排查。没有主数据迁移、云资源创建、push或部署。开发、生产目标保持Serverless + Periodic。
+
+下一步：文档存储的过期视频/频道元数据物理清理和孤立块GC；真实Hub签名/公网HTTPS/自然长期续订和漏通知、200条真实标注及内容到ICS；继续直播/公共Feed/OAuth/MCP/账号删除等存储迁移、SQL迁移工具；真实Cosmos身份/RU/429/Periodic恢复、Azure Queue/Timer和手机日历/内容直达验收。youtube_push仍not_tested，默认websub关闭；本地协议状态不代表真实平台验收。T04/T13/T14/T15/T16/T17/T33保持in_progress，原开发包任务JSON未改写，完整产品目标继续。
+
+说明：anke-sports-cloud/docs/document-websub.md；证据：anke-sports-cloud/evidence/document-websub-2026-09-10.md及JSON。本批代码/证据与客户端状态分别本地提交，提交编号记录在根STATE.md。

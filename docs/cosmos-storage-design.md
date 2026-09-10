@@ -60,7 +60,7 @@ Cosmos transactional batch 仅覆盖同容器、同逻辑分区；大小/操作�
 
 ## 当前代码与明确边界
 
-最新创作者批次：频道/视频共享分区、个人命令/匹配/确认、分步轮询、项目预算、辅助频道owner索引和稳定ICS已接入。50条长视频元数据先准备不可变块，再原子提交引用/频道状态/任务；个人匹配每事务最多20条关联。完整342项回归、最后兼容修正后16项相关检查及独立HTTP6项通过，见 [证据](../evidence/document-creators-2026-09-10.md)。WebSub/元数据物理清理/孤立块GC、真实Azure及规模化RU仍未完成。下面保留此前批次的证据边界。
+最新创作者批次：频道/视频共享分区、个人命令/匹配/确认、分步轮询、项目预算、辅助频道owner索引和稳定ICS已接入。50条长视频元数据先准备不可变块，再原子提交引用/频道状态/任务；个人匹配每事务最多20条关联。完整342项回归、最后兼容修正后16项相关检查及独立HTTP6项通过，见 [证据](../evidence/document-creators-2026-09-10.md)。真实Hub/元数据物理清理/孤立块GC、真实Azure及规模化RU仍未完成。下面保留此前批次的证据边界。
 
 此前Provider批次：三类共用解析器、文档状态/发布事务、定时抓取与每日窗口已接入；真实Jolpica到85条个人ICS通过。生产启用来源需显式配置；302项回归及最后20项针对性检查见 [证据](../evidence/document-providers-2026-09-10.md)。真实云仍未验收。
 
@@ -77,7 +77,7 @@ Cosmos transactional batch 仅覆盖同容器、同逻辑分区；大小/操作�
 
 当前通过 33 项文档存储/配置测试，包括真实 Cosmos SDK 配合完全离线传输层的请求序列化与错误处理检查；250 个合成事件多块发布中断后保留旧 Feed，单独进程重读持久文件通过。全量回归曾通过 267 项/2 项条件 MySQL 跳过，随后补充 3 项边界用例并执行上述 33 项。OpenAPI 未变，**没有真实 Cosmos RU、数据面认证、恢复或 HTTP/Queue 纵向证据**。详情见 [本批证据](../evidence/document-foundation-2026-09-10.md)。
 
-`ANKE_SPORTS_STORAGE_BACKEND=sql|cosmos|documents-local` 必须明确区分。`app.main` / `function_app.py` 已接入文档日历组合；选择文档模式后导入 `app.db` 仍会明确失败，防止误用本地 SQL。完整产品切换须等剩余模块和云验收完成。真实 Cosmos 只用独立托管身份；本机 CLI 需明确 tenant/subscription，且不得用于部署环境。个人链接及创作者轮询路径已有本地证据；WebSub/直播/公共Feed/删除/OAuth 等剩余模块接入并验收后再切换主服务。
+`ANKE_SPORTS_STORAGE_BACKEND=sql|cosmos|documents-local` 必须明确区分。`app.main` / `function_app.py` 已接入文档日历组合；选择文档模式后导入 `app.db` 仍会明确失败，防止误用本地 SQL。完整产品切换须等剩余模块和云验收完成。真实 Cosmos 只用独立托管身份；本机 CLI 需明确 tenant/subscription，且不得用于部署环境。个人链接及创作者轮询路径已有本地证据；真实WebSub/直播/公共Feed/删除/OAuth 等剩余模块接入并验收后再切换主服务。
 
 第一批批处理上限 100 操作、按 SDK 转义后的 JSON 计 1,000,000 字节，单文档上限 512,000 字节；Feed 分块原文为 128,000 UTF-8 字节，含 emoji/转义膨胀验证。最大配置/回执分块已由最新批次本地验证；超大 Feed 流式读取、未发布/旧 generation 清理和资源恢复仍需实现与验收。部分写入只留下不可见块，当前不自动 GC，不能宣称存储占用已受长期控制。发布器要求调用方提供权威赛事与已筛选链接，尚未用它代替 Provider 完整批次协议。
 
@@ -88,3 +88,5 @@ Anke Money 生产环境已由用户说明改为 Serverless + Periodic；此前�
 Azure 支持账号原地从 Serverless 转手动 Provisioned，转换所有容器，初始每个容器按其物理分区数 × 5,000 RU/s 配置。迁移完成后再调整手动吞吐或改 Autoscale。转换不可逆，进行期间不能执行管理操作，迁移耗时没有 SLA。参见 [原地转换官方说明](https://learn.microsoft.com/en-us/azure/cosmos-db/how-to-change-capacity-mode)。
 
 按实测月 RU、持续/峰值负载、429 与计费对比评估时机，不按注册人数自动触发。升级前冻结容器及物理分区清单、估算转换当时和 Autoscale 的费用，确认恢复策略；转换后先读回所有容器状态，再调整 Autoscale 上限，并更新 IaC，防止再次应用当前 Serverless 创建模板。容量升级不隐含切换备份模式，Periodic 继续保留；将来如需改备份，再作为独立变更。
+
+后续WebSub实现：每频道独立协议状态、哈希callback路由和原子通知收件记录/outbox；通知与轮询共用一个抓取任务，每次最多45个待处理版本、93项原子写。处理成功后才标记通知完成，7天后清除已处理提示。详见 [WebSub设计与证据](document-websub.md)，这不替代元数据物理清理、孤立块GC或真实Cosmos容量验证。

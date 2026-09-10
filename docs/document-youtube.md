@@ -16,7 +16,7 @@ SQL与文档模式共用 `youtube_transport`。只允许 `channels`、`playlistI
 
 每次请求先用ETag条件提交预留，再执行HTTP。并发冲突重读，最多32次后返回可重试的繁忙错误，不能绕过预留发请求。事务失败或提交结果不确定时不发HTTP；已经可能成功的预留不退还，因此崩溃可能保守多计。业务回滚与已提交的额度记录独立。
 
-沿用SQL的太平洋日期窗口与夏令时规则；同日降低上限立即持久生效，增加上限下个日界线生效。全局限流保存恢复时间，短等待不能覆盖长等待；旧日的迟到配额响应不封锁新日，迟到成功也不能清除等待。损坏记录与系统时钟倒退时停止请求。`GET /api/v1/status`返回内部预留计数与等待状态。最初解析批次标记not_migrated；当前 `integrations.youtube_discovery=polling_available`，实际频道成功时间和额度状态另行读回，WebSub仍未迁移。
+沿用SQL的太平洋日期窗口与夏令时规则；同日降低上限立即持久生效，增加上限下个日界线生效。全局限流保存恢复时间，短等待不能覆盖长等待；旧日的迟到配额响应不封锁新日，迟到成功也不能清除等待。损坏记录与系统时钟倒退时停止请求。`GET /api/v1/status`返回内部预留计数与等待状态。最初解析批次标记not_migrated；当前 `integrations.youtube_discovery=polling_available`，实际频道成功时间和额度状态另行读回，WebSub随后已接入本地路径，真实Hub仍未验收，见 [WebSub说明](document-websub.md)。
 
 这些记录不是Google实际用量/余额。迁移时不能让同一项目的SQL和文档请求分别使用两份独立账本运行：停止旧请求路径后迁入当日账本，或禁用请求并等下个太平洋日再统一启用。当前没有执行线上切换或修改已有常驻服务配置。
 
@@ -32,4 +32,4 @@ uv run python -m experiments.document_youtube_live --key-file data/youtube-dev.j
 
 实验只接受既有独立Anke Sports专用Key文件（0600），读取同一频道的ID与handle，共两次请求。专用本地账本 `data/document-youtube-live.db` 保留，单日上限4，重复运行不会重置；输出文件必须新建。该账本只计算此实验，未合并历史实验或Google Console的请求。不会写入用户关注、视频或任务，不操作浏览器、Firebase登录或Azure资源。
 
-后续批次已接入创作者保存/暂停/删除、共享频道任务、uploads分页/视频元数据、匹配/待确认、个人屏蔽和ICS发布，见 [当前说明](document-creators.md) 与 [合成HTTP验收](../evidence/document-creators-2026-09-10.md)。频道资料缺失仍拒绝静默发布空链接日历。通知续订、元数据清理、真实视频到ICS、真实Google限流、Cosmos多实例与RU和手机日历继续，不能用本页双次真实频道读取代替上述验收。
+后续批次已接入创作者保存/暂停/删除、共享频道任务、uploads分页/视频元数据、匹配/待确认、个人屏蔽和ICS发布，见 [当前说明](document-creators.md) 与 [合成HTTP验收](../evidence/document-creators-2026-09-10.md)。频道资料缺失仍拒绝静默发布空链接日历。真实Hub通知/长期续订、元数据清理、真实视频到ICS、真实Google限流、Cosmos多实例与RU和手机日历继续，不能用本页双次真实频道读取代替上述验收。

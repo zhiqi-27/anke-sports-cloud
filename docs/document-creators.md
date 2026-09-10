@@ -41,4 +41,4 @@ uv run python -m experiments.document_creators_verify --output data/document-cre
 
 完整回归342项通过；最后旧关联ID兼容修正后创作者相关16项通过。实际loopback HTTP/独立worker完成6项检查，包括12个唯一UID、确认与屏蔽的同事件SEQUENCE更新、重新抓取后的屏蔽保持和GET304/HEAD。见 [验收证据](../evidence/document-creators-2026-09-10.md)。
 
-Mac锁定期间没有浏览器或原生UI操作；HTML可达不是渲染验收。WebSub通知/续订、元数据到期清除和孤立块GC、真实200条人工标注与准确率、真实视频进入ICS、Cosmos RU/权限/恢复、Azure Queue/Timer和手机日历仍需继续。当前websub_status保持disabled；持续轮询可用不等于Hub已接入。
+Mac锁定期间没有浏览器或原生UI操作；HTML可达不是渲染验收。真实Hub通知/长期续订、元数据到期清除和孤立块GC、真实200条人工标注与准确率、真实视频进入ICS、Cosmos RU/权限/恢复、Azure Queue/Timer和手机日历仍需继续。此创作者批次的3008实例保留默认disabled和原运行代码；后续 [WebSub本地实现](document-websub.md) 已接入，但没有改变常驻实例或补充真实Hub验收。

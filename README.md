@@ -2,11 +2,14 @@
 
 体育日历、个人配置与原始观看链接的业务服务。原产品名 SportsCal 已更名为 **Anke Sports**。
 
-开发、生产目标架构统一：Python/FastAPI + Firebase Authentication + Azure Functions + Cosmos DB for NoSQL **Serverless + Periodic** + Azure Storage Queue。参考 FormaLM 的服务分层，使用独立账号、密钥与资源。文档日历 HTTP、完整赛程快照、Change Feed/Queue 投递、创作者轮询/匹配和 Feed 发布已接入本地路径；当前主预览仍运行 SQL，WebSub/直播/OAuth 等完整适配尚未完成。`anke-sports` 为独立客户端仓库。
+开发、生产目标架构统一：Python/FastAPI + Firebase Authentication + Azure Functions + Cosmos DB for NoSQL **Serverless + Periodic** + Azure Storage Queue。参考 FormaLM 的服务分层，使用独立账号、密钥与资源。文档日历 HTTP、完整赛程快照、Change Feed/Queue 投递、创作者轮询/匹配和 Feed 发布已接入本地路径；当前主预览仍运行 SQL，元数据清理/直播/OAuth 等完整适配尚未完成。`anke-sports` 为独立客户端仓库。
 
 独立文档模式验收：[日历](http://localhost:3007/calendar)（重新进入本地体验，切换“真实赛程”；已载入F1关注及85条窗口内事件），运行说明见 [文档存储路径](docs/document-runtime.md)。已接入个人链接、屏蔽/固定、单场选择、配置导入和Provider更新；[302 项回归及真实 F1 HTTP/worker 证据](evidence/document-providers-2026-09-10.md) 不代表真实 Cosmos/Azure 验收。
 
 最新独立验收：[创作者](http://localhost:3008/creators)。进入本地体验后，可检查合成频道、待确认和日历链接；后台已覆盖保存/暂停/删除、共享轮询、自动匹配、人工确认和屏蔽保持。完整342项回归通过，最后关联ID兼容修正后16项相关测试及独立HTTP/worker的6项检查通过。见 [运行说明](docs/document-creators.md) 和 [验收证据](evidence/document-creators-2026-09-10.md)。本批使用合成上游，实际页面待Mac解锁后检查；3007仍是Provider批次代码，未重启。真实频道解析证据单独保留在 [YouTube前置验收](evidence/document-youtube-2026-09-10.md)。
+
+
+本批补齐新存储的WebSub通知/续订/退订、持久去重收件记录和共享频道处理；完整361项回归通过，独立API/worker的4组HTTP检查通过，重启不重复订阅或抓取。见 [WebSub运行说明](docs/document-websub.md) 与 [验收证据](evidence/document-websub-2026-09-10.md)。本批仅合成Hub/YouTube，实验进程和临时数据均已清理；3008创作者演示保留上一批代码，未重启。
 
 ## 本地运行
 
