@@ -1,0 +1,641 @@
+{
+  "schema_version": 1,
+  "provenance": "synthetic",
+  "label_note": "Authored regression examples, not sampled YouTube videos. Expected links encode fixture truth; withheld correct links count against recall. No real-world 98% acceptance claim.",
+  "events": [
+    {
+      "id": "basket",
+      "sport": "basketball",
+      "title": "Lakers vs Warriors",
+      "source_key": "fixture:game",
+      "starts_at": "2026-09-10T12:00:00+00:00",
+      "timezone": "UTC",
+      "duration": 150,
+      "status": "scheduled",
+      "participants": [
+        {
+          "name": "Lakers",
+          "short_name": "LAL"
+        },
+        {
+          "name": "Warriors",
+          "short_name": "GSW"
+        }
+      ]
+    },
+    {
+      "id": "basket_previous",
+      "sport": "basketball",
+      "title": "Lakers vs Warriors",
+      "source_key": "fixture:previous",
+      "starts_at": "2026-09-09T12:00:00+00:00",
+      "timezone": "UTC",
+      "duration": 150,
+      "status": "finished",
+      "participants": [
+        {
+          "name": "Lakers",
+          "short_name": "LAL"
+        },
+        {
+          "name": "Warriors",
+          "short_name": "GSW"
+        }
+      ]
+    },
+    {
+      "id": "local_day",
+      "sport": "basketball",
+      "title": "Lakers vs Warriors",
+      "source_key": "fixture:local",
+      "starts_at": "2026-09-10T02:00:00+00:00",
+      "timezone": "America/Los_Angeles",
+      "duration": 150,
+      "status": "scheduled",
+      "participants": [
+        {
+          "name": "Lakers",
+          "short_name": "LAL"
+        },
+        {
+          "name": "Warriors",
+          "short_name": "GSW"
+        }
+      ]
+    },
+    {
+      "id": "undated",
+      "sport": "basketball",
+      "title": "Lakers vs Warriors",
+      "source_key": "fixture:undated",
+      "starts_at": null,
+      "timezone": "UTC",
+      "duration": 150,
+      "status": "scheduled",
+      "participants": [
+        {
+          "name": "Lakers",
+          "short_name": "LAL"
+        },
+        {
+          "name": "Warriors",
+          "short_name": "GSW"
+        }
+      ]
+    },
+    {
+      "id": "september13",
+      "sport": "basketball",
+      "title": "Lakers vs Warriors",
+      "source_key": "fixture:13",
+      "starts_at": "2026-09-13T12:00:00+00:00",
+      "timezone": "UTC",
+      "duration": 150,
+      "status": "scheduled",
+      "participants": [
+        {
+          "name": "Lakers",
+          "short_name": "LAL"
+        },
+        {
+          "name": "Warriors",
+          "short_name": "GSW"
+        }
+      ]
+    },
+    {
+      "id": "football",
+      "sport": "football",
+      "title": "Arsenal vs Manchester City",
+      "source_key": "fixture:football",
+      "starts_at": "2026-09-10T12:00:00+00:00",
+      "timezone": "UTC",
+      "duration": 150,
+      "status": "scheduled",
+      "participants": [
+        {
+          "name": "Arsenal",
+          "short_name": "ARS"
+        },
+        {
+          "name": "Manchester City",
+          "short_name": "MCI"
+        }
+      ]
+    },
+    {
+      "id": "qualifying",
+      "sport": "racing",
+      "title": "Italian Grand Prix · Qualifying",
+      "source_key": "fixture:monza:Qualifying",
+      "starts_at": "2026-09-10T12:00:00+00:00",
+      "timezone": "UTC",
+      "duration": 150,
+      "status": "scheduled",
+      "participants": []
+    },
+    {
+      "id": "sprint_qualifying",
+      "sport": "racing",
+      "title": "Italian Grand Prix · SprintQualifying",
+      "source_key": "fixture:monza:SprintQualifying",
+      "starts_at": "2026-09-10T12:00:00+00:00",
+      "timezone": "UTC",
+      "duration": 150,
+      "status": "scheduled",
+      "participants": []
+    }
+  ],
+  "cases": [
+    {
+      "id": "iso_preview",
+      "language": "en",
+      "event_ids": [
+        "basket"
+      ],
+      "video": {
+        "title": "Lakers Warriors 2026-09-10 preview",
+        "description": "",
+        "published_at": "2026-09-09T10:00:00+00:00"
+      },
+      "expected_links": [
+        {
+          "event_id": "basket",
+          "kind": "preview"
+        }
+      ]
+    },
+    {
+      "id": "chinese_date",
+      "language": "zh",
+      "event_ids": [
+        "basket"
+      ],
+      "video": {
+        "title": "湖人对勇士 9月10日前瞻",
+        "description": "",
+        "published_at": "2026-09-09T10:00:00+00:00"
+      },
+      "expected_links": [
+        {
+          "event_id": "basket",
+          "kind": "preview"
+        }
+      ]
+    },
+    {
+      "id": "description_promo",
+      "language": "en",
+      "event_ids": [
+        "basket"
+      ],
+      "video": {
+        "title": "A day in my life",
+        "description": "Lakers Warriors 2026-09-10 preview",
+        "published_at": "2026-09-09T10:00:00+00:00"
+      },
+      "expected_links": []
+    },
+    {
+      "id": "multiple_dates",
+      "language": "en",
+      "event_ids": [
+        "basket"
+      ],
+      "video": {
+        "title": "Lakers Warriors 9/10 and 9/11 preview",
+        "description": "",
+        "published_at": "2026-09-09T10:00:00+00:00"
+      },
+      "expected_links": []
+    },
+    {
+      "id": "score_not_date",
+      "language": "en",
+      "event_ids": [
+        "basket"
+      ],
+      "video": {
+        "title": "Lakers Warriors 9-10 preview",
+        "description": "",
+        "published_at": "2026-09-09T10:00:00+00:00"
+      },
+      "expected_links": []
+    },
+    {
+      "id": "ambiguous_slash",
+      "language": "en",
+      "event_ids": [
+        "basket"
+      ],
+      "video": {
+        "title": "Lakers Warriors 9/10 preview",
+        "description": "",
+        "published_at": "2026-09-09T10:00:00+00:00"
+      },
+      "expected_links": []
+    },
+    {
+      "id": "named_month",
+      "language": "en",
+      "event_ids": [
+        "basket"
+      ],
+      "video": {
+        "title": "Lakers Warriors September 10, 2026 preview",
+        "description": "",
+        "published_at": "2026-09-09T10:00:00+00:00"
+      },
+      "expected_links": [
+        {
+          "event_id": "basket",
+          "kind": "preview"
+        }
+      ]
+    },
+    {
+      "id": "day_named_month",
+      "language": "en",
+      "event_ids": [
+        "basket"
+      ],
+      "video": {
+        "title": "Lakers Warriors 10 Sept 2026 preview",
+        "description": "",
+        "published_at": "2026-09-09T10:00:00+00:00"
+      },
+      "expected_links": [
+        {
+          "event_id": "basket",
+          "kind": "preview"
+        }
+      ]
+    },
+    {
+      "id": "old_season",
+      "language": "en",
+      "event_ids": [
+        "basket"
+      ],
+      "video": {
+        "title": "Lakers Warriors 2025-09-10 preview",
+        "description": "",
+        "published_at": "2026-09-09T10:00:00+00:00"
+      },
+      "expected_links": []
+    },
+    {
+      "id": "invalid_date",
+      "language": "en",
+      "event_ids": [
+        "basket"
+      ],
+      "video": {
+        "title": "Lakers Warriors 2026-02-29 preview",
+        "description": "",
+        "published_at": "2026-09-09T10:00:00+00:00"
+      },
+      "expected_links": []
+    },
+    {
+      "id": "local_date",
+      "language": "en",
+      "event_ids": [
+        "local_day"
+      ],
+      "video": {
+        "title": "Lakers Warriors 2026-09-09 preview",
+        "description": "",
+        "published_at": "2026-09-08T10:00:00+00:00"
+      },
+      "expected_links": [
+        {
+          "event_id": "local_day",
+          "kind": "preview"
+        }
+      ]
+    },
+    {
+      "id": "unique_recap",
+      "language": "en",
+      "event_ids": [
+        "basket"
+      ],
+      "video": {
+        "title": "Lakers Warriors recap",
+        "description": "",
+        "published_at": "2026-09-10T16:00:00+00:00"
+      },
+      "expected_links": [
+        {
+          "event_id": "basket",
+          "kind": "recap"
+        }
+      ]
+    },
+    {
+      "id": "premature_recap",
+      "language": "en",
+      "event_ids": [
+        "basket"
+      ],
+      "video": {
+        "title": "Lakers Warriors recap",
+        "description": "",
+        "published_at": "2026-09-10T12:30:00+00:00"
+      },
+      "expected_links": []
+    },
+    {
+      "id": "undated_event",
+      "language": "en",
+      "event_ids": [
+        "undated"
+      ],
+      "video": {
+        "title": "Lakers Warriors 2026-09-10 preview",
+        "description": "",
+        "published_at": "2026-09-09T10:00:00+00:00"
+      },
+      "expected_links": []
+    },
+    {
+      "id": "repeated_opponent",
+      "language": "en",
+      "event_ids": [
+        "basket",
+        "basket_previous"
+      ],
+      "video": {
+        "title": "Lakers Warriors recap",
+        "description": "",
+        "published_at": "2026-09-10T16:00:00+00:00"
+      },
+      "expected_links": []
+    },
+    {
+      "id": "disambiguated_recap",
+      "language": "en",
+      "event_ids": [
+        "basket",
+        "basket_previous"
+      ],
+      "video": {
+        "title": "Lakers Warriors 2026-09-10 recap",
+        "description": "",
+        "published_at": "2026-09-10T16:00:00+00:00"
+      },
+      "expected_links": [
+        {
+          "event_id": "basket",
+          "kind": "recap"
+        }
+      ]
+    },
+    {
+      "id": "f1_qualifying",
+      "language": "en",
+      "event_ids": [
+        "qualifying"
+      ],
+      "video": {
+        "title": "Monza qualifying preview",
+        "description": "",
+        "published_at": "2026-09-09T10:00:00+00:00"
+      },
+      "expected_links": [
+        {
+          "event_id": "qualifying",
+          "kind": "preview"
+        }
+      ]
+    },
+    {
+      "id": "f1_sprint_qualifying",
+      "language": "en",
+      "event_ids": [
+        "qualifying",
+        "sprint_qualifying"
+      ],
+      "video": {
+        "title": "Monza sprint qualifying preview",
+        "description": "",
+        "published_at": "2026-09-09T10:00:00+00:00"
+      },
+      "expected_links": [
+        {
+          "event_id": "sprint_qualifying",
+          "kind": "preview"
+        }
+      ]
+    },
+    {
+      "id": "f1_unspecified",
+      "language": "en",
+      "event_ids": [
+        "qualifying",
+        "sprint_qualifying"
+      ],
+      "video": {
+        "title": "Monza preview",
+        "description": "",
+        "published_at": "2026-09-09T10:00:00+00:00"
+      },
+      "expected_links": []
+    },
+    {
+      "id": "f1_description_promo",
+      "language": "en",
+      "event_ids": [
+        "qualifying"
+      ],
+      "video": {
+        "title": "A day in my life",
+        "description": "Monza qualifying preview",
+        "published_at": "2026-09-09T10:00:00+00:00"
+      },
+      "expected_links": []
+    },
+    {
+      "id": "football_preview",
+      "language": "en",
+      "event_ids": [
+        "football"
+      ],
+      "video": {
+        "title": "Arsenal Manchester City Sept 10 preview",
+        "description": "",
+        "published_at": "2026-09-09T10:00:00+00:00"
+      },
+      "expected_links": [
+        {
+          "event_id": "football",
+          "kind": "preview"
+        }
+      ]
+    },
+    {
+      "id": "football_description_promo",
+      "language": "en",
+      "event_ids": [
+        "football"
+      ],
+      "video": {
+        "title": "Arsenal training day",
+        "description": "Arsenal Manchester City 2026-09-10 preview",
+        "published_at": "2026-09-09T10:00:00+00:00"
+      },
+      "expected_links": []
+    },
+    {
+      "id": "trade_topic",
+      "language": "en",
+      "event_ids": [
+        "basket"
+      ],
+      "video": {
+        "title": "Lakers Warriors 2026-09-10 trade preview",
+        "description": "",
+        "published_at": "2026-09-09T10:00:00+00:00"
+      },
+      "expected_links": []
+    },
+    {
+      "id": "phase_in_description",
+      "language": "en",
+      "event_ids": [
+        "basket"
+      ],
+      "video": {
+        "title": "Lakers Warriors 2026-09-10",
+        "description": "Match preview",
+        "published_at": "2026-09-09T10:00:00+00:00"
+      },
+      "expected_links": [
+        {
+          "event_id": "basket",
+          "kind": "preview"
+        }
+      ]
+    },
+    {
+      "id": "ambiguous_chinese",
+      "language": "zh",
+      "event_ids": [
+        "basket"
+      ],
+      "video": {
+        "title": "湖人找到了答案",
+        "description": "",
+        "published_at": "2026-09-09T10:00:00+00:00"
+      },
+      "expected_links": []
+    },
+    {
+      "id": "boilerplate_old_playlist",
+      "language": "en",
+      "event_ids": [
+        "basket"
+      ],
+      "video": {
+        "title": "Lakers Warriors 2026-09-10 preview",
+        "description": "More videos: 2025 recaps and 2025 recap playlist",
+        "published_at": "2026-09-09T10:00:00+00:00"
+      },
+      "expected_links": [
+        {
+          "event_id": "basket",
+          "kind": "preview"
+        }
+      ]
+    },
+    {
+      "id": "conflicting_year",
+      "language": "en",
+      "event_ids": [
+        "basket"
+      ],
+      "video": {
+        "title": "2025 Lakers Warriors 2026-09-10 preview",
+        "description": "",
+        "published_at": "2026-09-09T10:00:00+00:00"
+      },
+      "expected_links": []
+    },
+    {
+      "id": "duplicate_same_date",
+      "language": "mixed",
+      "event_ids": [
+        "basket"
+      ],
+      "video": {
+        "title": "Lakers Warriors 2026-09-10 9月10日前瞻",
+        "description": "",
+        "published_at": "2026-09-09T10:00:00+00:00"
+      },
+      "expected_links": [
+        {
+          "event_id": "basket",
+          "kind": "preview"
+        }
+      ]
+    },
+    {
+      "id": "unambiguous_day_month",
+      "language": "en",
+      "event_ids": [
+        "september13"
+      ],
+      "video": {
+        "title": "Lakers Warriors 13/09 preview",
+        "description": "",
+        "published_at": "2026-09-12T10:00:00+00:00"
+      },
+      "expected_links": [
+        {
+          "event_id": "september13",
+          "kind": "preview"
+        }
+      ]
+    },
+    {
+      "id": "false_date_other_month",
+      "language": "en",
+      "event_ids": [
+        "basket"
+      ],
+      "video": {
+        "title": "Lakers Warriors 2026-10-09 preview",
+        "description": "",
+        "published_at": "2026-09-09T10:00:00+00:00"
+      },
+      "expected_links": []
+    },
+    {
+      "id": "no_phase",
+      "language": "en",
+      "event_ids": [
+        "basket"
+      ],
+      "video": {
+        "title": "Lakers Warriors 2026-09-10 highlights",
+        "description": "",
+        "published_at": "2026-09-09T10:00:00+00:00"
+      },
+      "expected_links": []
+    },
+    {
+      "id": "multi_full_dates",
+      "language": "en",
+      "event_ids": [
+        "basket"
+      ],
+      "video": {
+        "title": "Lakers Warriors 2026-09-10 and 2026-09-11 preview",
+        "description": "",
+        "published_at": "2026-09-09T10:00:00+00:00"
+      },
+      "expected_links": []
+    }
+  ]
+}

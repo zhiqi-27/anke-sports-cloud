@@ -13,7 +13,7 @@ import app.content as content
 import app.websub as websub
 from app.calendar import event_view, rebuild_feed
 from app.config import settings
-from app.db import ChannelSync, Creator, Event, Feed, Job, NotificationReceipt, User, Video
+from app.db import ChannelSync, Creator, Event, Feed, Job, NotificationReceipt, User, Video, VideoMatch
 from app.matching import evaluate
 from app.schemas import CreatorFollow
 from app.service import ensure_user, save_config
@@ -122,6 +122,44 @@ def test_block_survives_refresh_and_user_isolation(stack, monkeypatch):
         db.commit()
         assert event_view(db, db.get(Event, ident), other)["links"] == []
     assert client.get(f"/api/v1/events/{ident}").json()["links"] == []
+
+
+@pytest.mark.parametrize("choice", ["automatic", "pin", "block"])
+def test_rule_upgrade_withdraws_description_only_auto_link_but_keeps_personal_choices(stack, choice):
+    from icalendar import Calendar
+
+    client, sessions = stack
+    ident = setup_content(sessions)
+    link = client.get(f"/api/v1/events/{ident}").json()["links"][0]
+    if choice != "automatic":
+        assert client.post(f"/api/v1/me/links/{link['id']}/{choice}").status_code == 200
+    with sessions() as db:
+        user = db.get(User, "local-reviewer")
+        video = db.get(Video, VID)
+        video.description, video.title = video.title, "A day in my life"
+        match = db.scalar(select(VideoMatch).where(VideoMatch.video_id == VID))
+        match.rule_version = "matching-v1"  # Existing stored association from the old rules.
+        rebuild_feed(db, user.id)
+        feed = db.scalar(select(Feed).where(Feed.owner_id == user.id))
+        before = Calendar.from_ical(feed.body).walk("VEVENT")[0]
+        old_revision = feed.revision
+        content.match_video(db, video)
+        rebuild_feed(db, user.id)
+        after = Calendar.from_ical(feed.body).walk("VEVENT")[0]
+        assert str(before["UID"]) == str(after["UID"])
+        visible = event_view(db, db.get(Event, ident), user)["links"]
+        assert bool(visible) == (choice == "pin")
+        if choice == "automatic":
+            assert feed.revision == old_revision + 1
+            assert int(after["SEQUENCE"]) == int(before["SEQUENCE"]) + 1
+            assert match.rule_version == "matching-v2"
+            assert match.decision == "needs_review"
+        elif choice == "block":
+            assert match.decision == "ignored"
+        stable = (feed.body, feed.etag, feed.revision, feed.updated_at)
+        content.match_video(db, video)
+        rebuild_feed(db, user.id)
+        assert (feed.body, feed.etag, feed.revision, feed.updated_at) == stable
 
 
 def test_pause_preserves_existing_and_delete_preserves_pin(stack):

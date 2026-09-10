@@ -1,0 +1,59 @@
+{
+  "date": "2026-09-10",
+  "environment": "main explicit local preview",
+  "no_migration": true,
+  "tables_unchanged": {
+    "users": {
+      "rows": 1,
+      "sha256": "62b769656b072a558f8a329f21860f7e8336b761a11490e4178d2f79ea2482ec"
+    },
+    "feeds": {
+      "rows": 1,
+      "sha256": "b0ded7aa83064ef37e63572b16af7c9b5bbf8c09d492bd324b649535b4027d7c"
+    },
+    "events": {
+      "rows": 163,
+      "sha256": "1e8bda4fd2312e46cc9438172afbd2101ff407b4df1ed78a2b764e8d31651c52"
+    },
+    "projections": {
+      "rows": 217,
+      "sha256": "576b291545d67ea63eb939ce2b411ea3fd7ba05999bc1d3eccbcc086deb9d630"
+    },
+    "creators": {
+      "rows": 0,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    "videos": {
+      "rows": 0,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    "video_matches": {
+      "rows": 0,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    "links": {
+      "rows": 0,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    }
+  },
+  "health": {
+    "status": "ok",
+    "product": "Anke Sports",
+    "environment": "local"
+  },
+  "local_preview": true,
+  "matching_rule": "matching-v2",
+  "synthetic_content_added_to_main": false,
+  "firebase_instance": {
+    "tables_unchanged": 8,
+    "firebase_configured": true,
+    "local_preview": false,
+    "credentials_and_database_config_unchanged": true,
+    "new_login_tested": false
+  },
+  "current_source_package": {
+    "sha256": "1a7c4b12cf7867724824ee0c8de7516b18fef89f3ddebdd250c4b32f870049b8",
+    "file_count": 44,
+    "core_tools_retested_this_batch": false
+  }
+}

@@ -1,0 +1,1256 @@
+{
+  "schema_version": 1,
+  "dataset_sha256": "2af96f90d919c534a6e3322615ab2dff919c20a64b7d42195c29381eae5fdb99",
+  "rule_version": "matching-v2",
+  "rule_source_sha256": "30abd3d6e25993ed0a50cce776571bda10564fce9bce60590c621f8f415b0b88",
+  "provenance": "synthetic",
+  "meets_product_acceptance": false,
+  "acceptance_note": "Offline labeled-set results only; synthetic data cannot prove real-video quality.",
+  "metrics": {
+    "cases": 32,
+    "true_positive": 13,
+    "false_positive": 0,
+    "false_negative": 1,
+    "automatic_precision": 1.0,
+    "automatic_recall": 0.9285714285714286,
+    "automatic_case_coverage": 0.40625,
+    "decisions": {
+      "automatic": 13,
+      "needs_review": 16,
+      "reject": 6
+    }
+  },
+  "by_sport": {
+    "basketball": {
+      "cases": 26,
+      "true_positive": 10,
+      "false_positive": 0,
+      "false_negative": 1,
+      "automatic_precision": 1.0,
+      "automatic_recall": 0.9090909090909091,
+      "automatic_case_coverage": 0.38461538461538464,
+      "decisions": {
+        "automatic": 10,
+        "needs_review": 11,
+        "reject": 6
+      }
+    },
+    "football": {
+      "cases": 2,
+      "true_positive": 1,
+      "false_positive": 0,
+      "false_negative": 0,
+      "automatic_precision": 1.0,
+      "automatic_recall": 1.0,
+      "automatic_case_coverage": 0.5,
+      "decisions": {
+        "automatic": 1,
+        "needs_review": 1
+      }
+    },
+    "racing": {
+      "cases": 4,
+      "true_positive": 2,
+      "false_positive": 0,
+      "false_negative": 0,
+      "automatic_precision": 1.0,
+      "automatic_recall": 1.0,
+      "automatic_case_coverage": 0.5,
+      "decisions": {
+        "automatic": 2,
+        "needs_review": 4
+      }
+    }
+  },
+  "by_language": {
+    "en": {
+      "cases": 29,
+      "true_positive": 11,
+      "false_positive": 0,
+      "false_negative": 1,
+      "automatic_precision": 1.0,
+      "automatic_recall": 0.9166666666666666,
+      "automatic_case_coverage": 0.3793103448275862,
+      "decisions": {
+        "automatic": 11,
+        "needs_review": 15,
+        "reject": 6
+      }
+    },
+    "mixed": {
+      "cases": 1,
+      "true_positive": 1,
+      "false_positive": 0,
+      "false_negative": 0,
+      "automatic_precision": 1.0,
+      "automatic_recall": 1.0,
+      "automatic_case_coverage": 1.0,
+      "decisions": {
+        "automatic": 1
+      }
+    },
+    "zh": {
+      "cases": 2,
+      "true_positive": 1,
+      "false_positive": 0,
+      "false_negative": 0,
+      "automatic_precision": 1.0,
+      "automatic_recall": 1.0,
+      "automatic_case_coverage": 0.5,
+      "decisions": {
+        "automatic": 1,
+        "needs_review": 1
+      }
+    }
+  },
+  "cases": [
+    {
+      "case_id": "iso_preview",
+      "language": "en",
+      "sports": [
+        "basketball"
+      ],
+      "automatic": [
+        [
+          "basket",
+          "preview"
+        ]
+      ],
+      "correct": [
+        [
+          "basket",
+          "preview"
+        ]
+      ],
+      "incorrect": [],
+      "missed": [],
+      "candidates": [
+        {
+          "event_id": "basket",
+          "kind": "preview",
+          "reason_codes": [
+            "BOTH_TEAMS_FOUND",
+            "EXPLICIT_DATE"
+          ],
+          "rule_version": "matching-v2",
+          "decision": "automatic"
+        }
+      ]
+    },
+    {
+      "case_id": "chinese_date",
+      "language": "zh",
+      "sports": [
+        "basketball"
+      ],
+      "automatic": [
+        [
+          "basket",
+          "preview"
+        ]
+      ],
+      "correct": [
+        [
+          "basket",
+          "preview"
+        ]
+      ],
+      "incorrect": [],
+      "missed": [],
+      "candidates": [
+        {
+          "event_id": "basket",
+          "kind": "preview",
+          "reason_codes": [
+            "BOTH_TEAMS_FOUND",
+            "EXPLICIT_DATE"
+          ],
+          "rule_version": "matching-v2",
+          "decision": "automatic"
+        }
+      ]
+    },
+    {
+      "case_id": "description_promo",
+      "language": "en",
+      "sports": [
+        "basketball"
+      ],
+      "automatic": [],
+      "correct": [],
+      "incorrect": [],
+      "missed": [],
+      "candidates": [
+        {
+          "event_id": "basket",
+          "kind": "preview",
+          "reason_codes": [
+            "BOTH_TEAMS_FOUND",
+            "TITLE_SUBJECT_UNCLEAR",
+            "NO_EXPLICIT_DATE",
+            "TITLE_PHASE_UNCLEAR"
+          ],
+          "rule_version": "matching-v2",
+          "decision": "needs_review"
+        }
+      ]
+    },
+    {
+      "case_id": "multiple_dates",
+      "language": "en",
+      "sports": [
+        "basketball"
+      ],
+      "automatic": [],
+      "correct": [],
+      "incorrect": [],
+      "missed": [],
+      "candidates": [
+        {
+          "event_id": "basket",
+          "kind": "preview",
+          "reason_codes": [
+            "BOTH_TEAMS_FOUND",
+            "DATE_AMBIGUOUS"
+          ],
+          "rule_version": "matching-v2",
+          "decision": "needs_review"
+        }
+      ]
+    },
+    {
+      "case_id": "score_not_date",
+      "language": "en",
+      "sports": [
+        "basketball"
+      ],
+      "automatic": [],
+      "correct": [],
+      "incorrect": [],
+      "missed": [],
+      "candidates": [
+        {
+          "event_id": "basket",
+          "kind": "preview",
+          "reason_codes": [
+            "BOTH_TEAMS_FOUND",
+            "NO_EXPLICIT_DATE"
+          ],
+          "rule_version": "matching-v2",
+          "decision": "needs_review"
+        }
+      ]
+    },
+    {
+      "case_id": "ambiguous_slash",
+      "language": "en",
+      "sports": [
+        "basketball"
+      ],
+      "automatic": [],
+      "correct": [],
+      "incorrect": [],
+      "missed": [],
+      "candidates": [
+        {
+          "event_id": "basket",
+          "kind": "preview",
+          "reason_codes": [
+            "BOTH_TEAMS_FOUND",
+            "DATE_AMBIGUOUS"
+          ],
+          "rule_version": "matching-v2",
+          "decision": "needs_review"
+        }
+      ]
+    },
+    {
+      "case_id": "named_month",
+      "language": "en",
+      "sports": [
+        "basketball"
+      ],
+      "automatic": [
+        [
+          "basket",
+          "preview"
+        ]
+      ],
+      "correct": [
+        [
+          "basket",
+          "preview"
+        ]
+      ],
+      "incorrect": [],
+      "missed": [],
+      "candidates": [
+        {
+          "event_id": "basket",
+          "kind": "preview",
+          "reason_codes": [
+            "BOTH_TEAMS_FOUND",
+            "EXPLICIT_DATE"
+          ],
+          "rule_version": "matching-v2",
+          "decision": "automatic"
+        }
+      ]
+    },
+    {
+      "case_id": "day_named_month",
+      "language": "en",
+      "sports": [
+        "basketball"
+      ],
+      "automatic": [
+        [
+          "basket",
+          "preview"
+        ]
+      ],
+      "correct": [
+        [
+          "basket",
+          "preview"
+        ]
+      ],
+      "incorrect": [],
+      "missed": [],
+      "candidates": [
+        {
+          "event_id": "basket",
+          "kind": "preview",
+          "reason_codes": [
+            "BOTH_TEAMS_FOUND",
+            "EXPLICIT_DATE"
+          ],
+          "rule_version": "matching-v2",
+          "decision": "automatic"
+        }
+      ]
+    },
+    {
+      "case_id": "old_season",
+      "language": "en",
+      "sports": [
+        "basketball"
+      ],
+      "automatic": [],
+      "correct": [],
+      "incorrect": [],
+      "missed": [],
+      "candidates": [
+        {
+          "event_id": "basket",
+          "kind": "preview",
+          "reason_codes": [
+            "BOTH_TEAMS_FOUND",
+            "DATE_CONFLICT"
+          ],
+          "rule_version": "matching-v2",
+          "decision": "reject"
+        }
+      ]
+    },
+    {
+      "case_id": "invalid_date",
+      "language": "en",
+      "sports": [
+        "basketball"
+      ],
+      "automatic": [],
+      "correct": [],
+      "incorrect": [],
+      "missed": [],
+      "candidates": [
+        {
+          "event_id": "basket",
+          "kind": "preview",
+          "reason_codes": [
+            "BOTH_TEAMS_FOUND",
+            "DATE_CONFLICT"
+          ],
+          "rule_version": "matching-v2",
+          "decision": "reject"
+        }
+      ]
+    },
+    {
+      "case_id": "local_date",
+      "language": "en",
+      "sports": [
+        "basketball"
+      ],
+      "automatic": [
+        [
+          "local_day",
+          "preview"
+        ]
+      ],
+      "correct": [
+        [
+          "local_day",
+          "preview"
+        ]
+      ],
+      "incorrect": [],
+      "missed": [],
+      "candidates": [
+        {
+          "event_id": "local_day",
+          "kind": "preview",
+          "reason_codes": [
+            "BOTH_TEAMS_FOUND",
+            "EXPLICIT_DATE"
+          ],
+          "rule_version": "matching-v2",
+          "decision": "automatic"
+        }
+      ]
+    },
+    {
+      "case_id": "unique_recap",
+      "language": "en",
+      "sports": [
+        "basketball"
+      ],
+      "automatic": [
+        [
+          "basket",
+          "recap"
+        ]
+      ],
+      "correct": [
+        [
+          "basket",
+          "recap"
+        ]
+      ],
+      "incorrect": [],
+      "missed": [],
+      "candidates": [
+        {
+          "event_id": "basket",
+          "kind": "recap",
+          "reason_codes": [
+            "BOTH_TEAMS_FOUND",
+            "NO_EXPLICIT_DATE"
+          ],
+          "rule_version": "matching-v2",
+          "decision": "automatic"
+        }
+      ]
+    },
+    {
+      "case_id": "premature_recap",
+      "language": "en",
+      "sports": [
+        "basketball"
+      ],
+      "automatic": [],
+      "correct": [],
+      "incorrect": [],
+      "missed": [],
+      "candidates": [
+        {
+          "event_id": "basket",
+          "kind": "recap",
+          "reason_codes": [
+            "BOTH_TEAMS_FOUND",
+            "NO_EXPLICIT_DATE",
+            "MATCH_NOT_FINISHED"
+          ],
+          "rule_version": "matching-v2",
+          "decision": "needs_review"
+        }
+      ]
+    },
+    {
+      "case_id": "undated_event",
+      "language": "en",
+      "sports": [
+        "basketball"
+      ],
+      "automatic": [],
+      "correct": [],
+      "incorrect": [],
+      "missed": [],
+      "candidates": []
+    },
+    {
+      "case_id": "repeated_opponent",
+      "language": "en",
+      "sports": [
+        "basketball"
+      ],
+      "automatic": [],
+      "correct": [],
+      "incorrect": [],
+      "missed": [],
+      "candidates": [
+        {
+          "event_id": "basket",
+          "kind": "recap",
+          "reason_codes": [
+            "BOTH_TEAMS_FOUND",
+            "NO_EXPLICIT_DATE",
+            "MULTIPLE_CANDIDATES"
+          ],
+          "rule_version": "matching-v2",
+          "decision": "needs_review"
+        },
+        {
+          "event_id": "basket_previous",
+          "kind": "recap",
+          "reason_codes": [
+            "BOTH_TEAMS_FOUND",
+            "NO_EXPLICIT_DATE",
+            "MULTIPLE_CANDIDATES"
+          ],
+          "rule_version": "matching-v2",
+          "decision": "needs_review"
+        }
+      ]
+    },
+    {
+      "case_id": "disambiguated_recap",
+      "language": "en",
+      "sports": [
+        "basketball"
+      ],
+      "automatic": [
+        [
+          "basket",
+          "recap"
+        ]
+      ],
+      "correct": [
+        [
+          "basket",
+          "recap"
+        ]
+      ],
+      "incorrect": [],
+      "missed": [],
+      "candidates": [
+        {
+          "event_id": "basket",
+          "kind": "recap",
+          "reason_codes": [
+            "BOTH_TEAMS_FOUND",
+            "EXPLICIT_DATE"
+          ],
+          "rule_version": "matching-v2",
+          "decision": "automatic"
+        },
+        {
+          "event_id": "basket_previous",
+          "kind": "recap",
+          "reason_codes": [
+            "BOTH_TEAMS_FOUND",
+            "DATE_CONFLICT"
+          ],
+          "rule_version": "matching-v2",
+          "decision": "reject"
+        }
+      ]
+    },
+    {
+      "case_id": "f1_qualifying",
+      "language": "en",
+      "sports": [
+        "racing"
+      ],
+      "automatic": [
+        [
+          "qualifying",
+          "preview"
+        ]
+      ],
+      "correct": [
+        [
+          "qualifying",
+          "preview"
+        ]
+      ],
+      "incorrect": [],
+      "missed": [],
+      "candidates": [
+        {
+          "event_id": "qualifying",
+          "kind": "preview",
+          "reason_codes": [
+            "RACE_FOUND",
+            "SESSION_FOUND",
+            "NO_EXPLICIT_DATE"
+          ],
+          "rule_version": "matching-v2",
+          "decision": "automatic"
+        }
+      ]
+    },
+    {
+      "case_id": "f1_sprint_qualifying",
+      "language": "en",
+      "sports": [
+        "racing"
+      ],
+      "automatic": [
+        [
+          "sprint_qualifying",
+          "preview"
+        ]
+      ],
+      "correct": [
+        [
+          "sprint_qualifying",
+          "preview"
+        ]
+      ],
+      "incorrect": [],
+      "missed": [],
+      "candidates": [
+        {
+          "event_id": "qualifying",
+          "kind": "preview",
+          "reason_codes": [
+            "RACE_FOUND",
+            "SESSION_AMBIGUOUS",
+            "NO_EXPLICIT_DATE"
+          ],
+          "rule_version": "matching-v2",
+          "decision": "needs_review"
+        },
+        {
+          "event_id": "sprint_qualifying",
+          "kind": "preview",
+          "reason_codes": [
+            "RACE_FOUND",
+            "SESSION_FOUND",
+            "NO_EXPLICIT_DATE"
+          ],
+          "rule_version": "matching-v2",
+          "decision": "automatic"
+        }
+      ]
+    },
+    {
+      "case_id": "f1_unspecified",
+      "language": "en",
+      "sports": [
+        "racing"
+      ],
+      "automatic": [],
+      "correct": [],
+      "incorrect": [],
+      "missed": [],
+      "candidates": [
+        {
+          "event_id": "qualifying",
+          "kind": "preview",
+          "reason_codes": [
+            "RACE_FOUND",
+            "SESSION_AMBIGUOUS",
+            "NO_EXPLICIT_DATE",
+            "MULTIPLE_CANDIDATES"
+          ],
+          "rule_version": "matching-v2",
+          "decision": "needs_review"
+        },
+        {
+          "event_id": "sprint_qualifying",
+          "kind": "preview",
+          "reason_codes": [
+            "RACE_FOUND",
+            "SESSION_AMBIGUOUS",
+            "NO_EXPLICIT_DATE",
+            "MULTIPLE_CANDIDATES"
+          ],
+          "rule_version": "matching-v2",
+          "decision": "needs_review"
+        }
+      ]
+    },
+    {
+      "case_id": "f1_description_promo",
+      "language": "en",
+      "sports": [
+        "racing"
+      ],
+      "automatic": [],
+      "correct": [],
+      "incorrect": [],
+      "missed": [],
+      "candidates": [
+        {
+          "event_id": "qualifying",
+          "kind": "preview",
+          "reason_codes": [
+            "RACE_FOUND",
+            "SESSION_AMBIGUOUS",
+            "TITLE_SUBJECT_UNCLEAR",
+            "NO_EXPLICIT_DATE",
+            "TITLE_PHASE_UNCLEAR"
+          ],
+          "rule_version": "matching-v2",
+          "decision": "needs_review"
+        }
+      ]
+    },
+    {
+      "case_id": "football_preview",
+      "language": "en",
+      "sports": [
+        "football"
+      ],
+      "automatic": [
+        [
+          "football",
+          "preview"
+        ]
+      ],
+      "correct": [
+        [
+          "football",
+          "preview"
+        ]
+      ],
+      "incorrect": [],
+      "missed": [],
+      "candidates": [
+        {
+          "event_id": "football",
+          "kind": "preview",
+          "reason_codes": [
+            "BOTH_TEAMS_FOUND",
+            "EXPLICIT_DATE"
+          ],
+          "rule_version": "matching-v2",
+          "decision": "automatic"
+        }
+      ]
+    },
+    {
+      "case_id": "football_description_promo",
+      "language": "en",
+      "sports": [
+        "football"
+      ],
+      "automatic": [],
+      "correct": [],
+      "incorrect": [],
+      "missed": [],
+      "candidates": [
+        {
+          "event_id": "football",
+          "kind": "preview",
+          "reason_codes": [
+            "BOTH_TEAMS_FOUND",
+            "TITLE_SUBJECT_UNCLEAR",
+            "NO_EXPLICIT_DATE",
+            "TITLE_PHASE_UNCLEAR"
+          ],
+          "rule_version": "matching-v2",
+          "decision": "needs_review"
+        }
+      ]
+    },
+    {
+      "case_id": "trade_topic",
+      "language": "en",
+      "sports": [
+        "basketball"
+      ],
+      "automatic": [],
+      "correct": [],
+      "incorrect": [],
+      "missed": [],
+      "candidates": [
+        {
+          "event_id": "basket",
+          "kind": "preview",
+          "reason_codes": [
+            "BOTH_TEAMS_FOUND",
+            "EXPLICIT_DATE",
+            "EXCLUDED_TOPIC"
+          ],
+          "rule_version": "matching-v2",
+          "decision": "reject"
+        }
+      ]
+    },
+    {
+      "case_id": "phase_in_description",
+      "language": "en",
+      "sports": [
+        "basketball"
+      ],
+      "automatic": [],
+      "correct": [],
+      "incorrect": [],
+      "missed": [
+        [
+          "basket",
+          "preview"
+        ]
+      ],
+      "candidates": [
+        {
+          "event_id": "basket",
+          "kind": "preview",
+          "reason_codes": [
+            "BOTH_TEAMS_FOUND",
+            "EXPLICIT_DATE",
+            "TITLE_PHASE_UNCLEAR"
+          ],
+          "rule_version": "matching-v2",
+          "decision": "needs_review"
+        }
+      ]
+    },
+    {
+      "case_id": "ambiguous_chinese",
+      "language": "zh",
+      "sports": [
+        "basketball"
+      ],
+      "automatic": [],
+      "correct": [],
+      "incorrect": [],
+      "missed": [],
+      "candidates": [
+        {
+          "event_id": "basket",
+          "kind": "unknown",
+          "reason_codes": [
+            "ONE_TEAM_ONLY",
+            "TITLE_SUBJECT_UNCLEAR",
+            "NO_EXPLICIT_DATE",
+            "PHASE_UNKNOWN"
+          ],
+          "rule_version": "matching-v2",
+          "decision": "needs_review"
+        }
+      ]
+    },
+    {
+      "case_id": "boilerplate_old_playlist",
+      "language": "en",
+      "sports": [
+        "basketball"
+      ],
+      "automatic": [
+        [
+          "basket",
+          "preview"
+        ]
+      ],
+      "correct": [
+        [
+          "basket",
+          "preview"
+        ]
+      ],
+      "incorrect": [],
+      "missed": [],
+      "candidates": [
+        {
+          "event_id": "basket",
+          "kind": "preview",
+          "reason_codes": [
+            "BOTH_TEAMS_FOUND",
+            "EXPLICIT_DATE"
+          ],
+          "rule_version": "matching-v2",
+          "decision": "automatic"
+        }
+      ]
+    },
+    {
+      "case_id": "conflicting_year",
+      "language": "en",
+      "sports": [
+        "basketball"
+      ],
+      "automatic": [],
+      "correct": [],
+      "incorrect": [],
+      "missed": [],
+      "candidates": [
+        {
+          "event_id": "basket",
+          "kind": "preview",
+          "reason_codes": [
+            "BOTH_TEAMS_FOUND",
+            "DATE_CONFLICT"
+          ],
+          "rule_version": "matching-v2",
+          "decision": "reject"
+        }
+      ]
+    },
+    {
+      "case_id": "duplicate_same_date",
+      "language": "mixed",
+      "sports": [
+        "basketball"
+      ],
+      "automatic": [
+        [
+          "basket",
+          "preview"
+        ]
+      ],
+      "correct": [
+        [
+          "basket",
+          "preview"
+        ]
+      ],
+      "incorrect": [],
+      "missed": [],
+      "candidates": [
+        {
+          "event_id": "basket",
+          "kind": "preview",
+          "reason_codes": [
+            "BOTH_TEAMS_FOUND",
+            "EXPLICIT_DATE"
+          ],
+          "rule_version": "matching-v2",
+          "decision": "automatic"
+        }
+      ]
+    },
+    {
+      "case_id": "unambiguous_day_month",
+      "language": "en",
+      "sports": [
+        "basketball"
+      ],
+      "automatic": [
+        [
+          "september13",
+          "preview"
+        ]
+      ],
+      "correct": [
+        [
+          "september13",
+          "preview"
+        ]
+      ],
+      "incorrect": [],
+      "missed": [],
+      "candidates": [
+        {
+          "event_id": "september13",
+          "kind": "preview",
+          "reason_codes": [
+            "BOTH_TEAMS_FOUND",
+            "EXPLICIT_DATE"
+          ],
+          "rule_version": "matching-v2",
+          "decision": "automatic"
+        }
+      ]
+    },
+    {
+      "case_id": "false_date_other_month",
+      "language": "en",
+      "sports": [
+        "basketball"
+      ],
+      "automatic": [],
+      "correct": [],
+      "incorrect": [],
+      "missed": [],
+      "candidates": [
+        {
+          "event_id": "basket",
+          "kind": "preview",
+          "reason_codes": [
+            "BOTH_TEAMS_FOUND",
+            "DATE_CONFLICT"
+          ],
+          "rule_version": "matching-v2",
+          "decision": "reject"
+        }
+      ]
+    },
+    {
+      "case_id": "no_phase",
+      "language": "en",
+      "sports": [
+        "basketball"
+      ],
+      "automatic": [],
+      "correct": [],
+      "incorrect": [],
+      "missed": [],
+      "candidates": [
+        {
+          "event_id": "basket",
+          "kind": "unknown",
+          "reason_codes": [
+            "BOTH_TEAMS_FOUND",
+            "EXPLICIT_DATE",
+            "PHASE_UNKNOWN"
+          ],
+          "rule_version": "matching-v2",
+          "decision": "needs_review"
+        }
+      ]
+    },
+    {
+      "case_id": "multi_full_dates",
+      "language": "en",
+      "sports": [
+        "basketball"
+      ],
+      "automatic": [],
+      "correct": [],
+      "incorrect": [],
+      "missed": [],
+      "candidates": [
+        {
+          "event_id": "basket",
+          "kind": "preview",
+          "reason_codes": [
+            "BOTH_TEAMS_FOUND",
+            "DATE_AMBIGUOUS"
+          ],
+          "rule_version": "matching-v2",
+          "decision": "needs_review"
+        }
+      ]
+    }
+  ],
+  "comparison": {
+    "previous_rule_version": "matching-v1",
+    "changed_cases": [
+      {
+        "case_id": "description_promo",
+        "before": [
+          [
+            "basket",
+            "preview",
+            "automatic"
+          ]
+        ],
+        "after": [
+          [
+            "basket",
+            "preview",
+            "needs_review"
+          ]
+        ]
+      },
+      {
+        "case_id": "multiple_dates",
+        "before": [
+          [
+            "basket",
+            "preview",
+            "automatic"
+          ]
+        ],
+        "after": [
+          [
+            "basket",
+            "preview",
+            "needs_review"
+          ]
+        ]
+      },
+      {
+        "case_id": "score_not_date",
+        "before": [
+          [
+            "basket",
+            "preview",
+            "automatic"
+          ]
+        ],
+        "after": [
+          [
+            "basket",
+            "preview",
+            "needs_review"
+          ]
+        ]
+      },
+      {
+        "case_id": "ambiguous_slash",
+        "before": [
+          [
+            "basket",
+            "preview",
+            "automatic"
+          ]
+        ],
+        "after": [
+          [
+            "basket",
+            "preview",
+            "needs_review"
+          ]
+        ]
+      },
+      {
+        "case_id": "named_month",
+        "before": [
+          [
+            "basket",
+            "preview",
+            "needs_review"
+          ]
+        ],
+        "after": [
+          [
+            "basket",
+            "preview",
+            "automatic"
+          ]
+        ]
+      },
+      {
+        "case_id": "day_named_month",
+        "before": [
+          [
+            "basket",
+            "preview",
+            "needs_review"
+          ]
+        ],
+        "after": [
+          [
+            "basket",
+            "preview",
+            "automatic"
+          ]
+        ]
+      },
+      {
+        "case_id": "f1_description_promo",
+        "before": [
+          [
+            "qualifying",
+            "preview",
+            "automatic"
+          ]
+        ],
+        "after": [
+          [
+            "qualifying",
+            "preview",
+            "needs_review"
+          ]
+        ]
+      },
+      {
+        "case_id": "football_preview",
+        "before": [
+          [
+            "football",
+            "preview",
+            "needs_review"
+          ]
+        ],
+        "after": [
+          [
+            "football",
+            "preview",
+            "automatic"
+          ]
+        ]
+      },
+      {
+        "case_id": "football_description_promo",
+        "before": [
+          [
+            "football",
+            "preview",
+            "automatic"
+          ]
+        ],
+        "after": [
+          [
+            "football",
+            "preview",
+            "needs_review"
+          ]
+        ]
+      },
+      {
+        "case_id": "phase_in_description",
+        "before": [
+          [
+            "basket",
+            "preview",
+            "automatic"
+          ]
+        ],
+        "after": [
+          [
+            "basket",
+            "preview",
+            "needs_review"
+          ]
+        ]
+      },
+      {
+        "case_id": "boilerplate_old_playlist",
+        "before": [
+          [
+            "basket",
+            "unknown",
+            "reject"
+          ]
+        ],
+        "after": [
+          [
+            "basket",
+            "preview",
+            "automatic"
+          ]
+        ]
+      },
+      {
+        "case_id": "unambiguous_day_month",
+        "before": [
+          [
+            "september13",
+            "preview",
+            "reject"
+          ]
+        ],
+        "after": [
+          [
+            "september13",
+            "preview",
+            "automatic"
+          ]
+        ]
+      },
+      {
+        "case_id": "multi_full_dates",
+        "before": [
+          [
+            "basket",
+            "preview",
+            "automatic"
+          ]
+        ],
+        "after": [
+          [
+            "basket",
+            "preview",
+            "needs_review"
+          ]
+        ]
+      }
+    ]
+  }
+}

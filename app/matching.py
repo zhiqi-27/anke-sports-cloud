@@ -2,10 +2,10 @@
 
 import re
 import unicodedata
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
-RULE_VERSION = "matching-v1"
+RULE_VERSION = "matching-v2"
 ALIASES = {
     "LAL": ["lakers", "湖人", "洛杉矶湖人"],
     "GSW": ["warriors", "勇士", "金州勇士"],
@@ -56,27 +56,91 @@ def parse_time(value):
 
 
 def explicit_date(text, event):
+    """Dates in the video title, not scores or a description's link archive.
+
+    Numeric short slash dates can use either D/M or M/D. Full ISO, Chinese
+    month/day and named English months avoid silently choosing a locale.
+    """
     day = parse_time(event.starts_at).astimezone(ZoneInfo(event.timezone)).date() if event.starts_at else None
     if not day:
-        return False, False
-    dates = [
-        (int(m), int(d))
-        for m, d in re.findall(r"(?<!\d)(\d{1,2})\s*(?:月|[/-])\s*(\d{1,2})(?:日)?(?!\d)", text)
-    ]
-    dates += [
-        (int(m), int(d))
-        for _, m, d in re.findall(r"(?<!\d)(20\d{2})[-/.](\d{1,2})[-/.](\d{1,2})(?!\d)", text)
-    ]
+        return False, False, False
+    found = []
+    invalid = False
+
+    def record(year, month, number):
+        nonlocal invalid
+        try:
+            found.append({date(int(year or day.year), int(month), int(number))})
+        except ValueError:
+            invalid = True
+        return " "
+
+    # Consume full dates first; don't parse the suffix again as a short date.
+    text = re.sub(
+        r"(?<!\d)(20\d{2})([-/.])(\d{1,2})\2(\d{1,2})(?!\d)",
+        lambda m: record(m[1], m[3], m[4]), text,
+    )
+    text = re.sub(
+        r"(?<!\d)(?:(20\d{2})\s*年\s*)?(\d{1,2})\s*月\s*(\d{1,2})(?:\s*日)?(?!\d)",
+        lambda m: record(m[1], m[2], m[3]), text,
+    )
+    months = {name: i for i, name in enumerate(
+        ["january", "february", "march", "april", "may", "june", "july", "august",
+         "september", "october", "november", "december"], 1
+    )}
+    months.update({name[:3]: number for name, number in list(months.items())})
+    months["sept"] = 9
+    names = "|".join(sorted(months, key=len, reverse=True))
+    text = re.sub(
+        rf"\b({names})\.?\s+(\d{{1,2}})(?:st|nd|rd|th)?(?:,?\s+(20\d{{2}}))?\b",
+        lambda m: record(m[3], months[m[1]], m[2]), text,
+    )
+    text = re.sub(
+        rf"\b(\d{{1,2}})(?:st|nd|rd|th)?\s+({names})\.?(?:,?\s+(20\d{{2}}))?\b",
+        lambda m: record(m[3], months[m[2]], m[1]), text,
+    )
+    for m, d in re.findall(r"(?<![\d/])(\d{1,2})\s*/\s*(\d{1,2})(?![\d/])", text):
+        options = set()
+        for month, number in [(m, d), (d, m)]:
+            try:
+                options.add(date(day.year, int(month), int(number)))
+            except ValueError:
+                pass
+        found.append(options)
+        invalid |= not options
     years = [int(y) for y in re.findall(r"(?<!\d)(20\d{2})(?!\d)", text)]
-    date_matches = (day.month, day.day) in dates
-    conflict = (bool(dates) and not date_matches) or any(y != day.year for y in years)
-    return date_matches and not conflict, conflict
+    conflict = invalid or any(y != day.year for y in years) or (bool(found) and all(day not in x for x in found))
+    ambiguous = bool(found) and any(x != {day} for x in found) and not conflict
+    return bool(found) and not conflict and not ambiguous, conflict, ambiguous
+
+
+def phase(text):
+    before, after = any(contains(text, x) for x in PREVIEW), any(contains(text, x) for x in RECAP)
+    return "preview" if before and not after else "recap" if after and not before else "unknown"
+
+
+def team_hits(text, event):
+    return sum(
+        any(contains(text, a) for a in [p["name"], p["short_name"], *ALIASES.get(p["short_name"], [])])
+        for p in event.participants
+    )
+
+
+def detected_sessions(text):
+    detected = {k for k, terms in SESSIONS.items() if any(contains(text, t) for t in terms)}
+    if "SprintQualifying" in detected:
+        detected -= {"Qualifying", "Sprint"}
+    return detected
 
 
 def evaluate(video, events):
+    title = normalized(video.title)
     text = normalized(video.title + "\n" + video.description)
-    before, after = any(contains(text, x) for x in PREVIEW), any(contains(text, x) for x in RECAP)
-    kind = "preview" if before and not after else "recap" if after and not before else "unknown"
+    title_kind = phase(title)
+    # Descriptions may suggest review candidates, but cannot provide the title's
+    # missing subject, phase or date for automatic writes. Boilerplate commonly
+    # lists unrelated games, old years and both preview/recap playlists.
+    kind = title_kind if title_kind != "unknown" else phase(text)
     excluded = any(contains(text, x) for x in EXCLUDE)
     published = parse_time(video.published_at)
     candidates = []
@@ -98,25 +162,26 @@ def evaluate(video, events):
             if not any(contains(text, a) for a in [race, *RACE_ALIASES.get(race, [])]):
                 continue
             reasons.append("RACE_FOUND")
-            detected = {k for k, terms in SESSIONS.items() if any(contains(text, t) for t in terms)}
-            if "SprintQualifying" in detected:
-                detected -= {"Qualifying", "Sprint"}
             session = event.source_key.rsplit(":", 1)[-1]
-            strong = detected == {session}
+            title_subject = any(contains(title, a) for a in [race, *RACE_ALIASES.get(race, [])])
+            strong = title_subject and detected_sessions(title) == {session}
             reasons.append("SESSION_FOUND" if strong else "SESSION_AMBIGUOUS")
         else:
-            hits = sum(
-                any(
-                    contains(text, a) for a in [p["name"], p["short_name"], *ALIASES.get(p["short_name"], [])]
-                )
-                for p in event.participants
-            )
+            hits = team_hits(text, event)
             if not hits:
                 continue
-            strong = hits == 2 and len(event.participants) == 2
-            reasons.append("BOTH_TEAMS_FOUND" if strong else "ONE_TEAM_ONLY")
-        has_date, conflict = explicit_date(text, event)
-        reasons.append("EXPLICIT_DATE" if has_date else "DATE_CONFLICT" if conflict else "NO_EXPLICIT_DATE")
+            title_subject = team_hits(title, event) == 2 and len(event.participants) == 2
+            strong = title_subject
+            reasons.append("BOTH_TEAMS_FOUND" if hits == 2 else "ONE_TEAM_ONLY")
+        if not title_subject:
+            reasons.append("TITLE_SUBJECT_UNCLEAR")
+        has_date, conflict, ambiguous = explicit_date(title, event)
+        reasons.append(
+            "EXPLICIT_DATE" if has_date else "DATE_CONFLICT" if conflict
+            else "DATE_AMBIGUOUS" if ambiguous else "NO_EXPLICIT_DATE"
+        )
+        if title_kind == "unknown" and kind != "unknown":
+            reasons.append("TITLE_PHASE_UNCLEAR")
         if kind == "unknown":
             reasons.append("PHASE_UNKNOWN")
         if excluded:
@@ -133,6 +198,7 @@ def evaluate(video, events):
                 "strong": strong,
                 "date": has_date,
                 "conflict": conflict,
+                "ambiguous": ambiguous,
                 "ended": ended,
             }
         )
@@ -146,13 +212,14 @@ def evaluate(video, events):
             item["strong"]
             and unambiguous
             and not item["conflict"]
+            and not item["ambiguous"]
             and not excluded
-            and kind != "unknown"
+            and title_kind != "unknown"
             and (kind != "recap" or item["ended"])
         )
         item["decision"] = (
             "reject" if excluded or item["conflict"] else "automatic" if automatic else "needs_review"
         )
-        for field in ["strong", "date", "conflict", "ended"]:
+        for field in ["strong", "date", "conflict", "ambiguous", "ended"]:
             item.pop(field)
     return candidates

@@ -38,6 +38,8 @@ uv run python -m scripts.export_contracts
 
 `contracts/openapi.json` 与 `contracts/config.schema.json` 从 Pydantic 生成。客户端在自己的仓库运行 `npm run contracts`。两仓分别检查、提交、发布，不假定共享 Git 历史。
 
+匹配规则升级可先用离线元数据回放比较逐条决策；工具不连接数据库或改写关联。命令、合成样本与真实准确率边界见 [视频匹配回放](docs/matching-replay.md)。
+
 数据库：本机演示可自动建表；正式环境必须使用迁移。
 
 ```sh

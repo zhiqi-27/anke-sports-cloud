@@ -1,8 +1,8 @@
 # Anke Sports 服务端状态
 
-当前摘要：2026-09-10，真实Firebase登录在Chrome通过；Core Tools/Azurite本机宿主通过，Azure尚未部署。最新进程与证据见文末；下列旧批次保留当时状态。
+当前摘要：2026-09-10，匹配v2/离线回放已完成本地验证，后端214项通过；真实Firebase登录先前在Chrome通过。Azure选型待成本决定，尚未部署。最新进程与证据见文末；下列旧批次保留当时状态。
 
-更新：2026-09-10。主 API 127.0.0.1:8787，session45462/PID34189；worker session77294/PID34200；显式启用本地体验并关闭访问日志。显式本地SQLite/体验身份。主库163条比赛（48演示+115 Jolpica F1分场次），无合成频道/视频或公共直播记录。
+更新：2026-09-10。主 API 127.0.0.1:8787，session43380/PID44497；worker session62679/PID44496；显式启用本地体验并关闭访问日志。显式本地SQLite/体验身份。主库163条比赛（48演示+115 Jolpica F1分场次），无合成频道/视频或公共直播记录。
 
 已实现账号验证入口、个人配置/链接、稳定投影与ICS、事务outbox、local worker/Azure触发器、体育Provider接口、共享YouTube发现/签名通知/补查/匹配/人工确认、PKCE/刷新/撤销和HTTP MCP（公开3、私人11工具）。真实Firebase/YouTube/云队列与触发器仍未验收。
 
@@ -192,3 +192,40 @@ Codex内置浏览器未完成Google弹窗，曾返回auth/popup-closed-by-user�
 主API8787 session27072/PID37845、worker29987/PID37859、Web3000 session43940/PID53698继续；本批仅Functions投递入口变化，主uvicorn/worker无需重启。production构建预览3002已重启为session20042/PID40149；真实FirebaseWeb3003 session91087/PID38482、API8788 session85403/PID38459、worker73541/PID38782保留。用户明确停止Codex内置浏览器登录排查，Chrome现有登录页保留。
 
 下一批继续独立Azure开发资源与费用边界、远端Linux构建、MySQL TLS、Functions真实Firebase、Queue死信/告警/遥测，再推进YouTube/真实日历设备。Azure未创建/部署，无push，任务保持in_progress，完整产品尚未完成。
+
+
+## 2026-09-10 · Azure开发模板、托管身份与费用确认（T07/T13/T33）
+
+实际订阅a1187bf2-2e2f-4e05-aaea-407163a009f5/租户5ba85645-4c35-4efd-93ea-11c0890472d8已核对，East Asia支持Flex/MySQL8.4B1ms，相关Provider已注册。新建infra/main.bicep与resources.bicep：独立anke-sports-dev资源组，Flex Python3.12、专用VNet/MySQL B1ms20GB7天备份、LRS存储、托管身份及Key Vault。Bicep0.46.1编译及Azure订阅validate Succeeded；验证用HTTPS占位Web来源，未执行what-if/create/deploy。API public_url引用Azure实际defaultHostName。
+
+云队列发送器支持绑定同名的托管身份配置，禁止回退本机Azure账号；原Azurite连接保持。Firebase新增SecretStr JSON配置，拒绝其他项目/非法格式并脱敏报错，保留ADC本机路径。真实独立Firebase Admin只读验证通过，未用真实Key Vault/RBAC；191项pytest通过/2项MySQL条件跳过，ruff通过，契约未变。44文件实际源码包下Core Tools/Azurite全链路回归通过，包hash0f0e28483705cdb78241b6f398335ac170981551cc1d4b18e79765202daac8a1；临时宿主/模拟器均正常退出清理。
+
+详见docs/azure-development-plan.md，模板、价格、Firebase JSON和Functions回归证据位于evidence。官方零售价MySQL基线约US$23.88/月，Functions等按量另计；建议参考预算US$40/月，不是硬上限。用户随后要求参考Anke Money降低费用，原方案未获批准，暂缓创建收费资源。首次Pricing工具SKU映射为空、补查零售API遇429；保留成功数据，不假报免费额度。
+
+主API8787 session27072/PID37845、worker29987/PID37859、Web3000 session43940/PID53698，构建预览3002 session20042/PID40149；Firebase Web3003 session91087/PID38482、API8788 session85403/PID38459、worker73541/PID38782均保留。本批可选云凭据/队列路径仅在独立进程验证，未重启现有预览或迁移主库。Chrome登录可用页保持；按用户要求不再排查Codex内置浏览器登录。
+
+下一步先评估低成本数据库选型，原MySQL创建暂缓；后续仍需准备真实Web HTTPS来源、私网迁移执行器/业务账号、Linux远端构建、真实Azure身份与SQL TLS、遥测脱敏/死信告警。YouTube、MCP目标客户端完整业务、Chrome安装和设备日历仍需验收。完整目标保持进行中，未push/部署。
+
+
+## 2026-09-10 · 用户要求重新评估 Azure 成本
+
+原 MySQL B1ms / US$40 月参考预算未获批准，用户要求参考 Anke Money 寻找更低成本方案。只读核对证实 Money 开发环境采用 Cosmos Serverless，生产为 autoscale 最大1,000 RU/s；实际账单保存在后端 Git 忽略的 data/money-cost-summary.md，未写入公开证据。订阅免费层已被其他账号使用，不改动既有产品资源。
+
+已准备 docs/azure-low-cost-proposal.md：独立 Cosmos Serverless + 保留 Firebase/Functions/Queue/Key Vault 的候选。香港单价 US$0.31/百万 RU、US$0.25/GB月；100万/1,000万 RU +1GB的数据库示例为US$0.56/3.35，非实测或月账单承诺。价格证据 evidence/azure-cosmos-pricing-2026-09-10.json。整体早期低流量设计目标US$5–10/月，仍取决于后台调度、实际RU与其他用量。
+
+本批只做只读成本核对和计划更新，SQL源码/现有数据/主进程未变。SQL→Cosmos的分区、原子outbox、ETag、稳定Feed发布和删除竞态需要实做实测；现有191项SQL测试不代表Cosmos已实现。数据库架构尚未更改；原MySQL模板保留供比较，不创建。未push、部署、迁移或修改任何既有Azure资源。完整产品目标继续，选型只影响相关后端与云验收。
+
+
+## 2026-09-10 · 匹配规则 v2 与离线差异（T17/T18）
+
+修复简介旧推广、比分和歧义日期触发错误自动附加。标题须自身明确比赛对象/分场次及阶段，ISO/中文/英文日期参与消歧；仅简介支持时保留人工候选。新增三个中文原因提示、无数据库/网络副作用的离线回放及规则源/数据哈希。32条显式合成样本：正确自动关联9→13、错误7→0、遗漏5→1；覆盖率50%→40.63%。这不是200条真实视频或98%验收，工具不自动改写线上关联。
+
+后端214 passed/2 MySQL条件跳过、ruff通过，Web/扩展typecheck和Web production build通过；OpenAPI/config字节未变。新测试验证旧自动链接撤回时UID稳定、SEQUENCE增加，固定与屏蔽保留、重复重算保持ETag。实际IPv6隔离UI键盘确认/忽略后候选3→2→1，HTTP ICS的UID不变、SEQUENCE1→2、条件304；1440/1280/1024无横向溢出，1440/1024截图已检查，console error0。
+
+可检查合成页面 http://[::1]:3004/creators ：实验session63263/PID44193，临时库，标签26保留；浏览器viewport已重置。其频道/比赛/视频均合成，未访问YouTube，停止实验即删除临时库。主库与真实Firebase验收库的8张相关表各自重启前后哈希相同；主库163场、217投影、无创作者/视频，未加入测试内容或迁移。
+
+当前主API8787 session43380/PID44497，worker session62679/PID44496；保留四个显式local/preview/public/web参数，关闭访问日志。主Web3000 session43940/PID53698；构建预览3002 session31276/PID44147。Firebase API8788 session92869/PID44563，worker session24522/PID44564，Web3003 session91087/PID38482；保持原启动器和配置，仅同步三个前端原因文案，没有重新登录或排查IAB登录。旧主/Firebase API及worker、旧3002进程均已正常停止。
+
+说明docs/matching-replay.md；证据evidence/matching-replay-before/after-2026-09-10.json、matching-ui-2026-09-10.json、matching-main-readback-2026-09-10.json。源码包已重建为44文件，SHA256 1a7c4b12cf7867724824ee0c8de7516b18fef89f3ddebdd250c4b32f870049b8，本批没有重复Core Tools宿主验收。前一轮云身份/未获批准的资源与价格候选已本地提交2263269；没有push或Azure创建/部署。
+
+继续完整产品目标：低成本数据库选型待用户决定；真实YouTube采集/Hub与人工标注质量、真实体育来源覆盖、目标MCP业务调用、Chrome安装/生命周期、Azure及设备日历验收仍未完成。用户已停止IAB Google登录排查，保持该范围。此次为实际实现与运行证据进展，未把任务标done。
