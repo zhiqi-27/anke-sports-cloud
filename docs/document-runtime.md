@@ -8,9 +8,11 @@
 
 已接入同一路径和响应模型：健康/集成状态、来源、比赛列表/详情、本地或 Firebase 身份验证、个人日历、关注预览/保存、偏好、配置导出、私人地址/轮换/暂停/恢复/预览、ICS GET/HEAD/304。API 验证 Firebase ID token 的代码共用原验证器，启用撤销检查；**本批没有重新进行真实 Firebase 验收**。
 
-本批新增个人原链接附加、屏蔽/固定、单场加入/排除/重置、配置导入预览与确认。链接、配置、新任务和精确幂等回执在个人分区同事务提交；屏蔽后重新附加不会撤销屏蔽。共享链接筛选和导入规则由 SQL 与文档模式共用，合并超出配置上限返回明确错误。预览不修改配置或创建任务，确认绑定账号、版本和完整配置。未迁移创作者在导入中标为 unresolved，拒绝应用。
+已接入个人原链接附加、屏蔽/固定、单场加入/排除/重置、配置导入预览与确认。链接、配置、新任务和精确幂等回执在个人分区同事务提交；屏蔽后重新附加不会撤销屏蔽。共享链接筛选和导入规则由 SQL 与文档模式共用，合并超出配置上限返回明确错误。预览不修改配置或创建任务，确认绑定账号、版本和完整配置。导入接受已解析的创作者；未知频道或关联范围标为 unresolved，拒绝应用。
 
-文档模式已接入YouTube项目额度记录与只读频道解析，SQL/文档共用请求传输，见 [YouTube请求与解析](document-youtube.md)。尚未接入：创作者保存/YouTube持续发现与匹配、直播、公共 Feed、账号删除、OAuth/MCP、Google直连。未迁移接口明确返回 `DOCUMENT_FEATURE_UNAVAILABLE`。包含尚未迁移创作者配置的账号不能被静默发布为空链接日历。额度configured状态不代表后台发现已启用。
+文档模式已接入YouTube额度记录、频道解析、创作者保存/范围与类型设置/暂停/删除、共享频道轮询、规则匹配和人工确认，见 [创作者链路](document-creators.md)。共享视频与个人链接分区独立，跨分区依靠持久任务收敛。频道资料缺失时拒绝发布，不能静默生成空链接日历。状态页标记 `youtube_discovery=polling_available`；实际是否有配置、额度和成功时间分别读回。
+
+尚未接入：WebSub通知/续订、元数据到期物理清理、直播、公共 Feed、账号删除、OAuth/MCP、Google直连。未迁移接口明确返回 `DOCUMENT_FEATURE_UNAVAILABLE`，创作者websub_status保持disabled。
 
 完整客户端合同继续以 SQL 基线导出，并已核对未变化。导出脚本拒绝在文档模式下覆盖完整合同，避免误把当前接口子集作为产品全部接口。新路径不是完整 Cosmos 迁移，也不是可直接公测的部署包。
 
@@ -38,7 +40,7 @@ Provider抓取、状态和定期更新已接入新存储。SQL/文档共用解�
 
 SDK 固定 4.17.0，离线实测发现：跨多个物理分区只读取第一分页后，其初始续读令牌仍可能含未访问分区的空 token，SDK 自身恢复时拒绝。实现使用公开 `read_feed_ranges` 和分页 API 完成首轮，再保存原始 opaque token，不解析/篡改 SDK 令牌。首次最多100个范围，后续一次有界分页；物理分区真实拆分/恢复还需云验收。[SDK 源码](https://github.com/Azure/azure-sdk-for-python/blob/azure-cosmos_4.17.0/sdk/cosmos/azure-cosmos/azure/cosmos/_change_feed/composite_continuation_token.py)、[公开接口](https://learn.microsoft.com/en-us/python/api/azure-cosmos/azure.cosmos.containerproxy?view=azure-python)。
 
-文档模式的 Azure Functions 注册 HTTP、分钟投递、来源更新、Queue处理和每日窗口任务；Provider使用文档任务与状态，YouTube定时器尚未迁移。每日窗口任务与公共赛程变更按每页100个已登记 owner 生成幂等个人任务。当前每次变化仍遍历 owner 目录，反向关注索引及费用验证是后续工作，不能声称已具备规模化成本证据。
+文档模式的 Azure Functions 注册 HTTP、分钟投递、来源更新、Queue处理、每5分钟频道调度和每日窗口任务；本地worker每分钟检查持久的来源/频道到期条件。每日窗口任务与公共赛程变更按每页100个已登记 owner 生成幂等个人任务。赛程变更仍遍历 owner 目录；频道通知使用自己的辅助owner索引，每页50个并重查权威账号。反向赛事关注索引及真实RU/成本验证仍待完成。
 
 ## 本地检查
 
@@ -63,3 +65,5 @@ ANKE_DOCUMENT_UI_PORT=3007 uv run python -m experiments.document_ui
 最新Provider批次完整302项回归通过；最后禁用状态细化后20项相关检查通过。真实Jolpica→HTTP关注→独立worker→85条ICS的8项验证通过，见 [证据](../evidence/document-providers-2026-09-10.md)。本批未操作锁定Mac的浏览器，新预览的渲染尚未重查。
 
 其后频道解析与额度批次完整327项回归通过，真实YouTube双次读取和持久账本共6项检查通过，见 [新证据](../evidence/document-youtube-2026-09-10.md)。3007预览保留Provider批次运行代码，本批没有重启常驻服务。
+
+最新创作者批次完整342项回归通过，最后旧关联ID兼容修正后16项相关检查通过；[独立3008创作者预览](http://localhost:3008/creators)绑定最终源码，以合成上游及独立worker完成6项HTTP检查。12个UID保持不变、屏蔽后SEQUENCE 3→4，再抓取内容不变、GET304/HEAD通过。运行 `uv run python -m experiments.document_creators_ui` 可另建临时实例；见 [本批证据](../evidence/document-creators-2026-09-10.md)。没有浏览器渲染或真实上游/云/设备证据。

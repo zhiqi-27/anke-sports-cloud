@@ -23,6 +23,7 @@ from app.db import (
 from app.matching import evaluate, parse_time
 from app.providers import youtube_request
 from app.schemas import CreatorFollow
+from app.youtube_content_rules import uploads_page, video_batch
 from app.security import digest, problem
 from app.service import enqueue, lock_user, save_config
 
@@ -264,44 +265,20 @@ def refresh_videos(db, channel_id, video_ids):
     if not channel_interest(db, channel_id, retained=True):
         return
     payload = youtube_request("videos", {"id": ",".join(ids), "part": "snippet,status"})
-    rows = payload.get("items")
-    if not isinstance(rows, list):
-        raise ValueError("INVALID_VIDEO_RESPONSE")
-    found = {r["id"]: r for r in rows}
-    if set(found) - set(ids):
-        raise ValueError("UNEXPECTED_VIDEO_ID")
-    if any(r.get("snippet", {}).get("channelId") != channel_id for r in rows):
-        raise ValueError("CHANNEL_ID_MISMATCH")
-    for ident in ids:
-        raw = found.get(ident)
-        video = db.get(Video, ident)
-        if video and video.channel_id != channel_id:
-            raise ValueError("CHANNEL_ID_MISMATCH")
-        public = bool(raw and raw.get("status", {}).get("privacyStatus") == "public")
-        if not raw and not video:
-            continue
-        if not video:
-            snippet = raw["snippet"]
-            parse_time(snippet["publishedAt"])
-            video = Video(
-                id=ident,
-                channel_id=channel_id,
-                title=snippet["title"][:300],
-                description=snippet.get("description", "")[:10000],
-                published_at=snippet["publishedAt"],
-            )
+    existing = {ident: db.get(Video, ident) for ident in ids}
+    previous = {ident: {name: getattr(video, name) for name in (
+        "id", "channel_id", "title", "description", "published_at", "available", "updated_at"
+    )} if video else None for ident, video in existing.items()}
+    normalized = video_batch(channel_id, ids, payload, previous, now())
+    for values in normalized:
+        ident, public = values["id"], values["available"]
+        video = existing.get(ident)
+        if video is None:
+            video = Video(**values)
             db.add(video)
-        if public:
-            snippet = raw["snippet"]
-            parse_time(snippet["publishedAt"])
-            video.title, video.description, video.published_at = (
-                snippet["title"][:300],
-                snippet.get("description", "")[:10000],
-                snippet["publishedAt"],
-            )
         else:
-            video.title, video.description = "视频不可用", ""
-        video.available, video.updated_at = public, now()
+            for name, value in values.items():
+                setattr(video, name, value)
         db.flush()
         url = f"https://www.youtube.com/watch?v={ident}"
         for link in db.scalars(select(Link).where(Link.url_hash == digest(url))):
@@ -335,26 +312,12 @@ def poll_channel(db, payload):
     if payload.get("cursor"):
         args["pageToken"] = payload["cursor"]
     raw = youtube_request("playlistItems", args)
-    if not isinstance(raw.get("items"), list):
-        raise ValueError("INVALID_UPLOADS_RESPONSE")
-    ids = []
-    reached_cutoff = False
-    for item in raw["items"]:
-        details = item["contentDetails"]
-        published = details.get("videoPublishedAt")
-        if published and parse_time(published) < parse_time(cutoff):
-            reached_cutoff = True
-            continue
-        ids.append(details["videoId"])
-    # One upstream request per job. Video validation/matching is independent
-    # outbox work, so quota waits never roll back and repeat a paid playlist read.
-    if ids:
-        enqueue(db, "youtube_videos", {"channel_id": channel_id, "video_ids": list(dict.fromkeys(ids))})
-    cursor = raw.get("nextPageToken")
     seen = payload.get("seen", [])
-    if cursor and not reached_cutoff:
-        if cursor in seen or len(seen) >= 100:
-            raise ValueError("PAGINATION_LOOP")
+    ids, cursor = uploads_page(raw, cutoff, seen)
+    # Each successful uploads page commits independent detail work before quota waits.
+    if ids:
+        enqueue(db, "youtube_videos", {"channel_id": channel_id, "video_ids": ids})
+    if cursor:
         enqueue(
             db,
             "youtube_poll",

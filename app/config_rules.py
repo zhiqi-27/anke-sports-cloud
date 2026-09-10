@@ -50,6 +50,7 @@ def import_configuration(user, data, cipher, *, source_exists, event_exists, cre
     for creator in config["creators"]:
         if not creator_exists(creator["channel_id"]):
             unresolved.append(creator["channel_id"])
+        unresolved.extend(key for key in creator["scope_keys"] if not source_exists(key))
     for item in config["event_overrides"] + config["link_overrides"]:
         if not event_exists(item["event_key"]):
             unresolved.append(item["event_key"])

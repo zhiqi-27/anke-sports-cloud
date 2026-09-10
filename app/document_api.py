@@ -18,9 +18,11 @@ from app.document_store import Conflict, StoreError, Write, open_document_store
 from app.feed_delivery import calendar_response
 from app.schemas import (
     AddLink,
+    AddCreator,
     CalendarUserView,
     Config,
     CreatorIdentity,
+    CreatorRemovalImpact,
     EventList,
     EventView,
     FeedAction,
@@ -30,10 +32,13 @@ from app.schemas import (
     LinkAddedView,
     OverrideInput,
     ResolveCreator,
+    ReviewDecision,
+    ReviewList,
     SaveFollows,
     SavePreferences,
     ServiceStatusView,
     SourceList,
+    UpdateCreator,
 )
 from app.security import check_origin, digest, firebase_subject, local_allowed, problem
 
@@ -161,7 +166,7 @@ def create_app(store=None, cfg=None):
                 "content_migration": "not_ready",
                 "ics_device_test": "not_tested",
                 "youtube_push": "not_tested",
-                "youtube_discovery": "not_migrated",
+                "youtube_discovery": "polling_available",
                 "app_links": "not_tested",
             },
         }
@@ -174,6 +179,42 @@ def create_app(store=None, cfg=None):
             "name": details["name"],
             "url": "https://www.youtube.com/channel/" + details["channel_id"],
         }
+
+    @app.post("/api/v1/me/creators", response_model=CalendarUserView)
+    def creator_add(
+        data: AddCreator, idempotency_key: str | None = Header(None), user=Depends(me), rt=Depends(runtime)
+    ):
+        return rt.creators.save(user["user_id"], data, key=idempotency_key)
+
+    @app.patch("/api/v1/me/creators/{channel_id}", response_model=CalendarUserView)
+    def creator_update(channel_id: str, data: UpdateCreator, user=Depends(me), rt=Depends(runtime)):
+        return rt.creators.save(user["user_id"], data, ident=channel_id)
+
+    @app.get("/api/v1/me/creators/{channel_id}/impact", response_model=CreatorRemovalImpact)
+    def creator_impact(channel_id: str, user=Depends(me), rt=Depends(runtime)):
+        return rt.creators.impact(user, channel_id)
+
+    @app.delete("/api/v1/me/creators/{channel_id}", response_model=CalendarUserView)
+    def creator_delete(
+        channel_id: str,
+        expected_revision: int,
+        confirmed: bool = False,
+        user=Depends(me),
+        rt=Depends(runtime),
+    ):
+        return rt.creators.remove(user["user_id"], channel_id, expected_revision, confirmed)
+
+    @app.post("/api/v1/me/creators/{channel_id}/refresh")
+    def creator_refresh(channel_id: str, user=Depends(me), rt=Depends(runtime)):
+        return rt.creators.refresh(user["user_id"], channel_id)
+
+    @app.get("/api/v1/me/reviews", response_model=ReviewList)
+    def reviews(user=Depends(me), rt=Depends(runtime)):
+        return rt.matches.reviews(user)
+
+    @app.post("/api/v1/me/reviews/{match_id}")
+    def review_decide(match_id: str, data: ReviewDecision, user=Depends(me), rt=Depends(runtime)):
+        return rt.matches.decide(user["user_id"], match_id, data)
 
     @app.post("/api/v1/auth/local", response_model=CalendarUserView)
     def local_login(request: Request, response: Response, rt=Depends(runtime)):

@@ -1,6 +1,6 @@
 # Anke Sports 服务端状态
 
-当前摘要：2026-09-10，新存储已接入YouTube项目额度账本和只读频道解析；SQL/文档共用请求传输及太平洋窗口。真实频道ID与handle读取共6项检查通过，保留2次请求计数；完整327 passed/2 skipped/2既有警告，Ruff与完整OpenAPI/config schema一致。创作者保存/持续发现/匹配尚未迁移，完整内容流程仍需继续。开发、生产目标均为Cosmos Serverless + Periodic，Azure资源未创建。3007 F1预览保留上一批Provider代码（session7461/API PID94103、worker PID94104），本批未重启常驻服务；本轮未复核这些历史句柄。用户Mac锁定，需解锁/登录/电脑确认的步骤暂停，独立本地工作继续。没有浏览器、主数据迁移、push或部署。以下历史批次保留当时状态，以本摘要和最新批次为准。
+当前摘要：2026-09-10，新存储已接入创作者保存/暂停/删除、共享频道轮询、规则匹配/待确认、个人屏蔽与固定到稳定ICS；SQL/文档共用YouTube请求和内容规范化。完整342 passed/2 skipped/2既有警告；最后旧关联ID兼容修正后16项相关测试通过，最终源码绑定的独立HTTP/worker完成6项检查（12个UID不变，屏蔽SEQUENCE 3→4，重新抓取无变化，304/HEAD通过）。新合成预览localhost:3008/creators，session71956/API PID1760、worker PID1761。WebSub/元数据清理、真实内容/云/设备和剩余存储迁移继续。开发、生产目标均为Cosmos Serverless + Periodic，Azure资源未创建。3007及主SQL/Firebase实例未重启，本批未复核其历史句柄。用户Mac锁定，需解锁/登录/电脑确认的操作暂停；没有浏览器、主数据迁移、push或部署。以下历史批次保留当时状态，以本摘要和最新批次为准。
 
 更新：2026-09-10。主 API 127.0.0.1:8787，session43380/PID44497；worker session62679/PID44496；显式启用本地体验并关闭访问日志。显式本地SQLite/体验身份。主库163条比赛（48演示+115 Jolpica F1分场次），无合成频道/视频或公共直播记录。
 
@@ -339,3 +339,19 @@ SQL与文档共用YouTube传输，Key进入X-Goog-Api-Key请求头，不跟随�
 
 下一步仍是完整创作者链路：保存/暂停/删除、共享频道工作和uploads分页/视频详情、通知与续订、匹配与待确认、个人覆盖到稳定ICS；之后补齐直播/公共Feed/OAuth/MCP/删除及存储迁移与GC、真实Azure和设备验收。T13/T14/T15/T33仍in_progress；本批没有把频道解析视作持续发现或完整产品完成，原开发包任务JSON未改写。
 证据：[evidence/document-youtube-2026-09-10.md](evidence/document-youtube-2026-09-10.md)及同名JSON；说明：[docs/document-youtube.md](docs/document-youtube.md)。实现和文档作为独立本地提交保存，提交编号记录在根STATE.md；完整目标继续。
+
+## 2026-09-10 · 文档创作者、共享轮询与个人日历链接
+
+本轮为progress：创作者保存/范围与类型/暂停/恢复、删除影响/确认、手动刷新、共享频道分步轮询、规则匹配、待确认/忽略、个人屏蔽/固定及稳定ICS已接入新存储。个人配置、精确幂等回执、协调任务和日历发布outbox同owner分区原子提交；公共频道/视频在独立分区，辅助owner目录只作路由，操作前重新检查权威账号。相同频道跨账号复用一个活动抓取，各自匹配和覆盖保持独立。
+
+每步最多一次YouTube HTTP，已成功的uploads页持久推进后再请求视频详情；配额等待不会重复该页或耗尽失败尝试。50条长简介先准备不可变内容，再同频道分区提交视频引用、状态、下一步和通知；存储失败不能退化为只确认任务。频道通知每页50个owner，个人视频每页25个、关联每事务最多20条；账号ETag与任务租约阻止过期匹配覆盖新配置。自动链接按新元数据更新/撤下；人工确认、固定、忽略和屏蔽保持优先，导入的旧关联ID保留。配置导入接受已知频道，未知范围仍unresolved。
+
+新增16项创作者测试。相关SQL/文档内容与预算41项通过，扩展故障边界后相关57项通过；完整342 passed/2 skipped/2既有弃用警告（22.09秒）。最后仅保留已导入关联ID的兼容修正后，创作者16项通过（6.88秒），最终HTTP实验随后重跑通过。覆盖频道批次回滚、新旧租约、7次配额早醒、失败记录不可用、50条长元数据、41条模糊关联、并发屏蔽、确认/忽略及跨账号隔离。Ruff、完整SQL OpenAPI/config schema和diff检查通过；客户端仅README/STATE，无源码、依赖或契约变动，没有重复构建。
+
+独立演示 http://localhost:3008/creators 绑定最终源码：API/HTML代理session71956/PID1760、独立worker PID1761，临时文档库与合成上游。真实loopback HTTP完成6项检查，个人ICS始终12条唯一UID；确认后屏蔽更新原事件SEQUENCE 3→4，重新抓取内容完全一致、GET304/HEAD通过。初轮3008 session3869/PID99886及worker99887已正常退出并清理旧临时数据。脚本退出自己的本地会话，保留可操作的创作者、自动复盘、人工确认和剩余待确认；自动前瞻已被屏蔽以验证不复活。停止实验会清理新临时库和worker。没有浏览器渲染验收，等用户解锁后进入本地体验检查。
+
+用户Mac继续锁定且不在电脑旁，需要解锁、交互登录或电脑确认的操作暂停；不设置提醒、不恢复已取消的Codex浏览器登录排查。本批没有真实YouTube/Firebase/Azure调用，原3007 F1、主SQL/Firebase和其他产品服务未重启，也未重新核查其历史进程。没有主数据迁移、云资源创建、push或部署。开发、生产容量目标均保持Serverless + Periodic。
+
+下一步：WebSub通知/续订、过期元数据物理清理与不可变孤立块GC、真实200条标注/准确率和视频到ICS；继续直播/公共Feed/OAuth/MCP/账号删除等文档迁移与SQL迁移工具；真实Cosmos身份/RU/429/Periodic恢复、Azure Queue/Timer及手机日历/内容直达验收。当前websub_status=disabled，youtube_discovery=polling_available不代表Hub或手机同步完成。T13/T14/T15/T16/T17/T18/T24/T30保持in_progress，原开发包任务JSON未改写。完整产品目标继续，不能把本批本地链路等同完整迁移或最终发布。
+
+说明：anke-sports-cloud/docs/document-creators.md；证据：anke-sports-cloud/evidence/document-creators-2026-09-10.md及JSON。代码和客户端状态分别本地提交，提交编号记录在根STATE.md。

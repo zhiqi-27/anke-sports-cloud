@@ -148,7 +148,7 @@ class Content:
             self.runtime.cfg.cipher(),
             source_exists=sources.__contains__,
             event_exists=events.__contains__,
-            creator_exists=lambda _: False,
+            creator_exists=self.runtime.creators.exists,
         )
         snapshot.assert_current()
         return config, preview

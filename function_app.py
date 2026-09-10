@@ -80,15 +80,21 @@ def update_schedules(timer: func.TimerRequest):
     schedule_providers()
 
 
-if not DOCUMENTS:
+@app.timer_trigger(schedule="0 */5 * * * *", arg_name="timer", use_monitor=True)
+def update_content(timer: func.TimerRequest):
+    if DOCUMENTS:
+        from app.document_worker import runtime_context
 
-    @app.timer_trigger(schedule="0 */5 * * * *", arg_name="timer", use_monitor=True)
-    def update_content(timer: func.TimerRequest):
-        from app.worker import run_maintenance
+        with runtime_context() as runtime:
+            runtime.channels.schedule()
+        return
+    from app.worker import run_maintenance
 
-        if not run_maintenance():
-            raise RuntimeError("CONTENT_MAINTENANCE_INCOMPLETE")
-else:
+    if not run_maintenance():
+        raise RuntimeError("CONTENT_MAINTENANCE_INCOMPLETE")
+
+
+if DOCUMENTS:
 
     @app.timer_trigger(schedule="0 0 0 * * *", arg_name="timer", use_monitor=True)
     def advance_calendar_window(timer: func.TimerRequest):

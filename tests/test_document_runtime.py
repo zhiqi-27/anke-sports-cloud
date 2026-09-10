@@ -127,7 +127,7 @@ def test_http_follow_worker_feed_rotation_and_exact_idempotent_response(document
     assert runtime.accounts.active("local-reviewer") == state  # Feed reads never enqueue or mutate.
     assert client.get("/api/v1/me/config/export").json() == result["config"]
     assert (
-        client.post("/api/v1/me/creators", json={}).json()["error"]["code"] == "DOCUMENT_FEATURE_UNAVAILABLE"
+        client.get("/api/v1/me/connections").json()["error"]["code"] == "DOCUMENT_FEATURE_UNAVAILABLE"
     )
     assert client.post("/api/v1/auth/logout").json()["signed_out"]
     assert client.get("/api/v1/me/calendar").status_code == 401

@@ -353,7 +353,7 @@ def test_http_resolution_auth_origin_read_only_and_safe_transport_errors(youtube
         assert SECRET not in caplog.text and "private-provider-error" not in caplog.text + response.text
         status = client.get("/api/v1/status").json()
         assert status["youtube_budget"]["reserved_units"] == 2
-        assert status["integrations"]["youtube_discovery"] == "not_migrated"
+        assert status["integrations"]["youtube_discovery"] == "polling_available"
         assert not rt.accounts.active("local-reviewer")["payload"]["config"]["creators"]
 
 

@@ -23,6 +23,9 @@ class Runtime:
         from app.document_content import Content
         from app.document_providers import Providers
         from app.document_youtube_budget import Budget
+        from app.document_channels import Channels
+        from app.document_creators import Creators
+        from app.document_matches import Matches
 
         self.store, self.cfg = store, cfg
         self.accounts = Accounts(store, cfg.cipher())
@@ -31,6 +34,9 @@ class Runtime:
         self.content = Content(self)
         self.providers = Providers(self)
         self.youtube_budget = Budget(store, cfg)
+        self.channels = Channels(self)
+        self.creators = Creators(self)
+        self.matches = Matches(self)
 
     def youtube_request(self, endpoint, params):
         from app.provider_adapters import provider_key
@@ -45,9 +51,7 @@ class Runtime:
 
     def calendar_supported(self, payload):
         # Never silently publish an imported configuration with missing content.
-        config = payload["config"]
-        if config["creators"]:
-            raise StoreError("DOCUMENT_CONTENT_MIGRATION_REQUIRED")
+        self.creators.validate(payload)
 
     def activity(self, pk):
         pending, last = False, None
@@ -63,7 +67,6 @@ class Runtime:
         return pending, last
 
     def user_view(self, payload, *, pending=None):
-        self.calendar_supported(payload)
         pk = owner_partition(payload["user_id"])
         feed = self.store.get("state", pk, "feed")["payload"]
         active, last = self.activity(pk)
@@ -75,7 +78,7 @@ class Runtime:
             "is_maintainer": payload["user_id"] in self.cfg.maintainer_ids,
             "revision": payload["revision"],
             "config": payload["config"],
-            "creators": [],
+            "creators": self.creators.views(payload),
             "feed": {
                 "revision": feed["revision"],
                 "updated_at": feed["updated_at"],
@@ -91,8 +94,8 @@ class Runtime:
             },
         }
 
-    def event_view(self, event, payload=None, *, link_rows=None):
-        if payload:
+    def event_view(self, event, payload=None, *, link_rows=None, content_validated=False):
+        if payload and not content_validated:
             self.calendar_supported(payload)
         config = payload["config"] if payload else Config().model_dump()
         selected = included(event, config) if payload else False
@@ -106,6 +109,8 @@ class Runtime:
         }
 
     def schedule(self, from_, to, dataset, followed, q, payload, limit, cursor):
+        if payload:
+            self.calendar_supported(payload)
         lower, upper, earliest, latest = schedule_range(from_, to, dataset, q, limit)
         # Month blocks cover the conservative UTC envelope and date-only values.
         first = min(earliest[:7], lower.date().isoformat()[:7])
@@ -125,7 +130,7 @@ class Runtime:
         )
         link_rows = self.content.rows(payload["user_id"]) if payload else []
         result = {
-            "items": [self.event_view(row, payload, link_rows=link_rows) for row in page],
+            "items": [self.event_view(row, payload, link_rows=link_rows, content_validated=True) for row in page],
             "next_cursor": next_cursor,
             "coverage": {
                 "dataset": dataset,

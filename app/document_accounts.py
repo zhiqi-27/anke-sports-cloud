@@ -158,6 +158,11 @@ class Accounts:
             Write("create", job["id"], job),
             *change.writes,
         ]
+        if previous["config"]["creators"] or config["creators"]:
+            from app.document_creators import reconcile_job
+
+            content_job = reconcile_job(pk, change.payload["revision"])
+            writes.append(Write("create", content_job["id"], content_job))
         if receipt_id:
             saved = document(
                 pk,

@@ -1,0 +1,110 @@
+{
+  "date": "2026-09-10",
+  "scope": "local persistent documents, synthetic YouTube, loopback HTTP and independent worker",
+  "capacity_target": {
+    "development": "Serverless + Periodic",
+    "production": "Serverless + Periodic"
+  },
+  "azure_resources_created": false,
+  "validation": {
+    "related_initial": {
+      "passed": 41
+    },
+    "related_expanded": {
+      "passed": 57
+    },
+    "full_before_final_imported_match_id_fix": {
+      "passed": 342,
+      "skipped": 2,
+      "warnings": 2,
+      "seconds": 22.09
+    },
+    "creator_suite_after_final_fix": {
+      "passed": 16,
+      "warnings": 2,
+      "seconds": 6.88
+    },
+    "conditional_skips": "MySQL connection tests",
+    "warnings": "existing Starlette/AnyIO deprecations",
+    "client_source_contract_dependencies_changed": false,
+    "client_build_repeated": false
+  },
+  "http": {
+    "started_at": "2026-09-10T05:34:27.826434+00:00",
+    "checks": [
+      "desktop_html_available",
+      "creator_save_and_exact_replay",
+      "background_preview_recap_and_reviews",
+      "confirm_then_block_updates_same_event",
+      "rediscovery_preserves_block_and_conditional_feed",
+      "local_session_logged_out"
+    ],
+    "fixture": "synthetic YouTube and schedules",
+    "browser_used": false,
+    "external_requests": false,
+    "source_sha256": {
+      "app/document_channels.py": "3932565b4c7fca82b1186373d2e163bbeeb155dde4942725cca9b7dc6cca09bd",
+      "app/document_creators.py": "8a15dff331aa8da8d7d3da1ec5440d88675c66045b719adb44a4b01d2edd3539",
+      "app/document_matches.py": "e5cf3c81d065cf7f99f8885bd0f8189b30f2166c63e0a3ffe12c1d08eca49880",
+      "app/document_runtime.py": "b57d93f34b72525fd92903765c7b86e2ad70a7f933900f6f6f97e156f9351a50",
+      "app/document_accounts.py": "5fa10005cabd9489a91a3a1b0bc250140bbc2ca9743aac9e33ceac1c810e7f63",
+      "app/document_api.py": "6ef26101814985cea4d5afa4765cdb4c9c404a093d00c99f0d4cb7e285972a35",
+      "app/document_worker.py": "a531530189ca837d4976bbfbde22cdb3b4961e807f0b4637c2ff8b2052f9ae5c",
+      "app/youtube_content_rules.py": "4a7227abc53c2d6d8fdef2016a9ef0b30c779f5061113a23c6768adeb7755591",
+      "experiments/document_creators_ui.py": "2d4b024388705cddafe0588d0cac84a8711dfd4f7335cfa20e0ceb50e1c11b68",
+      "experiments/document_ui.py": "f8295845e620d6796b0fcbb31f2819a991db8818ac7a7000fff215c791ac42b6",
+      "experiments/document_creators_verify.py": "be0954b59bc0d625444cfc333e8d6dcf124ad2ab9d79cea51728006c9203e21a"
+    },
+    "event_count": 12,
+    "initial_review_count": 7,
+    "sequence_before_block": 3,
+    "sequence_after_block": 4,
+    "final_feed_sha256": "03704ee905042ee9dc2ef7efb28aab6d7de8a6c188d1b66e6c8ceb010f1cb419",
+    "uid_digest": "bbcae6e0d7f71670f42a8319f4983a8dd70841f7d0b590c70876b8928b4fd3f7",
+    "finished_at": "2026-09-10T05:34:35.685380+00:00"
+  },
+  "preview": {
+    "url": "http://localhost:3008/creators",
+    "session": 71956,
+    "api_pid": 1760,
+    "worker_pid": 1761,
+    "data": "isolated temporary synthetic fixture; removed on shutdown",
+    "browser_rendering_verified": false
+  },
+  "previous_preview_closed": {
+    "session": 3869,
+    "api_pid": 99886,
+    "worker_pid": 99887
+  },
+  "external_calls_this_batch": false,
+  "browser_or_native_ui_used": false,
+  "main_data_migrated": false,
+  "pushed_or_deployed": false,
+  "remaining": [
+    "WebSub notification and renewal",
+    "expired metadata removal and orphan block GC",
+    "real labeled video matching and video-to-ICS",
+    "live Cosmos auth/RU/429/recovery",
+    "Azure Queue and Timer",
+    "browser rendering and device calendar behavior",
+    "remaining broadcast/public feed/OAuth/MCP/account deletion migration"
+  ],
+  "source_sha256": {
+    "app/document_channels.py": "3932565b4c7fca82b1186373d2e163bbeeb155dde4942725cca9b7dc6cca09bd",
+    "app/document_creators.py": "8a15dff331aa8da8d7d3da1ec5440d88675c66045b719adb44a4b01d2edd3539",
+    "app/document_matches.py": "e5cf3c81d065cf7f99f8885bd0f8189b30f2166c63e0a3ffe12c1d08eca49880",
+    "app/document_runtime.py": "b57d93f34b72525fd92903765c7b86e2ad70a7f933900f6f6f97e156f9351a50",
+    "app/document_accounts.py": "5fa10005cabd9489a91a3a1b0bc250140bbc2ca9743aac9e33ceac1c810e7f63",
+    "app/document_api.py": "6ef26101814985cea4d5afa4765cdb4c9c404a093d00c99f0d4cb7e285972a35",
+    "app/document_worker.py": "a531530189ca837d4976bbfbde22cdb3b4961e807f0b4637c2ff8b2052f9ae5c",
+    "app/youtube_content_rules.py": "4a7227abc53c2d6d8fdef2016a9ef0b30c779f5061113a23c6768adeb7755591",
+    "experiments/document_creators_ui.py": "2d4b024388705cddafe0588d0cac84a8711dfd4f7335cfa20e0ceb50e1c11b68",
+    "experiments/document_ui.py": "f8295845e620d6796b0fcbb31f2819a991db8818ac7a7000fff215c791ac42b6",
+    "experiments/document_creators_verify.py": "be0954b59bc0d625444cfc333e8d6dcf124ad2ab9d79cea51728006c9203e21a",
+    "app/content.py": "fdce8ea0644e07b9a892a280b368bf1c6a63311328becc1d134f12ae6299234b",
+    "app/config_rules.py": "ee1a6e8a62b747b6b49aa62ab83e270e3d5d4012892622c25b74caec810ff317",
+    "app/document_content.py": "fdcf4e19281039bbd88a07c4f93fde90d305c3130a887357bf40af4e04718351",
+    "function_app.py": "de5b2512eb3c9c1ff8e8b14875bab47d3889e7b5077873528fb1d93a40ab55d2",
+    "tests/test_document_creators.py": "3a6e4a6427aa9d07da71b68cb298c9424b8eff6ec42b0339d527f5ef9d3da6cb"
+  }
+}

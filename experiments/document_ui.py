@@ -91,12 +91,13 @@ Catalog(store).publish(
     complete=True,
 )
 original_lifespan = app.router.lifespan_context
+WORKER_COMMAND = [sys.executable, "-m", "app.document_worker"]
 
 
 @asynccontextmanager
 async def lifespan(application):
     with open(storage.name + "/worker.log", "wb") as log:
-        worker = subprocess.Popen([sys.executable, "-m", "app.document_worker"], stdout=log, stderr=log)
+        worker = subprocess.Popen(WORKER_COMMAND, stdout=log, stderr=log)
         print(
             f"Document preview :{preview_port}; isolated worker pid={worker.pid}; synthetic events=12",
             flush=True,
