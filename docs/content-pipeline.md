@@ -1,6 +1,6 @@
 # 创作者与日历内容链路
 
-2026-09-09。本地实现已接入桌面；真实 YouTube、Azure 与设备验收待执行。
+2026-09-10。本地实现已接入桌面；独立 Key 的 Cloud Shell 真实 API 读取已通过，本机应用接入、真实 Hub、Azure 与设备验收待执行。见 [YouTube 开发接入](youtube-development.md)。
 
 ## 数据与处理
 

@@ -1,0 +1,107 @@
+{
+  "schema_version": 1,
+  "capture_method": "Sanitized JSON printed in authorized Chrome Firebase Cloud Shell terminal; not raw API response files",
+  "configuration": {
+    "project_id": "anke-sports-dev",
+    "project_number": "736683203171",
+    "project_state": "ACTIVE",
+    "firebase_plan": "Spark",
+    "enabled_services": [
+      "youtube.googleapis.com",
+      "apikeys.googleapis.com"
+    ],
+    "key_resource": "projects/736683203171/locations/global/keys/anke-sports-youtube-dev",
+    "key_display_name": "Anke Sports YouTube Dev",
+    "api_targets": [
+      {
+        "service": "youtube.googleapis.com"
+      }
+    ],
+    "ip_restriction_configured": false,
+    "existing_firebase_key_modified": false,
+    "billing_upgraded": false,
+    "cloud_shell_secret_file_mode": "0600",
+    "local_secret_transfer_verified": false
+  },
+  "probe": {
+    "runtime": "Google Cloud Shell",
+    "project_id": "anke-sports-dev",
+    "checked_at_utc": "2026-09-10T01:43:12.115074+00:00",
+    "requests": [
+      {
+        "endpoint": "channels",
+        "params_without_key": {
+          "part": "snippet,contentDetails",
+          "forHandle": "@Formula1"
+        },
+        "http_status": 200
+      },
+      {
+        "endpoint": "playlistItems",
+        "params_without_key": {
+          "part": "snippet,contentDetails",
+          "playlistId": "UUB_qr75-ydFVKSF9Dmo6izg",
+          "maxResults": 3
+        },
+        "http_status": 200
+      },
+      {
+        "endpoint": "videos",
+        "params_without_key": {
+          "part": "snippet,status",
+          "id": "X6Ck7g7qi4Y"
+        },
+        "http_status": 200
+      }
+    ],
+    "success": true,
+    "channel": {
+      "requested_handle": "@Formula1",
+      "id": "UCB_qr75-ydFVKSF9Dmo6izg",
+      "title": "FORMULA 1",
+      "uploads_playlist_id": "UUB_qr75-ydFVKSF9Dmo6izg"
+    },
+    "uploads_returned": 3,
+    "video": {
+      "id": "X6Ck7g7qi4Y",
+      "channel_id": "UCB_qr75-ydFVKSF9Dmo6izg",
+      "published_at": "2026-09-09T18:30:32Z",
+      "title": "The Pure JOY Of A Home Race Win! 🥹",
+      "privacy_status": "public"
+    },
+    "api_request_count": 3,
+    "estimated_read_quota_units": 3,
+    "app_budget_ledger_used": false,
+    "google_remaining_quota_read": false
+  },
+  "not_verified": [
+    "Local credential installation",
+    "Local service and worker real API integration",
+    "WebSub notification and renewal",
+    "Real matching accuracy",
+    "Real YouTube to ICS publication",
+    "Device calendar refresh",
+    "Official source review",
+    "App direct access and playback",
+    "Azure deployment"
+  ],
+  "local_readback": {
+    "date": "2026-09-10",
+    "ports_http_200": [
+      8787,
+      8788,
+      3000,
+      3002,
+      3003
+    ],
+    "source_code_changed": false,
+    "runtime_configuration_changed": false,
+    "database_mutated": false
+  },
+  "sources": [
+    "https://developers.google.com/youtube/v3/docs/channels/list",
+    "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+    "https://developers.google.com/youtube/v3/docs/videos/list",
+    "https://docs.cloud.google.com/shell/docs/uploading-and-downloading-files"
+  ]
+}

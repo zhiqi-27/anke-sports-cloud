@@ -30,4 +30,4 @@ uv run python -m experiments.ics_lab publish --phase 4
 
 ## T03 / T04
 
-Jolpica 已获取公开响应样本；NBA/football-data/YouTube keys 需独立配置。YouTube 推送订阅、续订、补查与回调尚未实现，不标为已验证。
+Jolpica 已获取公开响应样本；NBA/football-data keys 需独立配置。YouTube 推送订阅、续订、补查与回调已有本地实现和隔离验证；独立 Key 已在 Cloud Shell 完成频道/上传列表/视频详情三次真实读取，本机安全下载与应用联调、真实 Hub 长期续订仍待完成。见 [YouTube 开发接入](../docs/youtube-development.md)。

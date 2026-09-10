@@ -1,6 +1,6 @@
 # Anke Sports 服务端状态
 
-当前摘要：2026-09-10，实际Codex MCP业务与HTTP ICS的25项隔离检查通过，25项针对性pytest/ruff通过；业务源码/契约/UI未改。本批修正探测器对插件/apps的隔离。真实Firebase登录先前在Chrome通过；Azure低成本选型待决定，尚未部署。最新证据见文末，旧批次保留当时状态。
+当前摘要：2026-09-10，YouTube 独立受限 Key 已创建，Cloud Shell 频道/上传列表/视频详情三次真实请求均200；本机尚未收到密钥，用户暂时无法解锁 Mac，暂停下载窗口检查。应用/Hub/Feed真实联调仍待完成。Firebase Chrome登录、Codex MCP隔离业务证据保留；Azure低成本选型待决定，未创建收费资源。本批只新增证据和文档，历史批次保留当时状态。
 
 更新：2026-09-10。主 API 127.0.0.1:8787，session43380/PID44497；worker session62679/PID44496；显式启用本地体验并关闭访问日志。显式本地SQLite/体验身份。主库163条比赛（48演示+115 Jolpica F1分场次），无合成频道/视频或公共直播记录。
 
@@ -242,3 +242,16 @@ Codex内置浏览器未完成Google弹窗，曾返回auth/popup-closed-by-user�
 现有进程PID均读回存活，8787/8788健康及3000/3002/3003页面均200。主API session43380/PID44497、worker62679/PID44496、Web43940/PID53698；Firebase API92869/PID44563、worker24522/PID44564、Web91087/PID38482；构建预览31276/PID44147、合成匹配63263/PID44193均未重启。本批未操作浏览器标签；用户明确停止的IAB登录排查没有恢复。
 
 T28/T29保持in_progress；真实Firebase身份与MCP组合、自然时间过期、模型自行选择工具、真实YouTube、HTTPS/Azure与设备日历尚未验收。低成本Cosmos候选仍未选定，未创建收费资源或改造SQL架构。无push/部署，完整目标继续。
+
+
+## 2026-09-10 · YouTube 独立配置与云端实际读取（T04/T14/T15）
+
+已通过授权 Chrome 的 Firebase Cloud Shell 核对 anke-sports-dev/736683203171，启用 youtube.googleapis.com/apikeys.googleapis.com，创建专用 anke-sports-youtube-dev Key，API target 读回仅 YouTube。未改 Firebase Browser key、IAM 或计费计划，Spark 保持。Key 未输出到模型上下文；Cloud Shell 专用 JSON 创建时0600，已有资源不能重复创建。
+
+Cloud Shell 重连后于01:43:12 UTC实际执行三次只读 Data API：@Formula1频道、uploads前三条、第一条视频详情均200，public且频道归属一致。共三次/估算3配额单位，不经过应用SQL预算，不是Google余额。未给频道附加官方审核或给视频标注比赛关系。证据anke-sports-cloud/evidence/youtube-cloud-api-2026-09-10.md及JSON；资源和恢复步骤docs/youtube-development.md。
+
+本机Downloads与后端data/youtube-dev.json未找到文件。用户答复暂时无法解锁，已暂停原生下载窗口检查。两次Download表单实际传输表为/home/z24develop，精确cloudshell download命令的确认及传输表才指向专用JSON；UI均显示Success，但浏览器download事件超时，不能判定本机落盘。下次先检查现有下载状态，仅安全保存专用JSON至Git忽略0600文件，核对后删除下载原件及云端临时JSON；如本次错误尝试产生home归档，只清理该新产物，不解包。不要再创建Key或读取其他凭据。Mac锁定是否导致下载未完成尚未证实。
+
+Chrome标签210263789保留Firebase Cloud Shell，URL为https://console.firebase.google.com/u/1/project/anke-sports-dev/overview?cloudshell=true，iframe I0_1789003549632；原生窗口待用户可解锁后恢复。独立Cloud Console标签曾遇证书名称错误，没有绕过TLS。用户已停止的Codex内置浏览器Google登录排查未恢复。
+
+本批没有应用源码、契约、依赖、数据库、运行配置变化或服务重启。8787/8788健康与3000/3002/3003日历页均200；只是原服务可达证据，未重复全量测试/构建。原主API session43380/PID44497、worker62679/PID44496、Web43940/PID53698；Firebase API92869/PID44563、worker24522/PID44564、Web91087/PID38482；构建预览31276/PID44147、合成匹配63263/PID44193按原记录保留，本轮未逐个核对PID。真实应用频道/worker/预算、Hub及长期续订、匹配质量、Feed/手机仍未验收。Azure低成本选型未改变、未创建收费资源，无push/部署；完整目标继续。

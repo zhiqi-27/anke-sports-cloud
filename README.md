@@ -26,7 +26,7 @@ ANKE_SPORTS_ENV=local ANKE_SPORTS_LOCAL_PREVIEW=true uv run python -m app.worker
 
 前端通过同源 `/api/` 代理连接。Web 默认 127.0.0.1:3000。私人订阅地址通过已登录页面复制，服务访问日志应始终关闭。其令牌仅授权读取已发布的个人 Feed，不是写入凭据。
 
-在设置页手动获取 F1；首次成功后，本地 worker 按数据库中的时间每 6 小时更新已启用的数据源；启动即检查，重启不会重新等待六小时或提前抓取。NBA、足球和 YouTube 的 key 只配置于服务端；不复制 FormaLM 凭据。YouTube 频道确认、后台补查、匹配、人工确认与移除/固定已接入本地流程；真实 API、Hub 与 Azure 尚未联调。详见 [内容链路](docs/content-pipeline.md)。
+在设置页手动获取 F1；首次成功后，本地 worker 按数据库中的时间每 6 小时更新已启用的数据源；启动即检查，重启不会重新等待六小时或提前抓取。NBA、足球和 YouTube 的 key 只配置于服务端；不复制 FormaLM 凭据。YouTube 频道确认、后台补查、匹配、人工确认与移除/固定已接入本地流程；专用 Key 已在 Cloud Shell 完成三次真实 API 读取；本机下载/应用联调、Hub 与 Azure 仍待完成，见 [YouTube 接入进度](docs/youtube-development.md)。详见 [内容链路](docs/content-pipeline.md)。
 
 ## 检查与契约
 

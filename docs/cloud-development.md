@@ -6,6 +6,7 @@
 | --- | --- | --- |
 | Firebase | `anke-sports-dev`，项目显示名称Anke Sports Dev；Google登录 | 已创建，真实登录/验签/个人设置读写/退出通过 |
 | Firebase Web | Anke Sports Web Dev；`anke-sports-dev.firebaseapp.com` | 已注册，localhost与127.0.0.1已授权 |
+| YouTube Data API | 独立 `anke-sports-youtube-dev` Key，仅允许 YouTube API | Cloud Shell 三次真实公共读取通过；本机安装/应用联调与 Hub 待完成 |
 | Firebase服务账号 | Anke Sports Auth Dev；独立认证验签和身份清理 | 已创建，赋予Firebase Authentication Admin；实际Admin读取通过 |
 | Azure Functions | 新建Anke Sports独立Function App；Python3.12/FastAPI、HTTP/MCP/Queue/Timer | `function_app.py`入口已实现；Azure资源尚未创建 |
 | Azure MySQL | 独立业务数据库；公共比赛、个人配置、投影与事务outbox | 本机MySQL8.4.11测试及迁移通过；云资源/网络/TLS待配置与验证 |
@@ -53,3 +54,10 @@ uv run python data/run-firebase-dev.py worker
 Functions已完成真实Core Tools/Azurite本机宿主验收与安全源码打包，参见[复现与边界](functions-runtime.md)。Azure资源和远端部署状态仍为未执行。
 
 独立Azure开发Bicep已通过本机编译和订阅级validate；托管身份队列适配、Firebase JSON凭据及真实Admin只读验证已完成。具体资源与费用已提交确认，详见[Azure开发环境计划](azure-development-plan.md)。未创建收费资源，未把模板验证记为部署。
+
+
+## YouTube 接入进展（2026-09-10）
+
+已在同一独立项目启用 YouTube Data API/API Keys API，创建专用受限 Key；未修改 Firebase Browser key，Spark 计划保持。Cloud Shell 真实频道、uploads、视频详情请求均200，合计三次读取。Mac 暂时无法解锁，专用密钥文件尚未确认落到本机；完整资源读回、脱敏结果与安全恢复步骤见 [YouTube 开发接入](youtube-development.md)。真实应用/worker、Hub、匹配/Feed和手机验收仍待执行。
+
+Azure 原 MySQL 创建方案未获费用批准；参考 Anke Money 的低成本候选仍待选型，见 [成本方案](azure-low-cost-proposal.md)。本次没有创建收费 Azure 资源或改变 SQL 架构。
