@@ -1,5 +1,7 @@
 # Azure 低成本开发环境选择
 
+> 本文保留成本选择的依据。价格为文中注明日期的历史查询，本次文档刷新未重新查价；不作为新的费用承诺。当前实施优先级与接入范围以工作区STATE和当前实施计划为准。
+
 2026-09-10。用户要求参考 Anke Money，重新评估成本；先前 MySQL / US$40 月预算方案未获批准。用户随后明确选择 **Serverless + Periodic**：采用独立 Cosmos DB for NoSQL Serverless 与周期备份，取代 Azure MySQL 目标。现有 SQL 实现和本机数据作为迁移基线保留，文档日历路径已有本地证据，完整 Cosmos 迁移尚未完成；资源还未创建。
 
 ## 建议采用的组合
@@ -36,7 +38,7 @@ MySQL B1s 已在区域规格清单中出现，但补查其价格遇到零售 API
 4. 大型 Feed 发布不能假定无限事务大小。需先写不可变版本及完整清单，再用受条件保护的发布指针切换，读端只读取完成版本；失败继续提供上一有效版本。清理与账号撤销需验证竞态，私人 Feed 令牌仍不进入日志或导出。
 5. Cosmos 适配器的真实事务、RU、429 重试、备份恢复、MI/RBAC 和云端 Timer/Queue 需要独立证据。当前 191 项通过的后端测试属于现有 SQL 实现，不算 Cosmos 验收。
 
-选型已确认，正在更新架构约定和部署模板；原 MySQL 创建方案停止推进。Periodic 采用开发环境默认每4小时一次、保留8小时（两份），并显式保留 Geo 冗余；这是实现默认值，可后续调整。周期备份的恢复需要向 Azure 请求并恢复到新账号，不把它当作即时回滚；恢复后重建网络/RBAC并重放删除决定。官方说明：[周期备份与恢复](https://learn.microsoft.com/en-us/azure/cosmos-db/periodic-backup-restore-introduction)。
+选型已确认，架构约定和部署模板已更新并有validate记录，尚未创建Azure资源；原 MySQL 创建方案停止推进。Periodic 采用开发环境默认每4小时一次、保留8小时（两份），并显式保留 Geo 冗余；这是实现默认值，可后续调整。周期备份的恢复需要向 Azure 请求并恢复到新账号，不把它当作即时回滚；恢复后重建网络/RBAC并重放删除决定。官方说明：[周期备份与恢复](https://learn.microsoft.com/en-us/azure/cosmos-db/periodic-backup-restore-introduction)。
 
 第一批 Cosmos SDK 仓储、条件命令/租约与 Feed 分块发布代码已经过本地验证，产品 HTTP/Queue 接入和完整存储迁移仍待完成。为保证跨 Functions 实例的令牌撤销，模板和 SDK 改为 Strong 读取；读取 RU 通常约为 Session 的两倍，因此以上按 RU 计费的单价不变，按请求估算 RU 时需重新实测。详见 [一致性与代码进度](cosmos-storage-design.md)。真实 RU/数据面并发/恢复及云运行尚未验收。
 

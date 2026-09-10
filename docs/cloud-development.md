@@ -9,7 +9,7 @@
 | YouTube Data API | 独立 `anke-sports-youtube-dev` Key，仅允许 YouTube API | 已安全保存；隔离 API/worker 读取 69 条真实视频与预算通过；自动附链/Hub 待验 |
 | Firebase服务账号 | Anke Sports Auth Dev；独立认证验签和身份清理 | Authentication Admin；专用真实测试身份撤销、删除及远端清理 27 项检查通过 |
 | Azure Functions | 新建Anke Sports独立Function App；Python3.12/FastAPI、HTTP/MCP/Queue/Timer | `function_app.py`入口已实现；Azure资源尚未创建 |
-| Azure Cosmos DB | 独立 NoSQL Serverless + Periodic；Strong、个人分区、投影/outbox | Strong 模板重新通过 Bicep/ARM validate；日历 HTTP/独立 worker 本地通过；内容模块及真实云适配待完成，资源未创建 |
+| Azure Cosmos DB | 独立 NoSQL Serverless + Periodic；Strong、个人分区、投影/outbox | Strong 模板重新通过 Bicep/ARM validate；日历 HTTP/独立 worker 本地通过；创作者/匹配已有本地路径，其他模块与真实云适配待完成，资源未创建 |
 | Azure Storage Queue | `anke-sports-jobs` 任务分发；与权威存储的 outbox 共用处理器 | 文档 Change Feed/处理器已接入，持久本地队列通过；真实云触发器待验证 |
 
 Firebase保持Spark免费计划；未启用Analytics、Gemini、Hosting、Firestore或Firebase Storage。Google登录提供商展示名称为Anke Sports Dev，使用项目所属账号的支持邮箱。服务账号不是项目Owner/Editor，不复用其他产品身份。
@@ -34,10 +34,10 @@ uv run python data/run-firebase-dev.py worker
 
 ## Azure接入顺序
 
-当前浏览器已登录Azure，看到Azure subscription 1；曾打开的`speech`资源组属于已有语音/头像资源，仅作只读核对。尚未将其选为Anke Sports部署目标。继续使用独立资源组和独立数据库、队列及身份。
+历史浏览器核验曾登录Azure并看到Azure subscription 1；本次文档刷新未确认该会话是否仍有效；曾打开的`speech`资源组属于已有语音/头像资源，仅作只读核对。尚未将其选为Anke Sports部署目标。继续使用独立资源组和独立数据库、队列及身份。
 
 1. 已确认 Cosmos Serverless + Periodic；按 [分区与迁移合同](cosmos-storage-design.md) 实现仓储和同分区事务，先走通 Firebase → 关注 → outbox → Queue → 已发布 ICS。不可直接把 SQL 实现连接到 Cosmos。
-2. 完成所有既有业务模块适配，核对目标费用与 Web/API HTTPS 地址、独立身份/RBAC、平台日志脱敏，再构建对应的 Functions 包。
+2. 先限定早期真实日历主流程，只补该路径必需的适配；核对目标费用、Web/API HTTPS、身份/RBAC和日志脱敏，再构建匹配的Functions包。其余业务模块保留待办，不要求部署实验前全部迁移。
 3. 在独立 Cosmos 验证 RU、并发/429、稳定身份、完整投影、删除和恢复；验收 Functions HTTP、Queue/Timer 与重试。Periodic 恢复至新账号，需重建网络/RBAC并重放删除决定。
 4. 真实 YouTube Hub、长期续订和设备日历各自验收；流量增长时评估原地转手动 Provisioned，再调整 Autoscale。
 
@@ -53,7 +53,7 @@ uv run python data/run-firebase-dev.py worker
 
 Functions已完成真实Core Tools/Azurite本机宿主验收与安全源码打包，参见[复现与边界](functions-runtime.md)。Azure资源和远端部署状态仍为未执行。
 
-独立 Azure 开发 Bicep 已替换为 Cosmos Serverless + Periodic，并通过编译及订阅级 validate，详见 [当前设计](cosmos-storage-design.md) 与 [模板证据](../evidence/azure-cosmos-template-2026-09-10.json)。原 [MySQL 计划](azure-development-plan.md) 仅作历史记录。未创建收费资源，未把模板验证记为部署。
+独立 Azure 开发 Bicep 已替换为 Cosmos Serverless + Periodic，并通过编译及订阅级 validate，详见 [当前设计](cosmos-storage-design.md) 与 [模板证据](../evidence/azure-cosmos-template-2026-09-10.json)。旧MySQL部署计划已删除，不再作为部署依据。未创建收费资源，未把模板验证记为部署。
 
 
 ## YouTube 接入进展（2026-09-10）

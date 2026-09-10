@@ -1,41 +1,37 @@
 # Anke Sports Cloud
 
-体育日历、个人配置与原始观看链接的业务服务。原产品名 SportsCal 已更名为 **Anke Sports**。
+体育赛程、个人配置、原始观看链接与ICS的权威业务服务。客户端在独立仓`anke-sports`。
 
-开发、生产目标架构统一：Python/FastAPI + Firebase Authentication + Azure Functions + Cosmos DB for NoSQL **Serverless + Periodic** + Azure Storage Queue。参考 FormaLM 的服务分层，使用独立账号、密钥与资源。文档日历 HTTP、完整赛程快照、Change Feed/Queue 投递、创作者轮询/匹配和 Feed 发布已接入本地路径；当前主预览仍运行 SQL，元数据清理/直播/OAuth 等完整适配尚未完成。`anke-sports` 为独立客户端仓库。
-
-独立文档模式验收：[日历](http://localhost:3007/calendar)（重新进入本地体验，切换“真实赛程”；已载入F1关注及85条窗口内事件），运行说明见 [文档存储路径](docs/document-runtime.md)。已接入个人链接、屏蔽/固定、单场选择、配置导入和Provider更新；[302 项回归及真实 F1 HTTP/worker 证据](evidence/document-providers-2026-09-10.md) 不代表真实 Cosmos/Azure 验收。
-
-最新独立验收：[创作者](http://localhost:3008/creators)。进入本地体验后，可检查合成频道、待确认和日历链接；后台已覆盖保存/暂停/删除、共享轮询、自动匹配、人工确认和屏蔽保持。完整342项回归通过，最后关联ID兼容修正后16项相关测试及独立HTTP/worker的6项检查通过。见 [运行说明](docs/document-creators.md) 和 [验收证据](evidence/document-creators-2026-09-10.md)。本批使用合成上游，实际页面待Mac解锁后检查；3007仍是Provider批次代码，未重启。真实频道解析证据单独保留在 [YouTube前置验收](evidence/document-youtube-2026-09-10.md)。
-
-
-本批补齐新存储的WebSub通知/续订/退订、持久去重收件记录和共享频道处理；完整361项回归通过，独立API/worker的4组HTTP检查通过，重启不重复订阅或抓取。见 [WebSub运行说明](docs/document-websub.md) 与 [验收证据](evidence/document-websub-2026-09-10.md)。本批仅合成Hub/YouTube，实验进程和临时数据均已清理；3008创作者演示保留上一批代码，未重启。
+目标：Firebase认证、Python/FastAPI、Azure Functions、Cosmos NoSQL **Serverless + Periodic**、Storage Queue/timer。开发和生产都从该模式开始。当前主预览仍为SQL/SQLite；文档存储只有部分业务已接入，Azure尚未部署。详见[当前状态](STATE.md)与[架构](docs/architecture.md)。
 
 ## 本地运行
 
-需要 Python 3.12 与 uv。
+需要Python 3.12与uv。首次准备：
 
 ```sh
 uv sync --frozen
-cp .env.example .env
-ANKE_SPORTS_ENV=local ANKE_SPORTS_LOCAL_PREVIEW=true uv run uvicorn app.main:app --host 127.0.0.1 --port 8787 --no-access-log
 ```
 
-另开终端运行持久任务消费：
+尚无`.env`时，从`.env.example`复制并按说明配置；不要覆盖已有本机凭据。分别启动API和worker：
 
 ```sh
+ANKE_SPORTS_ENV=local ANKE_SPORTS_LOCAL_PREVIEW=true uv run uvicorn app.main:app --host 127.0.0.1 --port 8787 --no-access-log
 ANKE_SPORTS_ENV=local ANKE_SPORTS_LOCAL_PREVIEW=true uv run python -m app.worker
 ```
 
-`.env.example` 明确启用本机体验模式：SQLite `data/anke-sports.db`、合成演示赛程、本机独立体验身份。启动仅监听 loopback；生产模式禁止 SQLite 和体验身份。不要将此命令作为公网部署方式。
+这是两个终端中的命令。仅监听loopback，SQLite与体验身份仅用于本机。前端默认3000通过同源代理访问。私人Feed令牌是只读秘密，不应进入访问日志或Git。
 
-重启本地服务时同样保留上述两个显式参数；缺省配置关闭体验登录。当前运行的完整命令和进程见 [STATE.md](STATE.md)。
+## 实现边界
 
-前端通过同源 `/api/` 代理连接。Web 默认 127.0.0.1:3000。私人订阅地址通过已登录页面复制，服务访问日志应始终关闭。其令牌仅授权读取已发布的个人 Feed，不是写入凭据。
+| 路径 | 已有本地实现 | 仍未完成 |
+| --- | --- | --- |
+| SQL基线 | 赛程/关注/创作者/个人与公共Feed、直播维护、OAuth/MCP、账号生命周期 | 真实手机、Hub长期更新、云端全链路 |
+| 文档模式 | 日历/关注/个人链接/配置/ICS、Provider、创作者/轮询/匹配/人工确认、WebSub | 公共Feed、直播、OAuth/MCP、账号删除等完整适配，真实Cosmos验证 |
+| Azure | Bicep、Functions入口与打包、本地Core Tools/Azurite检查 | 独立资源、HTTPS、身份与真实Queue/Timer、恢复及端到端部署 |
 
-在设置页手动获取 F1；首次成功后，本地 worker 按数据库中的时间每 6 小时更新已启用的数据源；启动即检查，重启不会重新等待六小时或提前抓取。NBA、足球和 YouTube 的 key 只配置于服务端；不复制 FormaLM 凭据。YouTube 频道确认、后台补查、匹配、人工确认与移除/固定已接入本地流程；专用 Key 已安全保存，本机隔离 API/worker 读取 69 条真实视频并共用预算；自动附链、Hub 和 Azure 验收仍待完成，见 [YouTube 接入进度](docs/youtube-development.md)。详见 [内容链路](docs/content-pipeline.md)。
+[3008合成创作者](http://localhost:3008/creators)可检查个人链接与ICS；公共订阅尚未开放。3008后端是创作者批次，最新WebSub实验已退出。运行版本、PID和其他入口见STATE。
 
-## 检查与契约
+## 检查与证据
 
 ```sh
 uv run ruff check .
@@ -43,45 +39,19 @@ uv run pytest -q
 uv run python -m scripts.export_contracts
 ```
 
-`contracts/openapi.json` 与 `contracts/config.schema.json` 从 Pydantic 生成。客户端在自己的仓库运行 `npm run contracts`。两仓分别检查、提交、发布，不假定共享 Git 历史。
+仅在契约变化时导出并在客户端运行`npm run contracts`。完整OpenAPI由SQL基线导出，不能以文档模式接口子集覆盖。锁定依赖见`uv.lock`，Functions打包使用`requirements.txt`。
 
-匹配规则升级可先用离线元数据回放比较逐条决策；工具不连接数据库或改写关联。命令、合成样本与真实准确率边界见 [视频匹配回放](docs/matching-replay.md)。
+最近完整回归记录为[361 passed / 2 skipped](evidence/document-websub-2026-09-10.md)，这是本地证据，本次文档刷新没有重新执行。其他主要证据：
 
-数据库：本机演示可自动建表；正式环境必须使用迁移。
+- [真实F1样本及文档Provider](evidence/document-providers-2026-09-10.md)
+- [创作者合成链路](evidence/document-creators-2026-09-10.md)、[真实YouTube读取](evidence/youtube-live-2026-09-10.md)
+- [Codex实际业务调用](evidence/codex-business-2026-09-10.md)、[Firebase专用身份生命周期](evidence/firebase-lifecycle-2026-09-10.md)
+- [最新Web/ICS实操](../anke-sports/output/playwright/lean-check-2026-09-10.md)
 
-```sh
-uv run alembic upgrade head
-uv run alembic check
-```
+## 开发与部署
 
-迁移前应明确连接的目标环境，备份并确认恢复方式。以上命令未在 Azure 数据库执行。迁移在独立 SQLite 与本机 MySQL 8.4.11 临时库完成升级、回退、再升级及模型检查；尚未在 Azure 执行。MySQL 的连接隔离级别与身份比较要求、复现命令见 [MySQL 验证](docs/mysql-validation.md)。锁定依赖由 `uv.lock` 管理，Functions 构建使用导出的 `requirements.txt`。
+先让一项真实赛事和创作者通过个人ICS可用，再补该路径必需的独立开发环境与手机验证。不要为了完整架构先实施所有迁移、GC或容量项目。未实现的后台能力仍需明确提示，不能假报可用。
 
-## 当前状态
+[云配置现状](docs/cloud-development.md)、[Cosmos设计](docs/cosmos-storage-design.md)、[文档运行边界](docs/document-runtime.md)、[Functions运行](docs/functions-runtime.md)、[MCP](docs/mcp-and-connections.md)。旧MySQL模板/费用文档只作历史记录，不能直接执行。已授权的托管Chrome方式保留，具体部署必须使用核对过的独立目标，禁止复用其他产品资源。
 
-Functions 的安全源码打包和真实 Core Tools/Azurite 本机宿主已验证 HTTP、队列、定时器、MCP 及 Feed 发布；复现命令和云端待验边界见 [Functions 运行验收](docs/functions-runtime.md)。不要直接打包整个工作目录。
-
-独立 Azure 开发模板使用 Cosmos Serverless + Periodic；为保证跨实例令牌撤销，读一致性改为 Strong 后重新通过 Bicep/Provider validate。资源尚未创建。文档日历 HTTP、持久任务和个人链接路径已通过本地检查，完整模块及真实云验收尚未完成。分区、实现边界与后续 Provisioned → Autoscale 路径见 [Cosmos 存储设计](docs/cosmos-storage-design.md)。原 MySQL 计划和模板只保留为历史基线。
-
-MCP 已提供匿名与私人 Streamable HTTP、网页授权、短期令牌和撤销；入口、权限、重试约定与本地验收命令见 [MCP 与应用连接](docs/mcp-and-connections.md)。Chrome 本地安装包位于客户端仓库，实际 Chrome 运行仍待验收。
-
-官方直播草稿、审核发布、地区/观看条件、撤回、到期和 HEAD 检查已接入；维护者白名单默认空，自动联网检查默认关闭。使用与证据边界见 [直播入口维护](docs/broadcasts.md)。
-
-后台任务支持领取版本校验、Provider 串行处理/熔断和可审计的失败重放。复现真实子进程中断、SQLite 备份恢复及操作 CLI，见 [任务恢复手册](docs/job-recovery.md)。本地 `.env` 可配置独立 Provider key；正式云环境未验收。
-
-完整验收边界见 [STATE.md](STATE.md)、[当前架构](docs/architecture.md) 与 [验收证据](evidence/local-2026-09-09.md)。Codex CLI 0.153.4 的本地 OAuth、工具发现和撤销已实测；实际业务查询/写入/重试、模拟到期刷新、撤销和HTTP ICS已在独立合成环境通过，见 [Codex业务验收](evidence/codex-business-2026-09-10.md)；自然时间过期、系统日历刷新、Azure 触发器和手机内容直达仍待验收。独立Firebase开发项目已完成真实Google登录、服务端验签、偏好持久化和退出验证，见 [开发云环境](docs/cloud-development.md)。可运行 `uv run python -m scripts.check_codex_discovery` 检查已授权的本机 Codex 连接，操作与清理步骤见 [MCP 文档](docs/mcp-and-connections.md)。
-
-游客公共球队/赛事订阅已接入。后台发布公共快照，`GET /api/v1/public-feed?source_key=…`读取公开状态与地址；生产来源需先核验分发资格并配置。边界、迁移和重试见 [docs/public-feeds.md](docs/public-feeds.md)。
-
-个人关注支持 `POST /api/v1/me/follows/preview` 预览新增、移除、重叠与历史保留；Web确认后携带摘要和幂等键保存。计算规则、暂停状态与冲突处理见 [docs/follow-changes.md](docs/follow-changes.md)。
-
-赛程查询和Feed发布按日期缩小候选、批量读取可见链接。20,000场活动数据的本机HTTP查询、时区排序与账号隔离已验证；复现命令和完整容量限制见 [docs/schedule-queries.md](docs/schedule-queries.md)。
-
-定时截止、手动/自动去重、直播分批到期与巡检、迁移和复现命令见 [持续更新调度](docs/scheduling.md)。
-
-账号删除会撤销私人订阅与授权，防止删除前请求恢复个人数据；Firebase 身份清理由可重试任务执行。真实专用 Firebase 测试身份已完成 27 项撤销/刷新/HTTP 删除/后台清理检查；这不是 Google 浏览器删除、Cosmos 或设备缓存验收。保留字段与复现见 [账号删除](docs/account-deletion.md)。
-
-通知到1,000账号发布的本机容量、关注候选筛选、个人发布任务合并及重复通知验收见 [内容容量](docs/content-capacity.md)。真实 YouTube 小规模 API/worker 预算已验证，长期多频道、Google 实际余额与云端容量仍待完成。
-
-YouTube Data API 需要独立项目ID及Key，API与worker共用持久预算。默认9,000是本服务上限，不是Google实际余额。配置、迁移与恢复见 [项目预算](docs/youtube-budget.md)。
-
-新存储抓取与定时启动、生产显式来源配置、失败/限流和范围见 [Provider说明](docs/document-providers.md)。本批未操作浏览器；新实例数据已通过HTTP读回，渲染检查待继续。
+模块手册与必要验收保留在`docs/`、`evidence/`；旧STATE流水已删除，下一步只看当前STATE。双仓分别提交，无push或部署。
