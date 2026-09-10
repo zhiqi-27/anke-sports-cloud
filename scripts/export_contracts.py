@@ -1,5 +1,10 @@
 import json
 from pathlib import Path
+from app.config import settings
+
+if settings().storage_backend != "sql":
+    raise RuntimeError("CONTRACT_EXPORT_REQUIRES_COMPLETE_SQL_BASELINE_DURING_MIGRATION")
+
 from app.main import app
 from app.schemas import Config
 

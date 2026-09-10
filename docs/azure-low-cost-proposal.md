@@ -1,6 +1,6 @@
 # Azure 低成本开发环境选择
 
-2026-09-10。用户要求参考 Anke Money，重新评估成本；先前 MySQL / US$40 月预算方案未获批准。用户随后明确选择 **Serverless + Periodic**：采用独立 Cosmos DB for NoSQL Serverless 与周期备份，取代 Azure MySQL 目标。现有 SQL 实现和本机数据作为迁移基线保留，尚未改造成 Cosmos；资源还未创建。
+2026-09-10。用户要求参考 Anke Money，重新评估成本；先前 MySQL / US$40 月预算方案未获批准。用户随后明确选择 **Serverless + Periodic**：采用独立 Cosmos DB for NoSQL Serverless 与周期备份，取代 Azure MySQL 目标。现有 SQL 实现和本机数据作为迁移基线保留，文档日历路径已有本地证据，完整 Cosmos 迁移尚未完成；资源还未创建。
 
 ## 建议采用的组合
 

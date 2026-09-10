@@ -293,3 +293,78 @@ def test_sdk_errors_report_safe_codes_and_preserve_retry_after(error, expected, 
     if retry:
         assert caught.value.retry_after == 2.5
     assert "synthetic-secret" not in str(caught.value) + caplog.text
+
+
+def test_actual_sdk_change_feed_resumes_across_ranges_and_preserves_empty_cursor(caplog):
+    class ChangeTransport(OfflineTransport):
+        def send(self, request, **kwargs):
+            if len(self.requests) >= 20:
+                raise AssertionError(
+                    [
+                        (
+                            urlsplit(r.url).path,
+                            r.headers.get("If-None-Match"),
+                            r.headers.get("x-ms-documentdb-partitionkeyrangeid"),
+                        )
+                        for r in self.requests
+                    ]
+                )
+            path = urlsplit(request.url).path.rstrip("/")
+            if path.endswith("/pkranges"):
+                self.requests.append(request)
+                if request.headers.get("If-None-Match") == '"ranges"':
+                    response = OfflineResponse(request, {}, status=304, headers={"etag": '"ranges"'})
+                    response.value = b""
+                    return response
+                return OfflineResponse(
+                    request,
+                    {
+                        "PartitionKeyRanges": [
+                            {"id": "0", "minInclusive": "", "maxExclusive": "80"},
+                            {"id": "1", "minInclusive": "80", "maxExclusive": "FF"},
+                        ],
+                        "_count": 2,
+                    },
+                    headers={"etag": '"ranges"'},
+                )
+            if path.endswith("/docs") and request.method == "GET":
+                self.requests.append(request)
+                partition = request.headers["x-ms-documentdb-partitionkeyrangeid"]
+                if request.headers.get("If-None-Match") == '"1"':
+                    response = OfflineResponse(request, {}, status=304, headers={"etag": '"1"'})
+                    response.value = b""
+                    return response
+                return OfflineResponse(
+                    request,
+                    {"Documents": [document("p" + partition, "job:" + partition, "outbox")], "_count": 1},
+                    headers={"etag": '"1"'},
+                )
+            return super().send(request, **kwargs)
+
+    transport = ChangeTransport()
+    with CosmosClient(
+        endpoint,
+        OfflineCredential(),
+        transport=transport,
+        consistency_level="Strong",
+        retry_total=0,
+        logger=private_sdk_logger(),
+    ) as client:
+        store = CosmosDocumentStore(client, "anke-sports")
+        found, cursor = [], None
+        with caplog.at_level(logging.INFO):
+            for _ in range(5):
+                rows, cursor = store.changes("state", cursor, limit=1)
+                found.extend(row["id"] for row in rows)
+                if not rows:
+                    break
+        assert sorted(found) == ["job:0", "job:1"]
+        assert cursor and cursor != '"1"'  # Composite SDK token, not one range's ETag.
+        empty, resumed = store.changes("state", cursor, limit=1)
+        assert empty == [] and resumed == cursor
+        assert "synthetic-offline-token" not in caplog.text and cursor not in caplog.text
+    requests = [
+        request for request in transport.requests if urlsplit(request.url).path.rstrip("/").endswith("/docs")
+    ]
+    assert {request.headers["x-ms-documentdb-partitionkeyrangeid"] for request in requests} == {"0", "1"}
+    assert all(request.headers["x-ms-max-item-count"] == "1" for request in requests)

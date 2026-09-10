@@ -55,6 +55,13 @@ class Accounts:
         current = self.store.get("state", pk, "account")
         if current:
             return self.active(user_id)
+        # Register before creation so a crash cannot hide an owner from catalog
+        # fanout. This index is never identity authority; consumers recheck state.
+        route = document("owners", pk, "owner_route", owner_pk=pk)
+        try:
+            self.store.batch("indexes", "owners", [Write("create", pk, route)])
+        except Conflict:
+            pass
         user = document(
             pk,
             "account",
@@ -89,7 +96,18 @@ class Accounts:
             return self.active(user_id)
         return self.active(user_id)
 
-    def save_config(self, user_id, config, revision, *, key=None, operation="set_config", payload=None):
+    def save_config(
+        self,
+        user_id,
+        config,
+        revision,
+        *,
+        key=None,
+        operation="set_config",
+        payload=None,
+        prepare=None,
+        response=None,
+    ):
         current = self.active(user_id)  # Always before a cached command response.
         pk, previous = current["pk"], current["payload"]
         receipt_id, receipt, fingerprint = None, None, None
@@ -108,13 +126,16 @@ class Accounts:
                 return value["result"]
         if previous["revision"] != revision:
             problem("REVISION_CONFLICT", "配置已在其他页面更新，请刷新后重试", 409)
+        # Receipt replay precedes potentially stale preview/source validation.
+        if prepare:
+            config = prepare(deepcopy(previous))
         updated = clean(current)
         updated["payload"] = {
             **previous,
             "config": Config.model_validate(config).model_dump(),
             "revision": revision + 1,
         }
-        result = deepcopy(updated["payload"])
+        result = response(deepcopy(updated["payload"])) if response else deepcopy(updated["payload"])
         job = projection_job(pk, revision + 1)
         writes = [Write("replace", "account", updated, current["_etag"]), Write("create", job["id"], job)]
         if receipt_id:
@@ -189,6 +210,20 @@ class Accounts:
         )
         return self.address(user_id)
 
+    def pause(self, user_id, paused):
+        account = self.active(user_id)
+        old = self.store.get("state", account["pk"], "feed")
+        new = clean(old)
+        new["payload"] = {**old["payload"], "paused": paused}
+        writes = [
+            Write("replace", "account", clean(account), account["_etag"]),
+            Write("replace", "feed", new, old["_etag"]),
+        ]
+        if not paused:
+            job = projection_job(account["pk"], account["payload"]["revision"])
+            writes.append(Write("create", job["id"], job))
+        self.store.batch("state", account["pk"], writes)
+
     def feed_for_token(self, token):
         if not re.fullmatch(r"[A-Za-z0-9_-]{43}", token):
             problem("FEED_NOT_FOUND", "未找到订阅", 404)
@@ -262,3 +297,21 @@ class Outbox:
         completed = clean(job)
         completed.update(state="done", finished_at=now())
         return Write("replace", job["id"], completed, job["_etag"])
+
+    def fail(self, claim, error):
+        job = self.current(claim)
+        retryable = isinstance(error, Conflict) or (isinstance(error, StoreError) and error.retryable)
+        delay = min(3600, max(2 ** job["payload"]["attempts"], getattr(error, "retry_after", None) or 0))
+        updated = clean(job)
+        updated.update(
+            state="pending" if retryable and job["payload"]["attempts"] < 5 else "failed",
+            due_at=(datetime.now(timezone.utc) + timedelta(seconds=delay)).isoformat(),
+        )
+        updated["payload"] = {
+            **job["payload"],
+            "lease": None,
+            "error": error.code if isinstance(error, StoreError) else "JOB_EXECUTION_FAILED",
+        }
+        if updated["state"] == "failed":
+            updated["finished_at"] = now()
+        self.store.batch("state", job["pk"], [Write("replace", job["id"], updated, job["_etag"])])

@@ -63,6 +63,17 @@ def firebase_app():
     return app
 
 
+def firebase_subject(token):
+    from firebase_admin import auth
+
+    if not settings().firebase_project_id:
+        problem("AUTH_UNCONFIGURED", "Firebase 登录尚未配置", 503)
+    try:
+        return auth.verify_id_token(token, app=firebase_app(), check_revoked=True)["uid"]
+    except Exception:
+        problem("AUTH_REQUIRED", "登录已过期，请重新登录", 401)
+
+
 def actor(request: Request, db, required=True) -> str | None:
     from app.db import Session, User
 
@@ -93,22 +104,11 @@ def actor(request: Request, db, required=True) -> str | None:
             problem("INSUFFICIENT_SCOPE", "此连接未获得所需权限", 403)
         return principal.subject
     if bearer.startswith("Bearer "):
-        from firebase_admin import auth
-
-        cfg = settings()
-        if not cfg.firebase_project_id:
-            problem("AUTH_UNCONFIGURED", "Firebase 登录尚未配置", 503)
-        try:
-            claims = auth.verify_id_token(bearer[7:], app=firebase_app(), check_revoked=True)
-            user_id = claims["uid"]
-            user = db.get(User, user_id)
-            if user and user.deleted:
-                problem("ACCOUNT_DELETED", "账号已删除", 403)
-            return user_id
-        except HTTPException:
-            raise
-        except Exception:
-            problem("AUTH_REQUIRED", "登录已过期，请重新登录", 401)
+        user_id = firebase_subject(bearer[7:])
+        user = db.get(User, user_id)
+        if user and user.deleted:
+            problem("ACCOUNT_DELETED", "账号已删除", 403)
+        return user_id
     if token and local_allowed(request):
         session = db.get(Session, digest(token))
         if session and datetime.fromisoformat(session.expires_at) > datetime.now(timezone.utc):
@@ -228,6 +228,7 @@ def check_origin(request: Request):
         origin
         and origin.startswith("chrome-extension://")
         and request.headers.get("Authorization", "").startswith("Bearer as_at_")
+        and settings().storage_backend == "sql"
     ):
         from app.db import OAuthClient, SessionLocal
         from app.oauth import resource, verify_access

@@ -2,7 +2,9 @@
 
 体育日历、个人配置与原始观看链接的业务服务。原产品名 SportsCal 已更名为 **Anke Sports**。
 
-目标架构：Python/FastAPI + Firebase Authentication + Azure Functions + Cosmos DB for NoSQL **Serverless + Periodic** + Azure Storage Queue。参考 FormaLM 的服务分层，使用独立账号、密钥与资源。Cosmos 仓储、条件命令/任务与 Feed 分块发布的第一批代码已实现；产品 HTTP/Functions 仍运行 SQL，完整适配尚未完成。`anke-sports` 为独立客户端仓库。
+目标架构：Python/FastAPI + Firebase Authentication + Azure Functions + Cosmos DB for NoSQL **Serverless + Periodic** + Azure Storage Queue。参考 FormaLM 的服务分层，使用独立账号、密钥与资源。文档日历 HTTP、完整赛程快照、Change Feed/Queue 投递和 Feed 发布已接入，独立本地 UI 验收通过；当前主预览仍运行 SQL，内容/OAuth 等完整适配尚未完成。`anke-sports` 为独立客户端仓库。
+
+独立文档模式验收：[日历](http://localhost:3006/calendar)，运行说明见 [文档存储路径](docs/document-runtime.md)。本批 [277 项回归与浏览器证据](evidence/document-runtime-2026-09-10.md) 不代表真实 Cosmos/Azure 验收。
 
 ## 本地运行
 

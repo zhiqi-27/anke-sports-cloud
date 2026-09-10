@@ -1,6 +1,6 @@
 # Anke Sports 服务端状态
 
-当前摘要：2026-09-10，Cosmos SDK仓储、同分区账号/配置/幂等回执/outbox、任务租约、分块Feed发布第一批代码已实现；共享日历规则已抽出。全量267 passed/2 skipped，后补边界后的文档专项33 passed；OpenAPI未变。Strong读取保证跨实例撤销，更新后的Serverless + Periodic模板再次通过Bicep/Provider validate。尚无真实Cosmos数据面调用，产品HTTP/Functions及既有预览仍为SQL，资源未创建。下一步接入权威赛程仓储、同一HTTP路由和Queue/Change Feed。以下历史批次保留当时状态。
+当前摘要：2026-09-10，文档日历 HTTP、完整 Provider 快照、Change Feed/Queue 投递和独立 worker 已接入；浏览器保存关注，实际 HTTP 读回12条演示 ICS、稳定 UID/304。最终277 passed/2 skipped，Ruff及完整OpenAPI比较通过。新预览 localhost:3006/calendar（session67857/API PID83337、worker PID83338），IAB标签28已保留；原主预览/Firebase服务未重启。Serverless + Periodic及未来原地Provisioned→Autoscale方案保持。真实Cosmos/Azure未调用、资源未创建，内容/公共Feed/OAuth/删除等尚未迁移。以下历史批次保留当时状态。
 
 更新：2026-09-10。主 API 127.0.0.1:8787，session43380/PID44497；worker session62679/PID44496；显式启用本地体验并关闭访问日志。显式本地SQLite/体验身份。主库163条比赛（48演示+115 Jolpica F1分场次），无合成频道/视频或公共直播记录。
 
@@ -285,3 +285,14 @@ experiments.youtube_live 只复制原库115条公共 Jolpica缓存事件到临�
 产品app.main/function_app.py尚未接入文档仓储，现有SQL运行实例未重启；因此这些测试不是产品HTTP、真实Firebase+Cosmos或Queue/云恢复证据。8787/8788健康只作可达性读回，结果见JSON。此前YouTube/Firebase凭据和常驻实例配置未变，未重启或重新登录；本轮无浏览器操作。旧主API43380/PID44497、worker62679/PID44496、Web43940/PID53698；Firebase API92869/PID44563、worker24522/PID44564、Web91087/PID38482按原记录保留，PID未重新核对。本批测试/ARM校验句柄均已退出。
 
 下一步：权威公共赛程/来源索引及完整批次读取→既有HTTP路由/Firebase/关注预览→Queue/Change Feed出站投递与补发→个人链接/创作者/删除/OAuth剩余模块。之后验证真实Cosmos权限/RU/429/恢复和全链路。最大配置/回执分块、旧或孤立generation GC、超大Feed流式读取仍待实现；当前不自动GC，不能声称长期存储受控。第一批不是完整存储迁移，更不代替T01–T35/设备等完整验收。
+
+
+## 2026-09-10 · 文档日历接口与后台投递
+
+新增权威完整赛程块/指针、同一路径的日历/关注/私人Feed HTTP及持久任务投递；原SQL组合移至sql_app，默认仍为SQL，文档模式不导入app.db。业务保存/回执/outbox原子提交，后台发布后重复命令仍返回原响应；改期和令牌轮换保持UID、内容不变保持版本/ETag。SDK4.17初始多分区空token问题以公开API首轮读取处理，两个分区/304的实际离线SDK测试通过。断点存indexes，不自触发；Queue不确定发送可重放，租约/退避持久化。
+
+最终277项pytest通过、2项MySQL条件跳过、2条既有弃用警告（12.89秒）；Ruff、diff检查及完整OpenAPI一致。客户端无源码/契约/依赖变化，没有重复构建。新文档模式未迁移接口明确失败，完整合同导出拒绝接口子集覆盖。方案与证据：服务仓docs/document-runtime.md、evidence/document-runtime-2026-09-10.md及JSON。
+
+浏览器在localhost:3006/following进入本地体验，选择演示联赛→预览12条（含2条历史）→确认保存，月历读回12场已加入。HTTP独立读回同一临时体验账号revision1、Feed revision2/published/12条唯一UID、304与HEAD通过；脚本自己的临时会话退出，浏览器会话保留，console error为空。API/HTML proxy session67857/PID83337，独立worker PID83338，IAB标签28保留日历。数据全合成；停止实验清理临时库。首次3005端口被既有node占用，本次失败启动已清理后改用3006，没有停止原服务。
+
+主API/worker及Firebase/YouTube凭据配置未改，未重启已有实例。没有真实Firebase/Cosmos/Azure/上游调用、云资源创建、部署、push或主数据迁移。普通本地文档worker尚未自动执行每日窗口；Azure已注册每日窗口但未实测。每次catalog变化按页扫描owner目录，反向关注索引、旧任务/孤立块GC、大配置分块、SQL迁移以及内容/直播/公共Feed/OAuth/删除等仍待完成。此批不是整产品或完整存储迁移完成。

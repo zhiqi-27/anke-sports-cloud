@@ -31,7 +31,7 @@ from fastapi import Request, Response
 from sqlalchemy import select
 
 import app.content as content
-import app.main as main
+import app.sql_app as main
 from app.db import Base, Event, SessionLocal, engine
 from app.seed import seed_demo
 from app.service import ensure_user, save_config

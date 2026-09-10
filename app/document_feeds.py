@@ -84,7 +84,7 @@ class FeedPublisher:
         self.store, self.accounts = store, Accounts(store, cipher)
         self.generations, self.outbox = FeedGenerations(store), Outbox(store)
 
-    def publish(self, user_id, claim, events, links_for_event, *, instant=None):
+    def publish(self, user_id, claim, events, links_for_event, *, instant=None, validate_snapshot=None):
         """events/links come from authoritative repositories, never from an HTTP body.
 
         Require an explicit link resolver so migration cannot silently drop links.
@@ -164,6 +164,8 @@ class FeedPublisher:
             # Validate the captured pointer/paused/token state without changing public versions.
             writes.append(Write("replace", "feed", clean(feed), feed["_etag"]))
         writes.append(self.outbox.completion(claim))
+        if validate_snapshot:
+            validate_snapshot()
         # Config change, deletion, rotation, or another publisher invalidates this complete batch.
         self.store.batch("state", pk, writes)
         return changed

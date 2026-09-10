@@ -97,6 +97,7 @@ class DocumentStore(Protocol):
     def page(
         self, container: str, pk: str, kind: str, *, after: str = "", limit: int = 100
     ) -> list[dict]: ...
+    def changes(self, container: str, cursor=None, *, limit=100) -> tuple[list[dict], str | None]: ...
 
 
 def partition_items(store, container, pk, kind):
@@ -125,7 +126,7 @@ class LocalDocumentStore:
         with self.connection() as db:
             tables = {row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
             marker = db.execute("PRAGMA application_id").fetchone()[0]
-            if tables and (tables != {"documents"} or marker != 0x414E4B44):
+            if tables and (not tables <= {"documents", "document_changes"} or marker != 0x414E4B44):
                 raise StoreError("LOCAL_DOCUMENT_DATABASE_NOT_OWNED")
             db.execute("PRAGMA application_id=1095650116")
             db.execute("PRAGMA journal_mode=WAL")
@@ -135,6 +136,23 @@ class LocalDocumentStore:
                 "PRIMARY KEY(bucket,pk,id))"
             )
             db.execute("CREATE INDEX IF NOT EXISTS documents_kind ON documents(bucket,pk,kind,id)")
+            db.execute("BEGIN IMMEDIATE")
+            try:
+                exists = db.execute(
+                    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='document_changes'"
+                ).fetchone()
+                db.execute(
+                    "CREATE TABLE IF NOT EXISTS document_changes (seq INTEGER PRIMARY KEY, bucket TEXT NOT NULL, pk TEXT NOT NULL, id TEXT NOT NULL)"
+                )
+                db.execute("CREATE INDEX IF NOT EXISTS changes_bucket ON document_changes(bucket,seq)")
+                if not exists:
+                    db.execute(
+                        "INSERT INTO document_changes(bucket,pk,id) SELECT bucket,pk,id FROM documents ORDER BY bucket,pk,id"
+                    )
+                db.commit()
+            except BaseException:
+                db.rollback()
+                raise
 
     @contextmanager
     def connection(self):
@@ -183,6 +201,10 @@ class LocalDocumentStore:
                                 uuid4().hex,
                             ),
                         )
+                    # Only identity metadata: do not retain historical private payloads.
+                    db.execute(
+                        "INSERT INTO document_changes(bucket,pk,id) VALUES (?,?,?)", (container, pk, item.id)
+                    )
                 db.commit()
             except BaseException:
                 db.rollback()
@@ -201,6 +223,25 @@ class LocalDocumentStore:
 
     def close(self):
         pass
+
+    def changes(self, container, cursor=None, *, limit=100):
+        if (
+            container not in CONTAINERS
+            or not 1 <= limit <= 1000
+            or (cursor is not None and not re.fullmatch(r"[0-9]{1,20}", cursor))
+        ):
+            raise StoreError("CHANGE_CURSOR_INVALID")
+        with self.connection() as db:
+            rows = db.execute(
+                "SELECT c.seq,d.body,d.etag FROM document_changes c LEFT JOIN documents d "
+                "ON c.bucket=d.bucket AND c.pk=d.pk AND c.id=d.id "
+                "WHERE c.bucket=? AND c.seq>? ORDER BY c.seq LIMIT ?",
+                (container, int(cursor or 0), limit),
+            ).fetchall()
+        return (
+            [{**json.loads(row[1]), "_etag": row[2]} for row in rows if row[1]],
+            str(rows[-1][0]) if rows else cursor,
+        )
 
 
 class CosmosDocumentStore:
@@ -315,6 +356,43 @@ class CosmosDocumentStore:
         self.client.close()
         if self.credential:
             self.credential.close()
+
+    def changes(self, container, cursor=None, *, limit=100):
+        """One latest-version page; dispatcher owns an isolated SDK client.
+
+        SDK 4.17 stores the composite continuation in last_response_headers,
+        including empty 304 pages. Do not share this client with API threads.
+        """
+        if not 1 <= limit <= 1000 or (
+            cursor is not None and (not isinstance(cursor, str) or len(cursor) > 200_000)
+        ):
+            raise StoreError("CHANGE_CURSOR_INVALID")
+
+        def invoke(c, hook):
+            options = (
+                {"continuation": cursor} if cursor else {"start_time": "Beginning", "mode": "LatestVersion"}
+            )
+            # SDK 4.17 rejects its own bootstrap continuation while an unvisited
+            # range still has token=None. Consume one initial round using public
+            # APIs; never parse, edit or synthesize an opaque SDK continuation.
+            rounds = max(1, len(list(c.read_feed_ranges()))) if cursor is None else 1
+            if rounds > 100:
+                raise StoreError("CHANGE_BOOTSTRAP_RANGE_LIMIT")
+            pages = c.query_items_change_feed(
+                max_item_count=max(1, limit // rounds), response_hook=hook, **options
+            ).by_page()
+            rows = []
+            for _ in range(rounds):
+                page = list(next(pages, []))
+                rows.extend(page)
+                if not page:
+                    break
+            continuation = self.client.client_connection.last_response_headers.get("etag")
+            if not continuation:
+                raise StoreError("CHANGE_CURSOR_MISSING", retryable=True)
+            return rows, continuation
+
+        return self._call("changes", container, invoke)
 
 
 def private_sdk_logger():

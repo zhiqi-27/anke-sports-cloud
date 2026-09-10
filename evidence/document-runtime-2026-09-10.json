@@ -1,0 +1,59 @@
+{
+  "timestamp": "2026-09-10T03:34:17.621951+00:00",
+  "storage": "explicit local document adapter; not Cosmos emulator",
+  "queue": "explicit persistent local queue; separate worker process",
+  "ui_url": "http://localhost:3006/calendar",
+  "ui_verified": [
+    "local login",
+    "follow preview: 12 additions including 2 historical",
+    "confirm saved",
+    "calendar: 12 included synthetic events",
+    "no browser console errors"
+  ],
+  "http_checks": {
+    "feed_published": true,
+    "browser_saved_follow": true,
+    "ics_12_events": true,
+    "all_uid_unique": true,
+    "conditional_304": true,
+    "head_empty": true
+  },
+  "ics_sha256": "31ceca242eef7e06e63a4f989ea28b11d47f7e05513aaf23a74c64e7dd046598",
+  "account_revision": 1,
+  "feed_revision": 2,
+  "cloud_data_plane": false,
+  "firebase_real_identity_this_batch": false,
+  "azure_resources_created": false,
+  "validation": {
+    "pytest_passed": 277,
+    "pytest_skipped": 2,
+    "existing_warnings": 2,
+    "seconds": 12.89,
+    "ruff": "passed",
+    "canonical_openapi": "unchanged",
+    "actual_sdk_offline_ranges": 2,
+    "new_real_azure_evidence": false
+  },
+  "source_sha256": {
+    "app/actions.py": "31d79a371c400f58cc792be682082f5b8294b3a8ce0f4b5051625264595f5f4d",
+    "app/calendar_rules.py": "2ddfa96c45d5024bae1358d59a252eeaea5d086bf83df1d8632ec83a5963dcf1",
+    "app/document_accounts.py": "eca8b7537a244a8e4206be29ebc472effd61e6c0c18d91b8a74b34cfd9f75a44",
+    "app/document_api.py": "1783c3d989a369e337adbc783f86d0ca19342ec8add8ffa742aeb392ae9f0b78",
+    "app/document_catalog.py": "7144535f2433bf473a6166d1186fb89db4a1c7fb9e4175d93618ae088533d8b4",
+    "app/document_feeds.py": "21fb7de87ab9a68ef6651293e8c480554bc920f066c47ca4813154341794a70b",
+    "app/document_runtime.py": "17f8c42efc4ac3bd4948017ae0681442f82aac716860b108a09102633439a28a",
+    "app/document_store.py": "208de07ce9e25ffac75e9bc68c08dae50de4aac8a5d6cfacb4644af06e90e838",
+    "app/document_worker.py": "8729c31c9f3db988ed36c1a1a2118b9b09210a9bc6f3e7b3671e18ae8da2517a",
+    "app/follow_changes.py": "01b053eead21ab6c0b78c0889bcf570f78787e43b6d1a9a41d790238bd685e78",
+    "app/follow_rules.py": "fcfce379962d0f1189ecf6920ad5094250a5a1028952ceaac80f57d26727d345",
+    "app/main.py": "08694a2c241d9ec4e271dfd8b359a9f821fcf657f5d6a35d56afa9e299375ae2",
+    "app/schedule_rules.py": "6d95a65f058218b916181f2a54131ff24593829863d73c1566420512ae363d6b",
+    "app/security.py": "a43681871ffda25eda2e9e48e4aad2fa15186e39e8abcd3d14d2588e19301cee",
+    "app/sql_app.py": "9b2966777f223a00db47d7dc23a7dddee35d98f4f2edbb9bf4330fd09b220079",
+    "function_app.py": "0d2b84aedca976612f979191f967402d5ed892a961b1db5e7b9deeebc2f9261d",
+    "experiments/document_ui.py": "f9fe94a7cf052c8f91f79e139911a303a39a963877539849812224e14d3b2f1e",
+    "scripts/export_contracts.py": "951518dbfbe0489c009c51dd643cb58bcd30f6f5059e489c95e9149f8c2f60d5",
+    "tests/test_document_runtime.py": "9827d9751af0ec1492c72daefcf609c578c5251038a9c17329181b302adfb047",
+    "tests/test_document_store.py": "46b19634f175f56a2a75c9db66c453db3c5350114ec63258fd8c4d5f05e3fdd7"
+  }
+}

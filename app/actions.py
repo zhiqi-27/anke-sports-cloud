@@ -1,14 +1,13 @@
 """Transport-independent calendar queries and commands shared by HTTP and MCP."""
 
-import base64
 import json
 import re
 import time
-from datetime import date, datetime, timedelta, timezone
 
 from sqlalchemy import and_, or_, select
 
-from app.calendar import event_view, inclusion_filter, load_links
+from app.calendar import event_view, load_links
+from app.schedule_rules import schedule_page, schedule_range
 from app.config import settings
 from app.db import CommandReceipt, Event, Feed, Link, Source, User
 from app.schemas import Config
@@ -47,23 +46,9 @@ def search_sources(db, q="", dataset="real"):
 
 
 def get_schedule(db, from_, to, dataset="real", followed=False, q="", user=None, limit=500, cursor=None):
-    if dataset not in {"real", "demo"} or len(q) > 200 or not 1 <= limit <= 500:
-        problem("INVALID_QUERY", "查询条件无效")
+    lower, upper, earliest, latest = schedule_range(from_, to, dataset, q, limit)
     if followed and not user:
         problem("AUTH_REQUIRED", "登录后查看个人赛程", 401)
-    try:
-        lower, upper = (datetime.fromisoformat(value.replace("Z", "+00:00")) for value in (from_, to))
-        if not lower.tzinfo or not upper.tzinfo or not timedelta(0) < upper - lower <= timedelta(days=180):
-            raise ValueError()
-        lower_utc, upper_utc = lower.astimezone(timezone.utc), upper.astimezone(timezone.utc)
-    except (ValueError, OverflowError):
-        problem("INVALID_RANGE", "请查询带时区、最长 180 天的有效时间范围")
-    # ISO offset strings are not ordered by absolute time. Use a conservative
-    # indexed date envelope, then compare actual instants below. UTC offsets
-    # are less than 24 hours; this includes both extreme offsets at the edges.
-    earliest = date.fromordinal(max(date.min.toordinal(), lower_utc.date().toordinal() - 1)).isoformat()
-    last_day = upper_utc.date().toordinal() + 2
-    latest = date.fromordinal(last_day).isoformat() if last_day <= date.max.toordinal() else None
     columns = [Event.id, Event.starts_at, Event.local_date, Event.updated_at]
     if followed:
         columns += [Event.source_key, Event.competition_id, Event.participants]
@@ -80,56 +65,17 @@ def get_schedule(db, from_, to, dataset="real", followed=False, q="", user=None,
             ),
         ),
     )
-    result = []
-    accepts = inclusion_filter(user.config) if followed else None
-    needle = q.casefold()
-    for event in db.execute(query):
-        if accepts is not None and not accepts(event):
-            continue
-        if needle and needle not in event.title.casefold():
-            continue
-        start = datetime.fromisoformat(event.starts_at.replace("Z", "+00:00")) if event.starts_at else None
-        if start is not None and not lower <= start < upper:
-            continue
-        if start is None and (
-            not event.local_date
-            or not lower.date().isoformat() <= event.local_date < upper.date().isoformat()
-        ):
-            continue
-        order = start.astimezone(timezone.utc).isoformat() if start else event.local_date
-        result.append((order, event))
-    result.sort(key=lambda item: (item[0], item[1].id))
-    binding = digest(
-        json.dumps(
-            [
-                from_,
-                to,
-                dataset,
-                followed,
-                q,
-                user.id if user else None,
-                user.revision if user else None,
-                [(e.id, e.updated_at) for _, e in result],
-            ]
-        )
+    page, next_cursor = schedule_page(
+        db.execute(query),
+        from_,
+        to,
+        dataset,
+        followed,
+        q,
+        user,
+        limit,
+        cursor,
     )
-    offset = 0
-    if cursor:
-        try:
-            if len(cursor) > 200:
-                raise ValueError()
-            value = json.loads(base64.urlsafe_b64decode(cursor))
-            offset = value["offset"]
-            if value["binding"] != binding or type(offset) is not int or not 0 <= offset <= len(result):
-                raise ValueError()
-        except (ValueError, KeyError, TypeError):
-            problem("CURSOR_EXPIRED", "赛程或查询已变化，请重新查询第一页", 409)
-    next_cursor = (
-        base64.urlsafe_b64encode(json.dumps({"offset": offset + limit, "binding": binding}).encode()).decode()
-        if offset + limit < len(result)
-        else None
-    )
-    page = [event for _, event in result[offset : offset + limit]]
     current = (
         {
             event.id: event
