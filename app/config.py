@@ -11,7 +11,17 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="ANKE_SPORTS_", env_file=".env", extra="ignore")
     env: Literal["local", "staging", "production"] = "local"
+    storage_backend: Literal["sql", "cosmos", "documents-local"] = "sql"
     database_url: str = "sqlite:///./data/anke-sports.db"
+    document_local_path: str = "data/documents-local.db"
+    cosmos_endpoint: str = ""
+    cosmos_database: str = "anke-sports"
+    cosmos_state_container: str = "state"
+    cosmos_index_container: str = "indexes"
+    cosmos_auth: Literal["managed_identity", "azure_cli"] = "managed_identity"
+    cosmos_client_id: str = ""
+    cosmos_tenant_id: str = ""
+    cosmos_subscription_id: str = ""
     public_url: str = "http://localhost:8787"
     web_url: str = "http://localhost:3000"
     local_preview: bool = False
@@ -49,8 +59,15 @@ class Settings(BaseSettings):
 @lru_cache
 def settings() -> Settings:
     result = Settings()
-    if result.env != "local" and (result.local_preview or result.database_url.startswith("sqlite")):
-        raise RuntimeError("Deployed mode requires production authentication and Azure MySQL")
+    if result.env != "local" and (result.local_preview or result.storage_backend == "documents-local"):
+        raise RuntimeError("Deployed mode forbids local authentication and document adapters")
+    if result.env != "local" and result.storage_backend == "sql" and result.database_url.startswith("sqlite"):
+        raise RuntimeError("Deployed SQL mode requires Azure MySQL; Cosmos must be selected explicitly")
+    if result.storage_backend == "cosmos":
+        if not result.cosmos_endpoint or not result.cosmos_database:
+            raise RuntimeError("Cosmos requires an explicit independent endpoint and database")
+        if result.env != "local" and (result.cosmos_auth != "managed_identity" or not result.cosmos_client_id):
+            raise RuntimeError("Deployed Cosmos requires the dedicated managed identity")
     if os.getenv("WEBSITE_INSTANCE_ID") and result.env == "local":
         raise RuntimeError("Azure Functions requires an explicit staging or production environment")
     if result.env != "local":

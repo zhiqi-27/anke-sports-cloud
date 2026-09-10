@@ -2,7 +2,7 @@
 
 体育日历、个人配置与原始观看链接的业务服务。原产品名 SportsCal 已更名为 **Anke Sports**。
 
-目标架构：Python/FastAPI + Firebase Authentication + Azure Functions + Cosmos DB for NoSQL **Serverless + Periodic** + Azure Storage Queue。参考 FormaLM 的服务分层，使用独立账号、密钥与资源。当前业务代码仍运行 SQL，Cosmos 适配尚未完成；`anke-sports` 为独立客户端仓库。
+目标架构：Python/FastAPI + Firebase Authentication + Azure Functions + Cosmos DB for NoSQL **Serverless + Periodic** + Azure Storage Queue。参考 FormaLM 的服务分层，使用独立账号、密钥与资源。Cosmos 仓储、条件命令/任务与 Feed 分块发布的第一批代码已实现；产品 HTTP/Functions 仍运行 SQL，完整适配尚未完成。`anke-sports` 为独立客户端仓库。
 
 ## 本地运行
 
@@ -53,7 +53,7 @@ uv run alembic check
 
 Functions 的安全源码打包和真实 Core Tools/Azurite 本机宿主已验证 HTTP、队列、定时器、MCP 及 Feed 发布；复现命令和云端待验边界见 [Functions 运行验收](docs/functions-runtime.md)。不要直接打包整个工作目录。
 
-独立 Azure 开发模板已改为 Cosmos Serverless + Periodic，并通过 Bicep 编译和 Azure 服务端 validate；资源尚未创建，运行时迁移尚未完成。分区/事务/发布合同与后续 Provisioned → Autoscale 路径见 [Cosmos 存储设计](docs/cosmos-storage-design.md)。原 MySQL 计划和模板只保留为历史基线。
+独立 Azure 开发模板使用 Cosmos Serverless + Periodic；为保证跨实例令牌撤销，读一致性改为 Strong 后重新通过 Bicep/Provider validate。资源尚未创建。第一批仓储/发布器通过 33 项本地与离线 SDK 检查，产品入口及 Queue 尚未接入。分区、实现边界与后续 Provisioned → Autoscale 路径见 [Cosmos 存储设计](docs/cosmos-storage-design.md)。原 MySQL 计划和模板只保留为历史基线。
 
 MCP 已提供匿名与私人 Streamable HTTP、网页授权、短期令牌和撤销；入口、权限、重试约定与本地验收命令见 [MCP 与应用连接](docs/mcp-and-connections.md)。Chrome 本地安装包位于客户端仓库，实际 Chrome 运行仍待验收。
 

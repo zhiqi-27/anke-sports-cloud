@@ -48,7 +48,8 @@ resource cosmos 'Microsoft.DocumentDB/databaseAccounts@2025-04-15' = {
     enableMultipleWriteLocations: false
     enableAnalyticalStorage: false
     locations: [{ locationName: location, failoverPriority: 0, isZoneRedundant: false }]
-    consistencyPolicy: { defaultConsistencyLevel: 'Session' }
+    // Feed-token revocation must be visible across independent API instances.
+    consistencyPolicy: { defaultConsistencyLevel: 'Strong' }
     backupPolicy: {
       type: 'Periodic'
       periodicModeProperties: {

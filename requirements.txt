@@ -18,8 +18,11 @@ attrs==26.1.0
     #   referencing
 azure-core==1.41.0
     # via
+    #   azure-cosmos
     #   azure-identity
     #   azure-storage-queue
+azure-cosmos==4.17.0
+    # via anke-sports-cloud
 azure-functions==1.25.0
     # via anke-sports-cloud
 azure-identity==1.25.3
@@ -219,6 +222,7 @@ typing-extensions==4.16.0
     #   alembic
     #   anyio
     #   azure-core
+    #   azure-cosmos
     #   azure-identity
     #   azure-storage-queue
     #   fastapi

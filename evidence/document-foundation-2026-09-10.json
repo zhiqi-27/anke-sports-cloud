@@ -1,0 +1,91 @@
+{
+  "date": "2026-09-10",
+  "recorded_at": "2026-09-10T02:58:11.313598+00:00",
+  "scope": "document repository foundation; product HTTP and Functions still SQL",
+  "sdk": "azure-cosmos 4.17.0",
+  "full_regression": {
+    "passed": 267,
+    "skipped": 2,
+    "warnings": 2,
+    "seconds": 11.92,
+    "scope": "before three additional edge tests; runtime source unchanged afterwards"
+  },
+  "final_document_suite": {
+    "passed": 33,
+    "warnings": 2,
+    "seconds": 1.18
+  },
+  "ruff": "passed",
+  "openapi_unchanged": true,
+  "database_tests": "explicit local SQLite document adapter with separate connections; SDK uses fully offline HttpTransport",
+  "real_cosmos_data_plane_calls": 0,
+  "real_cosmos_ru_measured": false,
+  "real_managed_identity_data_access_verified": false,
+  "large_feed_events": 250,
+  "large_feed_contains_unicode_and_emoji": true,
+  "checked": [
+    "atomic config/receipt/outbox",
+    "concurrent winner and rollback",
+    "owner and query-page isolation",
+    "persistent reopen in independent process",
+    "SQL fallback rejected",
+    "native SDK batch partition/If-Match/atomic/Strong headers",
+    "SDK query parameters and read 404",
+    "batch errors 409/412; 429 retry-after; 403 non-retryable",
+    "SDK partition/payload logging suppressed",
+    "interrupted chunk publication preserves previous body and ETag",
+    "reschedule and rotation retain UID",
+    "content-identical publication stable version/timestamps/HTTP ETag",
+    "history retention and future removal cancellation",
+    "config/deletion/lease change fences old publisher",
+    "expired lease reclaimed, completed job not reclaimed",
+    "account tombstone checked before receipt replay",
+    "missing published chunk never returned as partial ICS"
+  ],
+  "azure_template": {
+    "capacity": "Serverless",
+    "backup": "Periodic",
+    "consistency": "Strong",
+    "bicep_compile_exit_code": 0,
+    "provider_validate": "Succeeded",
+    "name": "anke-sports-cosmos-strong-validate",
+    "region": "eastasia",
+    "web_url_parameter": "https://anke-sports-dev.invalid",
+    "web_url_is_validation_placeholder": true,
+    "template_sha256": "5f1ce00b98315c1ef02bbd0ca3a63584705b26e0c727e8a30e3333d95a842c79"
+  },
+  "resources_created": false,
+  "deployed": false,
+  "existing_services_restarted": false,
+  "existing_business_data_migrated": false,
+  "source_sha256": {
+    "app/document_store.py": "955faf35ae566099ab3b2ad25763a4757bff281121de2073a8ce1eb64eaaea8b",
+    "app/document_accounts.py": "9779125be6a79d3d5d9f21861cfed323cbbc8ae2de7c58f352a0620775a46b93",
+    "app/document_feeds.py": "6f14e04db2288d701dfc0f69ccb9232d30ac0d995a9da887ee002a151eff35d3",
+    "app/calendar_rules.py": "2ddfa96c45d5024bae1358d59a252eeaea5d086bf83df1d8632ec83a5963dcf1",
+    "app/calendar.py": "c53300618a7054d4c089b251d4c72531f857083a7452f2cc95ad84671c1a4628",
+    "app/config.py": "36f976a975a4485216a6770f1d081dd0cf8bcc12f9fda6e3697457a2c9c77866",
+    "app/db.py": "0c5ecacba6e7ff721f7de2a17c185e8d782e6c3e76cc148f43a9b5f721389d5b",
+    "app/security.py": "31e85abe2bfe26cdfca04c4b0fb8d65053fe5ae384a4960ceb04b57be87c3689",
+    "tests/test_document_store.py": "1877c6edcfdc0d08e26056ee75fa749ca468a0ac0834ee55a7c8284858658daa",
+    "tests/test_document_feeds.py": "5f2efcbdb848154e0e612560b8482736ad688d9f719fb82618ac46807b544537",
+    "tests/test_document_config.py": "dce218b8a0c5b3e84ad54be28fd3cf5e139e052934ddde1dd176248d1f8a2d8b",
+    "pyproject.toml": "cf091f950f055ca2d93a94bc7ae3d841919ccbaa0eb03914f97a624943876130",
+    "uv.lock": "410dc8d6d7f47fc7991b23f2c2d66f989af977cee28b29e9828f432a5715b8fd",
+    "requirements.txt": "c620b6c489d83a9f194eb465d03d12a823a4e99cc6000d1be83113a34441225d",
+    "infra/main.bicep": "2f31d14d34e2875aca0c612c3c76fe2ed940d6e17c0e45eb24fae5e2abb28f16",
+    "infra/resources.bicep": "7fa7ed8b1930439b7369b12b745a8568c1716cc0175b769c07b7c3083bde7261"
+  },
+  "existing_api_availability_only": {
+    "8787": {
+      "http_status": 200,
+      "status": "ok",
+      "environment": "local"
+    },
+    "8788": {
+      "http_status": 200,
+      "status": "ok",
+      "environment": "local"
+    }
+  }
+}

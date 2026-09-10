@@ -1,6 +1,6 @@
 # Anke Sports 服务端状态
 
-当前摘要：2026-09-10，用户确认 Cosmos NoSQL Serverless + Periodic，未来原地转手动 Provisioned 后调整 Autoscale；Anke Money 生产最新参考由用户说明更新。新 Bicep 编译与 Azure validate 通过，资源组不存在、尚未创建；业务仍为 SQL，Cosmos 适配未完成。Mac 已解锁，YouTube 专用 Key 已安全保存并清理临时明文，隔离 API/worker 两轮各 11 项通过、读取 69 条视频；183 待审/15 拒绝、0 自动附链。专用真实 Firebase 测试身份撤销/删除/后台清理 27 项通过，账号和临时库已移除。以下历史批次保留当时状态，以本摘要和最新批次为准。
+当前摘要：2026-09-10，Cosmos SDK仓储、同分区账号/配置/幂等回执/outbox、任务租约、分块Feed发布第一批代码已实现；共享日历规则已抽出。全量267 passed/2 skipped，后补边界后的文档专项33 passed；OpenAPI未变。Strong读取保证跨实例撤销，更新后的Serverless + Periodic模板再次通过Bicep/Provider validate。尚无真实Cosmos数据面调用，产品HTTP/Functions及既有预览仍为SQL，资源未创建。下一步接入权威赛程仓储、同一HTTP路由和Queue/Change Feed。以下历史批次保留当时状态。
 
 更新：2026-09-10。主 API 127.0.0.1:8787，session43380/PID44497；worker session62679/PID44496；显式启用本地体验并关闭访问日志。显式本地SQLite/体验身份。主库163条比赛（48演示+115 Jolpica F1分场次），无合成频道/视频或公共直播记录。
 
@@ -271,3 +271,17 @@ experiments.youtube_live 只复制原库115条公共 Jolpica缓存事件到临�
 原主API43380/PID44497、worker62679/PID44496、Web43940/PID53698；Firebase API92869/PID44563、worker24522/PID44564、Web91087/PID38482；构建预览31276/PID44147、匹配验收63263/PID44193按原记录保留，本轮未重启或逐项核对PID。没有为这些常驻实例配置YouTube Key/创作者，不声称页面已持续发现真实视频；现有用户数据没有迁移。实验和ARM验证进程均已退出。
 
 下一步优先实现 Cosmos 仓储的 Firebase→关注→同分区outbox→Queue→已发布ICS纵向路径，再覆盖原SQL业务；持续YouTube配置需共用同一项目预算，真实Hub/续订、人工标注到ICS、云身份/RU/429/恢复与设备验收继续。T04/T07/T14–T18等保持in_progress，完整目标未完成。两仓本批分别本地提交，不push/部署。
+
+## 2026-09-10 · Cosmos 文档仓储与发布器第一批代码
+
+新增服务仓 app/document_store.py、document_accounts.py、document_feeds.py；Cosmos SDK固定4.17.0，使用独立MI，显式本机CLI需指定tenant/subscription。单分区原子批处理、ETag冲突、配置+幂等回执+outbox、领取/过期租约、令牌路由/轮换、不可变分块/清单与最终CAS发布已实现。app/calendar_rules.py抽出原SQL共用选择/历史保留/描述/ICS规则，SQL入口继续使用同一逻辑，OpenAPI完全相同。文档模式导入SQL运行时明确拒绝，不能回落到原业务库。
+
+本地验证用专用持久文档适配器（SQLite仅存文档和ETag，独立连接），不得冒充Cosmos模拟器。真实SDK经过完全离线的HttpTransport，验证实际partition/If-Match/atomic/Strong请求、参数化分页、404及409/412/429/403；没有Azure数据面请求。修复SDK批错误不继承普通CosmosHttpResponseError、logging_enable=false仍输出分区头的问题；专用禁用logger隔离SDK原始日志，应用只留操作/状态/RU摘要。测试RU值为夹具，未实测云RU。
+
+250个长中文/emoji合成事件多块发布中断仍保留旧Feed；恢复后完整250条可读。改期/轮换保持UID、重复内容版本/时间/ETag稳定；历史保留、未来取消、配置/删除/新租约阻止旧发布者、过期任务重新领取、删除先于回执重放、坏块拒绝半份ICS，以及独立进程重读均通过。全量pytest267 passed/2个条件MySQL skipped/2已有弃用警告（11.92秒）；随后只新增3项测试，最终文档33项通过（1.18秒），ruff通过。
+
+因多台Functions客户端不能靠Session保证立刻读到其他实例的令牌撤销，模板/SDK改为Strong；保持Serverless + Periodic，Strong读取RU约为Session两倍，费用需要实测。Bicep与订阅级Provider validate再次Succeeded（anke-sports-cosmos-strong-validate）；仅validation占位Web URL，没有创建/部署资源、迁移数据或触碰其他产品。文档/机器证据：服务仓 evidence/document-foundation-2026-09-10.md及JSON，设计 docs/cosmos-storage-design.md。
+
+产品app.main/function_app.py尚未接入文档仓储，现有SQL运行实例未重启；因此这些测试不是产品HTTP、真实Firebase+Cosmos或Queue/云恢复证据。8787/8788健康只作可达性读回，结果见JSON。此前YouTube/Firebase凭据和常驻实例配置未变，未重启或重新登录；本轮无浏览器操作。旧主API43380/PID44497、worker62679/PID44496、Web43940/PID53698；Firebase API92869/PID44563、worker24522/PID44564、Web91087/PID38482按原记录保留，PID未重新核对。本批测试/ARM校验句柄均已退出。
+
+下一步：权威公共赛程/来源索引及完整批次读取→既有HTTP路由/Firebase/关注预览→Queue/Change Feed出站投递与补发→个人链接/创作者/删除/OAuth剩余模块。之后验证真实Cosmos权限/RU/429/恢复和全链路。最大配置/回执分块、旧或孤立generation GC、超大Feed流式读取仍待实现；当前不自动GC，不能声称长期存储受控。第一批不是完整存储迁移，更不代替T01–T35/设备等完整验收。

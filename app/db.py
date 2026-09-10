@@ -350,6 +350,8 @@ class ProviderState(Base):
     lease_until: Mapped[str | None] = mapped_column(String(40), nullable=True)
 
 
+if settings().storage_backend != "sql":
+    raise RuntimeError("SQL_ADAPTER_DISABLED: document mode must not import SQL runtime")
 url = settings().database_url
 if settings().env == "local":
     Path("data").mkdir(exist_ok=True)

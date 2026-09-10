@@ -38,7 +38,7 @@ MySQL B1s 已在区域规格清单中出现，但补查其价格遇到零售 API
 
 选型已确认，正在更新架构约定和部署模板；原 MySQL 创建方案停止推进。Periodic 采用开发环境默认每4小时一次、保留8小时（两份），并显式保留 Geo 冗余；这是实现默认值，可后续调整。周期备份的恢复需要向 Azure 请求并恢复到新账号，不把它当作即时回滚；恢复后重建网络/RBAC并重放删除决定。官方说明：[周期备份与恢复](https://learn.microsoft.com/en-us/azure/cosmos-db/periodic-backup-restore-introduction)。
 
-完整 Cosmos 存储实现、RU/并发/恢复和真实云运行仍待验收；不会把已经通过的 SQL 测试改名为 Cosmos 测试。
+第一批 Cosmos SDK 仓储、条件命令/租约与 Feed 分块发布代码已经过本地验证，产品 HTTP/Queue 接入和完整存储迁移仍待完成。为保证跨 Functions 实例的令牌撤销，模板和 SDK 改为 Strong 读取；读取 RU 通常约为 Session 的两倍，因此以上按 RU 计费的单价不变，按请求估算 RU 时需重新实测。详见 [一致性与代码进度](cosmos-storage-design.md)。真实 RU/数据面并发/恢复及云运行尚未验收。
 
 
 新模板、分区/投影迁移合同、Periodic 默认值及后续原地升级约束见 [Cosmos 存储设计](cosmos-storage-design.md)。

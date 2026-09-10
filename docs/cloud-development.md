@@ -9,7 +9,7 @@
 | YouTube Data API | 独立 `anke-sports-youtube-dev` Key，仅允许 YouTube API | 已安全保存；隔离 API/worker 读取 69 条真实视频与预算通过；自动附链/Hub 待验 |
 | Firebase服务账号 | Anke Sports Auth Dev；独立认证验签和身份清理 | Authentication Admin；专用真实测试身份撤销、删除及远端清理 27 项检查通过 |
 | Azure Functions | 新建Anke Sports独立Function App；Python3.12/FastAPI、HTTP/MCP/Queue/Timer | `function_app.py`入口已实现；Azure资源尚未创建 |
-| Azure Cosmos DB | 独立 NoSQL Serverless + Periodic；公共比赛、个人分区、投影/outbox | 用户已选定，Bicep/ARM validate 通过；资源及存储适配未完成，SQL 留作迁移基线 |
+| Azure Cosmos DB | 独立 NoSQL Serverless + Periodic；Strong、个人分区、投影/outbox | Strong 模板重新通过 Bicep/ARM validate；仓储/发布器本地通过，产品入口/队列及真实云适配待完成，资源未创建 |
 | Azure Storage Queue | `anke-sports-jobs` 任务分发；与权威存储的 outbox 共用处理器 | SQL 本地处理器通过；Cosmos 适配与云触发器待验证 |
 
 Firebase保持Spark免费计划；未启用Analytics、Gemini、Hosting、Firestore或Firebase Storage。Google登录提供商展示名称为Anke Sports Dev，使用项目所属账号的支持邮箱。服务账号不是项目Owner/Editor，不复用其他产品身份。

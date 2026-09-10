@@ -2,7 +2,7 @@
 
 2026-09-10 用户决定：Anke Sports 使用 **Cosmos DB for NoSQL Serverless + Periodic**。后续负载增长时，原地转手动 Provisioned，完成后调整为 Autoscale。Firebase 继续负责身份，FastAPI/Azure Functions 负责业务，Web/扩展/MCP 不直连数据库。
 
-部署模板已替换为该目标；原 MySQL 模板保存在 `infra/legacy-mysql/`，停止推进。**业务运行时目前仍是原 SQL 实现，Cosmos 适配器尚未完成，不能将当前 Functions 源码包部署到新模板并声称已可用。** 现有本机预览、Firebase 验收库和已通过的 SQL 测试保持各自证据。
+部署模板已替换为该目标；原 MySQL 模板保存在 `infra/legacy-mysql/`，停止推进。文档存储、账号命令、租约与分块 Feed 的第一批代码已实现，见下方进度。**产品 HTTP/Functions 入口仍是原 SQL 实现，Cosmos 迁移未完成；当前源码包不能作为新模板的可用部署包。** 现有本机预览、Firebase 验收库和已通过的 SQL 测试保持各自证据。
 
 ## 独立开发资源
 
@@ -10,7 +10,7 @@
 
 | 项目 | 配置 |
 | --- | --- |
-| 数据库 | 单区域 Cosmos NoSQL，Serverless，无预留吞吐、无免费层、Session consistency |
+| 数据库 | 单区域 Cosmos NoSQL，Serverless，无预留吞吐、无免费层、Strong consistency |
 | Periodic | 每 240 分钟一次，保留 8 小时，Geo 冗余；两份为开发默认值 |
 | 计算 | Functions Flex，Python 3.12，2 GB，无 always-ready，最大实例数40 |
 | 数据身份 | 独立用户分配托管身份；Cosmos Data Contributor 仅作用于本数据库 |
@@ -22,13 +22,15 @@
 
 周期备份默认两份免费，额外份数按备份存储计费。恢复通过 Azure 支持流程恢复到新账号，网络、防火墙和数据面 RBAC 等需重新配置；不能把“已开启备份”写成“已完成恢复演练”。参见 [Periodic 备份](https://learn.microsoft.com/en-us/azure/cosmos-db/periodic-backup-restore-introduction)。
 
+实现中将最初 Session 默认值改为 **Strong**：Session 的读写保证依赖同一客户端/共享 session token，新的 Functions 实例不能据此保证立刻读到另一个实例提交的私人令牌撤销。账号、Feed 和索引读回使用 Strong，SDK 不降低一致性；这是为保留已有撤销语义所作的实现选择，仍采用 Serverless + Periodic。Strong 读取 RU 通常约为 Session 的两倍，早期费用示例必须按实测 RU 更新，不能把原请求数直接当 RU。更新后的模板已重新通过 Azure Provider validate。参见 [一致性保证](https://learn.microsoft.com/en-us/azure/cosmos-db/consistency-levels)、[一致性覆盖限制](https://learn.microsoft.com/en-us/azure/cosmos-db/how-to-manage-consistency)。
+
 ## 事务与分区设计
 
 以下是迁移实现合同，当前 SQL 代码不能视为已经满足 Cosmos 合同。
 
 | `state.pk` | 原子管理的内容 | 读写要求 |
 | --- | --- | --- |
-| `user:<Firebase UID>` | 个人配置/撤销标记、Feed 身份及发布指针、链接/屏蔽、命令回执、个人 outbox、授权记录 | 命令读取最新账号状态，用 ETag/CAS 同批提交配置、回执与 outbox；旧身份/旧回执不得恢复已删除用户 |
+| `user:<SHA256(Firebase UID)>` | 个人配置/撤销标记、Feed 身份及发布指针、链接/屏蔽、命令回执、个人 outbox、授权记录 | 命令读取最新账号状态，用 ETag/CAS 同批提交配置、回执与 outbox；旧身份/旧回执不得恢复已删除用户 |
 | `event:<稳定比赛ID>` | 单场公共比赛版本、来源映射引用、公共链接与变更 outbox | 改期保持同一 ID；发布新版本后通过可重放 outbox 更新索引与个人投影 |
 | `channel:<频道ID>` | 频道发现租约、视频元数据、通知去重、续订状态、相关 outbox | 租约令牌与 ETag 拒绝旧 worker；个人屏蔽仍由用户分区决定 |
 | `provider:<Provider>` | 已完成赛程批次指针、抓取租约/错误、批次发布意图 | 先完整暂存分页及清单，再提交批次指针；失败保留上次有效赛程 |
@@ -55,6 +57,21 @@ Cosmos transactional batch 仅覆盖同容器、同逻辑分区；大小/操作�
 4. 使用真实独立 Cosmos 验证并发冲突、429、执行崩溃恢复、RU、长 Feed、反向关注索引和删除；既有 SQLite/MySQL 测试作为回归，不能替代 Cosmos 证据。
 5. SQL→Cosmos 导入先 dry-run 清单，再校对逐项身份/数量/内容摘要和私人令牌保护。新环境通过完整验收后才切换；原本机数据保留为可恢复基线。
 6. 校验新目标资源/费用/HTTPS 来源、部署运行时、验证 Firebase/Timer/Queue/WebSub/平台日志，并实施 Periodic 恢复演练。设备日历和客户端直达独立记录。
+
+## 当前代码与明确边界
+
+| 模块 | 已落地内容 |
+| --- | --- |
+| `app/document_store.py` | Cosmos SDK 4.17.0、明确 MI/本地 CLI 身份、同分区批处理/ETag、有界分页、错误/RU 摘要；独立 SQLite 文档适配器仅供本地验证 |
+| `app/document_accounts.py` | 账号/Feed/首个任务同批创建，配置/回执/新任务同批提交，冲突拒绝，重复命令，令牌路由与轮换，领取/过期租约/完成条件 |
+| `app/document_feeds.py` | 不可变分块及完整摘要清单，账号/Feed/任务同时 CAS 后发布；相同内容保留公开版本、时间和 ETag，旧 worker/中断不能覆盖旧发布 |
+| `app/calendar_rules.py` | 从原 SQL 日历模块提取共用选择、历史保留、内容描述、ICS 序列化规则；原模块继续导出相同入口 |
+
+当前通过 33 项文档存储/配置测试，包括真实 Cosmos SDK 配合完全离线传输层的请求序列化与错误处理检查；250 个合成事件多块发布中断后保留旧 Feed，单独进程重读持久文件通过。全量回归曾通过 267 项/2 项条件 MySQL 跳过，随后补充 3 项边界用例并执行上述 33 项。OpenAPI 未变，**没有真实 Cosmos RU、数据面认证、恢复或 HTTP/Queue 纵向证据**。详情见 [本批证据](../evidence/document-foundation-2026-09-10.md)。
+
+`ANKE_SPORTS_STORAGE_BACKEND=sql|cosmos|documents-local` 必须明确区分。现有 `app.main` / `function_app.py` 尚未改为文档仓储组合；选择文档模式后导入 `app.db` 会明确失败，防止误用本地 SQL。不要通过关闭此保护来启动新模板。真实 Cosmos 只用独立托管身份；本机 CLI 需明确 tenant/subscription，且不得用于部署环境。接口、公共赛事完整快照/索引、Queue/Change Feed 投递、个人链接/创作者/删除/OAuth 等模块接入后再切换服务。
+
+第一批批处理上限 100 操作、按 SDK 转义后的 JSON 计 1,000,000 字节，单文档上限 512,000 字节；Feed 分块原文为 128,000 UTF-8 字节，含 emoji/转义膨胀验证。最大配置/回执的进一步分块、超大 Feed 流式读取、未发布/旧 generation 清理和资源恢复仍需实现与验收。部分写入只留下不可见块，当前不自动 GC，不能宣称存储占用已受长期控制。发布器要求调用方提供权威赛事与已筛选链接，尚未用它代替 Provider 完整批次协议。
 
 ## 后续升级容量
 

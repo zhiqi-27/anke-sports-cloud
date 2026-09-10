@@ -8,7 +8,6 @@ from urllib.parse import parse_qs, urlencode, urlsplit, urlunsplit
 from fastapi import HTTPException, Request
 
 from app.config import settings
-from app.db import Session, User
 
 
 def digest(value: str) -> str:
@@ -65,6 +64,8 @@ def firebase_app():
 
 
 def actor(request: Request, db, required=True) -> str | None:
+    from app.db import Session, User
+
     bearer = request.headers.get("Authorization", "")
     token = request.cookies.get("anke_sports_session", "")
     if bearer.startswith("Bearer as_at_"):
@@ -120,6 +121,8 @@ def actor(request: Request, db, required=True) -> str | None:
 
 
 def local_session(db) -> str:
+    from app.db import Session
+
     token = secrets.token_urlsafe(32)
     db.add(
         Session(

@@ -22,6 +22,7 @@ version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "alembic" },
+    { name = "azure-cosmos" },
     { name = "azure-functions" },
     { name = "azure-identity" },
     { name = "azure-storage-queue" },
@@ -47,6 +48,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "alembic", specifier = ">=1.15,<2" },
+    { name = "azure-cosmos", specifier = "==4.17.0" },
     { name = "azure-functions", specifier = ">=1.21,<2" },
     { name = "azure-identity", specifier = ">=1.25,<2" },
     { name = "azure-storage-queue", specifier = ">=12.12,<13" },
@@ -120,6 +122,19 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/a6/f3/b416179e408990df5db0d516283022dde0f5d0111d98c1a848e41853e81c/azure_core-1.41.0.tar.gz", hash = "sha256:f46ff5dfcd230f25cf1c19e8a34b8dc08a337b2503e268bb600a16c00db8ad5a", size = 381042, upload-time = "2026-05-07T23:30:54.302Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/5b/db/325c6d7312d2200251c52323878281045aaffcb5586612296484e4280eaa/azure_core-1.41.0-py3-none-any.whl", hash = "sha256:522b4011e8180b1a3dcd2024396a4e7fe9ac37fb8597db47163d230b5efe892d", size = 220920, upload-time = "2026-05-07T23:30:56.357Z" },
+]
+
+[[package]]
+name = "azure-cosmos"
+version = "4.17.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "azure-core" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/99/b7/bd10308e5999dd6972cfbd361cda3c3390c7dff538db9d4226055fc96a37/azure_cosmos-4.17.0.tar.gz", hash = "sha256:38559f209ce13d135c07b12652d72d352bac6b6d6b3007006ce8fc174c815b07", size = 2487427, upload-time = "2026-09-09T21:25:22.496Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/27/25/335e03563df6dcb89f3b914afe31d43b7b5100155c7fd09d3e6891d7897c/azure_cosmos-4.17.0-py3-none-any.whl", hash = "sha256:505ce6a196c43d712a0bd9e3222fd74a8b599fdcc1940752d06a28dd06bd10d2", size = 505543, upload-time = "2026-09-09T21:25:24.894Z" },
 ]
 
 [[package]]
