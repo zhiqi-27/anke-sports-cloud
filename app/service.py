@@ -1,4 +1,3 @@
-import json
 import secrets
 
 from sqlalchemy import func, select, update
@@ -196,57 +195,13 @@ def attach_link(db, user: User, event: Event, url: str, title: str, kind: str):
 
 
 def import_preview(db, user: User, data: ImportInput) -> tuple[dict, dict]:
-    incoming = data.config.model_dump()
-    config = incoming
-    if data.mode == "merge":
-        config = {
-            **user.config,
-            "preferences": {
-                **user.config["preferences"],
-                **data.config.preferences.model_dump(exclude_unset=True),
-            },
-        }
-        keys = {
-            "follows": lambda x: x["source_key"],
-            "creators": lambda x: x["channel_id"],
-            "event_overrides": lambda x: x["event_key"],
-            "link_overrides": lambda x: (x["event_key"], x["url"]),
-        }
-        for name, key in keys.items():
-            merged = {key(x): x for x in user.config.get(name, [])}
-            merged.update({key(x): x for x in incoming[name]})
-            config[name] = list(merged.values())
-    unresolved = []
-    for follow in config["follows"]:
-        if not db.get(Source, follow["source_key"]) and not db.scalar(
-            select(Event.id).where(Event.source_key == follow["source_key"])
-        ):
-            unresolved.append(follow["source_key"])
-    for creator in config["creators"]:
-        if not db.get(Creator, creator["channel_id"]):
-            unresolved.append(creator["channel_id"])
-    for item in config["event_overrides"] + config["link_overrides"]:
-        if not db.scalar(select(Event.id).where(Event.source_key == item["event_key"])):
-            unresolved.append(item["event_key"])
-    for item in config["link_overrides"]:
-        item["url"], _ = canonical_url(item["url"])
-    summary = {
-        "added": sum(
-            x not in user.config.get(k, [])
-            for k in ("follows", "creators", "event_overrides", "link_overrides")
-            for x in config[k]
-        ),
-        "removed": sum(
-            x not in config[k]
-            for k in ("follows", "creators", "event_overrides", "link_overrides")
-            for x in user.config.get(k, [])
-        ),
-        "unresolved": sorted(set(unresolved)),
-        "revision": user.revision,
-    }
-    signature = digest(
-        json.dumps({"user_id": user.id, "revision": user.revision, "config": config}, sort_keys=True)
+    from app.config_rules import import_configuration
+
+    return import_configuration(
+        user,
+        data,
+        settings().cipher(),
+        source_exists=lambda key: db.get(Source, key) is not None,
+        event_exists=lambda key: db.scalar(select(Event.id).where(Event.source_key == key)) is not None,
+        creator_exists=lambda key: db.get(Creator, key) is not None,
     )
-    # Encrypted, authenticated confirmation binds the exact preview to actor and revision.
-    summary["confirmation"] = settings().cipher().encrypt(signature.encode()).decode()
-    return config, summary

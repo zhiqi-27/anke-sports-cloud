@@ -17,12 +17,17 @@ from app.document_runtime import Runtime
 from app.document_store import Conflict, StoreError, Write, open_document_store
 from app.feed_delivery import calendar_response
 from app.schemas import (
+    AddLink,
     CalendarUserView,
     Config,
     EventList,
     EventView,
     FeedAction,
     FollowPreviewView,
+    ImportInput,
+    ImportPreviewView,
+    LinkAddedView,
+    OverrideInput,
     SaveFollows,
     SavePreferences,
     ServiceStatusView,
@@ -229,6 +234,30 @@ def create_app(store=None, cfg=None):
             problem("EVENT_NOT_FOUND", "未找到这场比赛", 404)
         return rt.event_view(event, user)
 
+    @app.post("/api/v1/events/{event_id}/links", response_model=LinkAddedView)
+    def add_link(
+        event_id: str,
+        data: AddLink,
+        idempotency_key: str | None = Header(None),
+        user=Depends(me),
+        rt=Depends(runtime),
+    ):
+        return rt.content.attach(user["user_id"], event_id, data, idempotency_key)
+
+    @app.post("/api/v1/me/links/{link_id}/block")
+    def block_link(
+        link_id: str, idempotency_key: str | None = Header(None), user=Depends(me), rt=Depends(runtime)
+    ):
+        return rt.content.override_link(user["user_id"], link_id, "block", idempotency_key)
+
+    @app.post("/api/v1/me/links/{link_id}/pin")
+    def pin_link(link_id: str, user=Depends(me), rt=Depends(runtime)):
+        return rt.content.override_link(user["user_id"], link_id, "pin")
+
+    @app.put("/api/v1/events/{event_id}/selection", response_model=EventView)
+    def selection(event_id: str, data: OverrideInput, user=Depends(me), rt=Depends(runtime)):
+        return rt.content.selection(user["user_id"], event_id, data)
+
     @app.get("/api/v1/me/calendar", response_model=CalendarUserView)
     def calendar(user=Depends(me), rt=Depends(runtime)):
         return rt.user_view(user)
@@ -251,6 +280,12 @@ def create_app(store=None, cfg=None):
             data.expected_revision,
         )
         return rt.user_view(result)
+
+    @app.post("/api/v1/me/config/import", response_model=ImportPreviewView)
+    def import_config(
+        data: ImportInput, idempotency_key: str | None = Header(None), user=Depends(me), rt=Depends(runtime)
+    ):
+        return rt.content.import_config(user["user_id"], data, idempotency_key)
 
     @app.get("/api/v1/me/config/export", response_model=Config)
     def export(user=Depends(me)):

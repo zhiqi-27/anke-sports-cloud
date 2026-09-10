@@ -6,11 +6,18 @@ from sqlalchemy import and_, false, func, or_, select, update
 
 from app.db import BroadcastRecord, Event, Feed, Link, Projection, User, now
 from app.schemas import Config
+from app.link_rules import selected_links
 from app.security import digest
 from app.calendar_rules import (
-    select_candidates, projection_from_links,
-    event_keys as event_keys, inclusion_filter as inclusion_filter, included as included,
-    delivery_links as delivery_links, describe as describe, serialize as serialize, event_is_past as event_is_past,
+    select_candidates,
+    projection_from_links,
+    event_keys as event_keys,
+    inclusion_filter as inclusion_filter,
+    included as included,
+    delivery_links as delivery_links,
+    describe as describe,
+    serialize as serialize,
+    event_is_past as event_is_past,
 )
 
 
@@ -51,67 +58,21 @@ def chosen_links(db, event: Event, user: User | None, *, rows=None, broadcasts=N
             select(Link).where(Link.event_id == event.id, Link.owner_id.in_(owners), Link.available.is_(True))
         ).all()
     )
-    overrides = {
-        x["url"]: x["state"] for x in config.get("link_overrides", []) if x["event_key"] == event.source_key
-    }
-    creators = {x["channel_id"]: x for x in config.get("creators", [])}
-    result = []
-    for link in links:
-        broadcast = None
-        if link.owner_id == "public":
-            record = broadcasts.get(link.id) if broadcasts is not None else db.get(BroadcastRecord, link.id)
-            if not record or record.status != "published" or not record.published:
-                continue
-            # Only the reviewed publication is authoritative, never an edited draft.
-            if record.published["url"] != link.url:
-                continue
-            region = config.get("preferences", {}).get("watch_region")
-            if (
-                region
-                and record.published["region_mode"] == "exclude"
-                and region in record.published["regions"]
-            ):
-                continue
-            from app.broadcasts import public_metadata
 
-            broadcast = public_metadata(record)
-        state = overrides.get(link.url)
-        if state == "block":
-            continue
-        if link.origin == "automatic" and state != "pin":
-            creator = creators.get(link.channel_id)
-            if not creator or not creator.get(link.kind, False):
-                continue
-            if creator["scope_keys"] and not event_keys(event).intersection(creator["scope_keys"]):
-                continue
+    def published_info(link):
+        record = broadcasts.get(link.id) if broadcasts is not None else db.get(BroadcastRecord, link.id)
+        if not record or record.status != "published" or not record.published:
+            return None
+        if record.published["url"] != link.url:
+            return None
         region = config.get("preferences", {}).get("watch_region")
-        if region and link.regions and region not in link.regions:
-            continue
-        result.append(
-            {
-                "id": link.id,
-                "broadcast": broadcast,
-                "url": link.url,
-                "title": link.title,
-                "kind": link.kind,
-                "platform": link.platform,
-                "creator": link.creator,
-                "origin": link.origin,
-                "access": link.access,
-                "regions": link.regions,
-                "pinned": state == "pin",
-                "created_at": link.created_at,
-            }
-        )
-    result.sort(
-        key=lambda x: (not x["pinned"], x["origin"] != "official", x["creator"], x["created_at"], x["id"])
-    )
-    unique, seen_urls = [], set()
-    for item in result:
-        if item["url"] not in seen_urls:
-            unique.append(item)
-            seen_urls.add(item["url"])
-    return unique
+        if region and record.published["region_mode"] == "exclude" and region in record.published["regions"]:
+            return None
+        from app.broadcasts import public_metadata
+
+        return public_metadata(record)
+
+    return selected_links(event, config, links, published_info, user.id if user else None)
 
 
 def event_view(db, event: Event, user: User | None = None, *, link_rows=None, broadcasts=None) -> dict:

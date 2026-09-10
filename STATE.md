@@ -1,6 +1,6 @@
 # Anke Sports 服务端状态
 
-当前摘要：2026-09-10，文档日历 HTTP、完整 Provider 快照、Change Feed/Queue 投递和独立 worker 已接入；浏览器保存关注，实际 HTTP 读回12条演示 ICS、稳定 UID/304。最终277 passed/2 skipped，Ruff及完整OpenAPI比较通过。新预览 localhost:3006/calendar（session67857/API PID83337、worker PID83338），IAB标签28已保留；原主预览/Firebase服务未重启。Serverless + Periodic及未来原地Provisioned→Autoscale方案保持。真实Cosmos/Azure未调用、资源未创建，内容/公共Feed/OAuth/删除等尚未迁移。以下历史批次保留当时状态。
+当前摘要：2026-09-10，开发、生产云目标均为 Cosmos NoSQL Serverless + Periodic，Azure资源未创建。文档模式新增个人链接/屏蔽/固定、单场选择、导入预览/确认及大配置/回执分块。完整288 passed/2 skipped/2既有警告，Ruff及完整OpenAPI一致。独立浏览器与HTTP/worker验证同UID、屏蔽后SEQUENCE2→3及重新附加仍屏蔽。最新预览 localhost:3007/calendar?event=document-demo-03（session70275/API PID91533、worker PID91534），IAB标签29保留；旧3006、主SQL及Firebase实例未重启。创作者/直播/公共Feed/OAuth/删除等文档路径、真实云与设备仍待验收；无push或部署。以下历史批次保留当时状态。
 
 更新：2026-09-10。主 API 127.0.0.1:8787，session43380/PID44497；worker session62679/PID44496；显式启用本地体验并关闭访问日志。显式本地SQLite/体验身份。主库163条比赛（48演示+115 Jolpica F1分场次），无合成频道/视频或公共直播记录。
 
@@ -296,3 +296,14 @@ experiments.youtube_live 只复制原库115条公共 Jolpica缓存事件到临�
 浏览器在localhost:3006/following进入本地体验，选择演示联赛→预览12条（含2条历史）→确认保存，月历读回12场已加入。HTTP独立读回同一临时体验账号revision1、Feed revision2/published/12条唯一UID、304与HEAD通过；脚本自己的临时会话退出，浏览器会话保留，console error为空。API/HTML proxy session67857/PID83337，独立worker PID83338，IAB标签28保留日历。数据全合成；停止实验清理临时库。首次3005端口被既有node占用，本次失败启动已清理后改用3006，没有停止原服务。
 
 主API/worker及Firebase/YouTube凭据配置未改，未重启已有实例。没有真实Firebase/Cosmos/Azure/上游调用、云资源创建、部署、push或主数据迁移。普通本地文档worker尚未自动执行每日窗口；Azure已注册每日窗口但未实测。每次catalog变化按页扫描owner目录，反向关注索引、旧任务/孤立块GC、大配置分块、SQL迁移以及内容/直播/公共Feed/OAuth/删除等仍待完成。此批不是整产品或完整存储迁移完成。
+
+
+## 2026-09-10 · 开发/生产容量一致与个人链接存储
+
+用户进一步确认开发、生产均采用Serverless + Periodic；不会因为部署生产就预先改用Provisioned或Autoscale。根/后端AGENTS、存储设计与成本方案已明确。Anke Money生产状态以用户说明为准，本批没有读取或修改其资源。Anke Sports Azure资源仍未创建，后续容量升级保持独立评估。
+
+文档模式完成个人附链/屏蔽/固定、单场加入/排除/重置与配置导入预览/确认，SQL与文档模式共用链接选择和导入规则。配置、链接、任务和精确回执同个人分区原子提交；大配置/回执先准备不可变块和摘要，再原子切换引用。2,000条长链接配置、UTF-8/转义、分块失败及提交失败重试、坏块与删除后的回执、跨用户隔离、并发屏蔽拒绝旧发布者均通过。初轮发现文档kind参数冲突已修复；最终288项pytest通过、2项MySQL条件跳过、2条既有弃用警告（15.51秒），Ruff、完整OpenAPI/config schema和diff检查通过。客户端只有README/STATE变化，无源码、合同或依赖变化，没有重复构建。
+
+新独立预览localhost:3007，API/HTML代理session70275/PID91533、worker PID91534，IAB标签29已保留。浏览器登录本地体验，单场加入document-demo-03，附加明确标注的合成URL、移除、再附加仍屏蔽，描述预览与渲染检查通过，console error为空。独立HTTP读取同一体验账号：revision2/SEQUENCE2/一条已发布事件，屏蔽后revision3/SEQUENCE3/同UID且URL消失；304和HEAD通过，脚本会话已退出，浏览器会话保留。未访问演示URL，不代表真实视频、比赛匹配或可播放性。实验停止即清理临时库。旧3006进程PID83337/83338在开头读回存活，原主/Firebase/YouTube配置未改、未重启，本批没有逐项复验其他常驻实例。
+
+证据：anke-sports-cloud/evidence/document-content-2026-09-10.md及JSON；范围：docs/document-runtime.md。主服务仍SQL；内容未完整迁移，创作者/YouTube/直播/公共Feed/OAuth/MCP/删除/Google直连继续。GC、反向索引、真实Cosmos/RU/429/分区/权限、Azure Queue/Timer、Periodic恢复、SQL迁移、设备验收均未完成。普通文档worker的每日窗口调度仍待接入。T12/T18/T22/T30保持in_progress，不以本地接口通过认定外部验收完成。未push、部署或迁移主数据，完整产品目标继续。

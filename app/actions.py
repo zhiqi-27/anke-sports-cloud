@@ -209,16 +209,9 @@ def import_config(db, user, data):
         problem("REVISION_CONFLICT", "配置已更新，请重新预览", 409)
     config, preview = import_preview(db, user, data)
     if not data.dry_run:
-        try:
-            valid = settings().cipher().decrypt(
-                (data.confirmation or "").encode()
-            ) == settings().cipher().decrypt(preview["confirmation"].encode())
-        except Exception:
-            valid = False
-        if not valid:
-            problem("PREVIEW_REQUIRED", "请先预览并确认本次导入")
-        if preview["unresolved"]:
-            problem("UNRESOLVED_CONFIG", "存在无法解析的对象，请修正后导入")
+        from app.config_rules import confirm_import
+
+        confirm_import(data, preview, settings().cipher())
         save_config(db, user, config, data.expected_revision)
     return {**preview, "applied": not data.dry_run}
 

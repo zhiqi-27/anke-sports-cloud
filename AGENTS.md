@@ -10,4 +10,4 @@ Use the parent workspace agreement when present. This repository owns Firebase a
 - Inspect this repository's Git and checks independently. Do not deploy or migrate an inferred cloud target. Missing external credentials means unverified integration, not a reason to fake success.
 - Keep commands in `README.md`, current state in `STATE.md`, architecture decisions in `docs/`, and sanitized acceptance results in `evidence/`.
 
-- Capacity growth: keep Periodic backups; evaluate measured load and cost before the irreversible in-place Serverless → manual Provisioned conversion, then adjust Autoscale. Update IaC to the resulting capacity mode; do not reapply the initial Serverless template after conversion.
+- Both development and production start with Serverless + Periodic. Production does not imply Provisioned or Autoscale. Capacity growth: keep Periodic backups; evaluate measured load and cost before the irreversible in-place Serverless → manual Provisioned conversion, then adjust Autoscale. Update IaC to the resulting capacity mode; do not reapply the initial Serverless template after conversion.

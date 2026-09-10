@@ -1,0 +1,87 @@
+{
+  "recorded_at": "2026-09-10T04:07:54.039182+00:00",
+  "environment": "isolated local document adapter; synthetic schedules and URLs",
+  "capacity_decision": {
+    "development": "Serverless + Periodic",
+    "production": "Serverless + Periodic",
+    "azure_resources_created": false
+  },
+  "validation": {
+    "pytest_passed": 288,
+    "pytest_skipped": 2,
+    "pytest_warnings": 2,
+    "pytest_seconds": 15.51,
+    "new_content_tests": 11,
+    "ruff_passed": true,
+    "full_openapi_unchanged": true,
+    "config_schema_unchanged": true,
+    "maximum_link_overrides_tested": 2000
+  },
+  "browser": {
+    "tab": "29",
+    "url": "http://localhost:3007/calendar?event=document-demo-03",
+    "actions": [
+      "local_login",
+      "include_single_event",
+      "attach_synthetic_url",
+      "block_link",
+      "reattach_stays_blocked",
+      "inspect_description"
+    ],
+    "console_errors": [],
+    "screenshot_inspected": true
+  },
+  "http": {
+    "before": {
+      "user_revision": 2,
+      "feed_status": "published",
+      "event_count": 1,
+      "uid": "e05c2b6bd96a507274887c549467c3bd@calendar.anke-sports",
+      "sequence": 2,
+      "manual_url_present": true,
+      "conditional_304": true,
+      "head_status": 200
+    },
+    "after": {
+      "user_revision": 3,
+      "feed_status": "published",
+      "event_count": 1,
+      "same_uid": true,
+      "sequence": 3,
+      "manual_url_absent": true,
+      "block_retained": true,
+      "conditional_304": true
+    }
+  },
+  "processes": {
+    "session": 70275,
+    "api_pid": 91533,
+    "worker_pid": 91534,
+    "port": 3007
+  },
+  "source_sha256": {
+    "app/actions.py": "1270047531944280ee5b316ab87fa2ddd2a55fb6c20426c963507e1801ad504d",
+    "app/calendar.py": "6cfcfff14ffe2250205aa5c6ede913051f8c9ce7111e4147a2e8d2758c0b1b14",
+    "app/service.py": "82647818c3c34ca81472f1b7e9c5bb7832420802b84c470f8cb302a7057ee589",
+    "app/document_accounts.py": "a0e865129e3950a9021e5a71e752ca6114f473731b6b8d3ff9e0f9492682196f",
+    "app/document_content.py": "2b65276d9567054e42e2e9fa503c64b6ea16341dcf5bc61841237364f336d865",
+    "app/document_values.py": "8a140a0240dbae606c6cfeb30b46f057aad7b71e7733ee74facae854bb78dbee",
+    "app/config_rules.py": "904f0a0268cd0cfbc53491b3611275783d609ba1019f16bd9fa4b0c7dfc4d02a",
+    "app/link_rules.py": "9dfa6c74f3b53c187284f6a23fc0463dd45b152ce27e528ed936b14bdafb4543",
+    "app/document_api.py": "3fe05dd1b4306f610730ad5cce899c661c02450959fe21d93e76545833ff8a5e",
+    "app/document_runtime.py": "d2fb237507ec89e05195bce937d13aa29d0bd2689bd57fea70870259e8175a79",
+    "app/document_feeds.py": "6260314ff4ee027a514e64b12bfbb4ced54c00ede9d443658943e36f22dfca72",
+    "experiments/document_ui.py": "25548afc86ac5e8bcd7640b1b589374d7222ec91ccd9ac4a612e47a6735872b1",
+    "tests/test_document_content.py": "09d6feec9d0c05bdd89c262793148fe5e8467c9a9cc577a9235e1be63fd8b168"
+  },
+  "not_verified": [
+    "real Cosmos transactions or RU",
+    "Azure Queue/Timer",
+    "Firebase with Cosmos",
+    "YouTube content identity or playback",
+    "device calendar",
+    "SQL migration",
+    "Periodic restore"
+  ],
+  "no_push_or_deploy": true
+}

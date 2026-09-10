@@ -1,6 +1,6 @@
 # Cosmos 存储与开发环境
 
-2026-09-10 用户决定：Anke Sports 使用 **Cosmos DB for NoSQL Serverless + Periodic**。后续负载增长时，原地转手动 Provisioned，完成后调整为 Autoscale。Firebase 继续负责身份，FastAPI/Azure Functions 负责业务，Web/扩展/MCP 不直连数据库。
+2026-09-10 用户决定：Anke Sports 的**开发、生产环境都使用 Cosmos DB for NoSQL Serverless + Periodic**，不会因部署到生产就默认改为 Provisioned 或 Autoscale。后续负载增长时，原地转手动 Provisioned，完成后调整为 Autoscale。Firebase 继续负责身份，FastAPI/Azure Functions Flex Consumption 负责业务，Web/扩展/MCP 不直连数据库。当前 Azure 资源尚未创建；此处是环境目标，不是生产部署记录。
 
 部署模板已替换为该目标；原 MySQL 模板保存在 `infra/legacy-mysql/`，停止推进。文档存储、完整赛程快照、日历 HTTP、租约与 Change Feed/Queue 投递已接入，见 [当前运行范围](document-runtime.md)。**完整 Cosmos 迁移未完成；当前接口子集不能作为公测部署包。** 现有本机预览、Firebase 验收库和已通过的 SQL 测试保持各自证据。
 
@@ -60,6 +60,8 @@ Cosmos transactional batch 仅覆盖同容器、同逻辑分区；大小/操作�
 
 ## 当前代码与明确边界
 
+当前新增：个人链接/屏蔽/固定、单场选择、配置导入和大配置/回执分块；288项回归及独立UI/HTTP检查通过，见 [最新证据](../evidence/document-content-2026-09-10.md)。下文保留前两批的证据范围。
+
 最新批次：新增 document_catalog、document_runtime、document_api、document_worker；app.main/function_app 按存储类型组合，原 SQL 入口移至 sql_app。277项回归通过，独立进程和浏览器/HTTP确认12条演示事件已发布。内容、公共 Feed、OAuth/MCP、删除等尚未迁移，真实云与设备未验收。[说明](document-runtime.md) / [证据](../evidence/document-runtime-2026-09-10.md)。以下首批仓储证据保留。
 
 | 模块 | 已落地内容 |
@@ -73,7 +75,7 @@ Cosmos transactional batch 仅覆盖同容器、同逻辑分区；大小/操作�
 
 `ANKE_SPORTS_STORAGE_BACKEND=sql|cosmos|documents-local` 必须明确区分。`app.main` / `function_app.py` 已接入文档日历组合；选择文档模式后导入 `app.db` 仍会明确失败，防止误用本地 SQL。完整产品切换须等剩余模块和云验收完成。真实 Cosmos 只用独立托管身份；本机 CLI 需明确 tenant/subscription，且不得用于部署环境。个人链接/创作者/删除/OAuth 等剩余模块接入并验收后再切换主服务。
 
-第一批批处理上限 100 操作、按 SDK 转义后的 JSON 计 1,000,000 字节，单文档上限 512,000 字节；Feed 分块原文为 128,000 UTF-8 字节，含 emoji/转义膨胀验证。最大配置/回执的进一步分块、超大 Feed 流式读取、未发布/旧 generation 清理和资源恢复仍需实现与验收。部分写入只留下不可见块，当前不自动 GC，不能宣称存储占用已受长期控制。发布器要求调用方提供权威赛事与已筛选链接，尚未用它代替 Provider 完整批次协议。
+第一批批处理上限 100 操作、按 SDK 转义后的 JSON 计 1,000,000 字节，单文档上限 512,000 字节；Feed 分块原文为 128,000 UTF-8 字节，含 emoji/转义膨胀验证。最大配置/回执分块已由最新批次本地验证；超大 Feed 流式读取、未发布/旧 generation 清理和资源恢复仍需实现与验收。部分写入只留下不可见块，当前不自动 GC，不能宣称存储占用已受长期控制。发布器要求调用方提供权威赛事与已筛选链接，尚未用它代替 Provider 完整批次协议。
 
 ## 后续升级容量
 

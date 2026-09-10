@@ -1,14 +1,18 @@
 """Authoritative account commands and leased outbox, each atomic in one partition."""
 
 from copy import deepcopy
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 import re
 import secrets
 import time
 from uuid import uuid4
 
+from pydantic import ValidationError
+
 from app.document_store import Conflict, StoreError, Write, clean, encode
 from app.schemas import Config
+from app.document_values import Values
 from app.security import digest, problem
 
 
@@ -40,15 +44,31 @@ def projection_job(pk, revision):
     return {**job, "state": "pending", "due_at": now()}
 
 
+@dataclass
+class Change:
+    payload: dict
+    result: dict
+    writes: list[Write] = field(default_factory=list)
+
+
 class Accounts:
     def __init__(self, store, cipher):
         self.store, self.cipher = store, cipher
+        self.values = Values(store)
 
     def active(self, user_id):
         row = self.store.get("state", owner_partition(user_id), "account")
         if not row or row["payload"]["deleted"]:
             problem("ACCOUNT_DELETED", "账号已删除", 403)
+        if "config_ref" in row["payload"]:
+            raw = clean(row)
+            payload = {key: value for key, value in row["payload"].items() if key != "config_ref"}
+            payload["config"] = self.values.unpack(row["pk"], "config", row["payload"])
+            row = {**row, "payload": payload, "_raw": raw}
         return row
+
+    def guard(self, row):
+        return Write("replace", "account", row.get("_raw", clean(row)), row["_etag"])
 
     def ensure(self, user_id):
         pk = owner_partition(user_id)
@@ -96,48 +116,48 @@ class Accounts:
             return self.active(user_id)
         return self.active(user_id)
 
-    def save_config(
-        self,
-        user_id,
-        config,
-        revision,
-        *,
-        key=None,
-        operation="set_config",
-        payload=None,
-        prepare=None,
-        response=None,
-    ):
-        current = self.active(user_id)  # Always before a cached command response.
+    def command(self, user_id, operation, payload, perform, *, key=None):
+        current = self.active(user_id)  # Identity/deletion precedes receipt replay.
         pk, previous = current["pk"], current["payload"]
-        receipt_id, receipt, fingerprint = None, None, None
+        receipt_id, receipt = None, None
+        fingerprint = digest(encode(payload))
+
+        def cached(row):
+            if not row or row["payload"]["expires_at"] <= time.time():
+                return None
+            value = row["payload"]
+            if value["operation"] != operation or value["fingerprint"] != fingerprint:
+                problem("IDEMPOTENCY_CONFLICT", "此幂等键已用于不同操作", 409)
+            return self.values.unpack(pk, "result", value)
+
         if key is not None:
             if not re.fullmatch(r"[A-Za-z0-9._:-]{8,128}", key):
                 problem("INVALID_IDEMPOTENCY_KEY", "幂等键需要 8 至 128 个字母、数字或 ._:-")
             receipt_id = "receipt:" + digest(key)
-            fingerprint = digest(
-                encode(payload if payload is not None else {"config": config, "revision": revision})
-            )
             receipt = self.store.get("state", pk, receipt_id)
-            if receipt and receipt["payload"]["expires_at"] > time.time():
-                value = receipt["payload"]
-                if value["operation"] != operation or value["fingerprint"] != fingerprint:
-                    problem("IDEMPOTENCY_CONFLICT", "此幂等键已用于不同操作", 409)
-                return value["result"]
-        if previous["revision"] != revision:
-            problem("REVISION_CONFLICT", "配置已在其他页面更新，请刷新后重试", 409)
-        # Receipt replay precedes potentially stale preview/source validation.
-        if prepare:
-            config = prepare(deepcopy(previous))
-        updated = clean(current)
-        updated["payload"] = {
-            **previous,
-            "config": Config.model_validate(config).model_dump(),
-            "revision": revision + 1,
-        }
-        result = response(deepcopy(updated["payload"])) if response else deepcopy(updated["payload"])
-        job = projection_job(pk, revision + 1)
-        writes = [Write("replace", "account", updated, current["_etag"]), Write("create", job["id"], job)]
+            result = cached(receipt)
+            if result is not None:
+                return result
+        change = perform(deepcopy(previous))
+        updated = deepcopy(change.payload)
+        if (
+            updated["user_id"] != user_id
+            or updated["deleted"]
+            or updated["revision"] not in {previous["revision"], previous["revision"] + 1}
+        ):
+            raise StoreError("ACCOUNT_MUTATION_INVALID")
+        try:
+            config = Config.model_validate(updated.pop("config")).model_dump()
+        except ValidationError:
+            problem("CONFIG_LIMIT_EXCEEDED", "配置超过支持的数量上限，请减少内容后重试")
+        updated.update(self.values.pack(pk, "config", config))
+        account = document(pk, "account", "account", **updated)
+        job = projection_job(pk, change.payload["revision"])
+        writes = [
+            Write("replace", "account", account, current["_etag"]),
+            Write("create", job["id"], job),
+            *change.writes,
+        ]
         if receipt_id:
             saved = document(
                 pk,
@@ -145,8 +165,8 @@ class Accounts:
                 "receipt",
                 operation=operation,
                 fingerprint=fingerprint,
-                result=result,
                 expires_at=int(time.time()) + 86400,
+                **self.values.pack(pk, "result", change.result),
             )
             writes.append(
                 Write(
@@ -159,17 +179,49 @@ class Accounts:
         try:
             self.store.batch("state", pk, writes)
         except Conflict:
-            # A response may have been lost after another identical request committed.
-            # Re-enter receipt lookup, but never silently rebase a configuration command.
-            fresh = self.active(user_id)
-            if key and fresh["payload"]["revision"] != revision:
-                prior = self.store.get("state", pk, receipt_id)
-                if prior and prior["payload"]["expires_at"] > time.time():
-                    value = prior["payload"]
-                    if value["operation"] == operation and value["fingerprint"] == fingerprint:
-                        return value["result"]
+            self.active(user_id)
+            if receipt_id:
+                result = cached(self.store.get("state", pk, receipt_id))
+                if result is not None:
+                    return result
             problem("REVISION_CONFLICT", "配置已在其他页面更新，请刷新后重试", 409)
-        return result
+        return change.result
+
+    def save_config(
+        self,
+        user_id,
+        config,
+        revision,
+        *,
+        key=None,
+        operation="set_config",
+        payload=None,
+        prepare=None,
+        response=None,
+    ):
+        def perform(previous):
+            if previous["revision"] != revision:
+                problem("REVISION_CONFLICT", "配置已在其他页面更新，请刷新后重试", 409)
+            prepared = prepare(deepcopy(previous)) if prepare else config
+            try:
+                prepared = Config.model_validate(prepared).model_dump()
+            except ValidationError:
+                problem("CONFIG_LIMIT_EXCEEDED", "配置超过支持的数量上限，请减少内容后重试")
+            updated = {
+                **previous,
+                "config": prepared,
+                "revision": revision + 1,
+            }
+            result = response(deepcopy(updated)) if response else deepcopy(updated)
+            return Change(updated, result)
+
+        return self.command(
+            user_id,
+            operation,
+            payload if payload is not None else {"config": config, "revision": revision},
+            perform,
+            key=key,
+        )
 
     def address(self, user_id):
         self.active(user_id)
@@ -204,7 +256,7 @@ class Accounts:
             "state",
             account["pk"],
             [
-                Write("replace", "account", clean(account), account["_etag"]),
+                self.guard(account),
                 Write("replace", "feed", new, old["_etag"]),
             ],
         )
@@ -216,7 +268,7 @@ class Accounts:
         new = clean(old)
         new["payload"] = {**old["payload"], "paused": paused}
         writes = [
-            Write("replace", "account", clean(account), account["_etag"]),
+            self.guard(account),
             Write("replace", "feed", new, old["_etag"]),
         ]
         if not paused:

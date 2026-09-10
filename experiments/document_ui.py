@@ -18,6 +18,9 @@ from cryptography.fernet import Fernet
 if os.getenv("WEBSITE_INSTANCE_ID") or os.getenv("ANKE_SPORTS_ENV", "local") != "local":
     raise RuntimeError("LOCAL_EXPERIMENT_ONLY")
 
+preview_port = int(os.environ.get("ANKE_DOCUMENT_UI_PORT", "3006"))
+if not 1024 <= preview_port <= 65535:
+    raise RuntimeError("LOCAL_PREVIEW_PORT_INVALID")
 storage = tempfile.TemporaryDirectory(prefix="anke-document-ui-")
 os.environ.update(
     {
@@ -25,8 +28,8 @@ os.environ.update(
         "ANKE_SPORTS_STORAGE_BACKEND": "documents-local",
         "ANKE_SPORTS_DOCUMENT_LOCAL_PATH": storage.name + "/documents.db",
         "ANKE_SPORTS_LOCAL_PREVIEW": "true",
-        "ANKE_SPORTS_WEB_URL": "http://localhost:3006",
-        "ANKE_SPORTS_PUBLIC_URL": "http://localhost:3006",
+        "ANKE_SPORTS_WEB_URL": f"http://localhost:{preview_port}",
+        "ANKE_SPORTS_PUBLIC_URL": f"http://localhost:{preview_port}",
         "ANKE_SPORTS_FIREBASE_PROJECT_ID": "",
         "ANKE_SPORTS_ENCRYPTION_KEY": Fernet.generate_key().decode(),
     }
@@ -93,7 +96,10 @@ original_lifespan = app.router.lifespan_context
 async def lifespan(application):
     with open(storage.name + "/worker.log", "wb") as log:
         worker = subprocess.Popen([sys.executable, "-m", "app.document_worker"], stdout=log, stderr=log)
-        print(f"Document preview :3006; isolated worker pid={worker.pid}; synthetic events=12", flush=True)
+        print(
+            f"Document preview :{preview_port}; isolated worker pid={worker.pid}; synthetic events=12",
+            flush=True,
+        )
         try:
             async with original_lifespan(application):
                 yield
@@ -129,4 +135,4 @@ async def desktop(path: str, request: Request):
 app.router.routes.insert(-1, app.router.routes.pop())
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=3006, access_log=False)
+    uvicorn.run(app, host="127.0.0.1", port=preview_port, access_log=False)

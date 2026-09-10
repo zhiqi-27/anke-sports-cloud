@@ -20,19 +20,18 @@ def user_value(payload):
 
 class Runtime:
     def __init__(self, store, cfg):
+        from app.document_content import Content
+
         self.store, self.cfg = store, cfg
         self.accounts = Accounts(store, cfg.cipher())
         self.catalog = Catalog(store)
         self.publisher = FeedPublisher(store, cfg.cipher())
+        self.content = Content(self)
 
     def calendar_supported(self, payload):
         # Never silently publish an imported configuration with missing content.
         config = payload["config"]
-        if (
-            config["creators"]
-            or config["link_overrides"]
-            or next(partition_items(self.store, "state", owner_partition(payload["user_id"]), "link"), None)
-        ):
+        if config["creators"]:
             raise StoreError("DOCUMENT_CONTENT_MIGRATION_REQUIRED")
 
     def activity(self, pk):
@@ -77,16 +76,17 @@ class Runtime:
             },
         }
 
-    def event_view(self, event, payload=None):
+    def event_view(self, event, payload=None, *, link_rows=None):
         if payload:
             self.calendar_supported(payload)
         config = payload["config"] if payload else Config().model_dump()
         selected = included(event, config) if payload else False
+        links = self.content.selected(event, payload, rows=link_rows)
         return {
             **vars(event),
             "included": selected,
-            "links": [],
-            "description": describe(event, [], config),
+            "links": links,
+            "description": describe(event, links, config),
             "description_in_feed": selected,
         }
 
@@ -108,8 +108,9 @@ class Runtime:
             limit,
             cursor,
         )
+        link_rows = self.content.rows(payload["user_id"]) if payload else []
         result = {
-            "items": [self.event_view(row, payload) for row in page],
+            "items": [self.event_view(row, payload, link_rows=link_rows) for row in page],
             "next_cursor": next_cursor,
             "coverage": {
                 "dataset": dataset,
@@ -181,6 +182,7 @@ class Runtime:
         account = self.store.get("state", claim["pk"], "account")
         if not account or account["payload"]["deleted"]:
             raise StoreError("ACCOUNT_DELETED")
+        account = self.accounts.active(account["payload"]["user_id"])
         self.calendar_supported(account["payload"])
         snapshot = self.catalog.capture()
         # Narrow to the publication window; undated rows cannot enter an ICS.
@@ -195,11 +197,13 @@ class Runtime:
             snapshot.assert_current()
             self.calendar_supported(self.accounts.active(account["payload"]["user_id"])["payload"])
 
+        link_rows = self.content.rows(account["payload"]["user_id"])
         return self.publisher.publish(
             account["payload"]["user_id"],
             claim,
             list(snapshot.events(months=months)),
-            lambda _: [],
+            lambda event: self.content.selected(event, account["payload"], rows=link_rows),
             instant=instant,
             validate_snapshot=validate,
+            expected_account_etag=account["_etag"],
         )

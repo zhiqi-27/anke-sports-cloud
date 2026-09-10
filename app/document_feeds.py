@@ -84,7 +84,17 @@ class FeedPublisher:
         self.store, self.accounts = store, Accounts(store, cipher)
         self.generations, self.outbox = FeedGenerations(store), Outbox(store)
 
-    def publish(self, user_id, claim, events, links_for_event, *, instant=None, validate_snapshot=None):
+    def publish(
+        self,
+        user_id,
+        claim,
+        events,
+        links_for_event,
+        *,
+        instant=None,
+        validate_snapshot=None,
+        expected_account_etag=None,
+    ):
         """events/links come from authoritative repositories, never from an HTTP body.
 
         Require an explicit link resolver so migration cannot silently drop links.
@@ -95,6 +105,8 @@ class FeedPublisher:
         if claim["pk"] != pk or claim["payload"]["operation"] != "projection":
             raise StoreError("JOB_OWNER_OR_OPERATION_MISMATCH")
         account = self.accounts.active(user_id)
+        if expected_account_etag and account["_etag"] != expected_account_etag:
+            raise StoreError("ACCOUNT_SNAPSHOT_CHANGED", retryable=True)
         feed = self.store.get("state", pk, "feed")
         self.outbox.current(claim)
         if feed["payload"]["paused"] or feed["payload"]["revoked"]:
@@ -102,7 +114,7 @@ class FeedPublisher:
                 "state",
                 pk,
                 [
-                    Write("replace", "account", clean(account), account["_etag"]),
+                    self.accounts.guard(account),
                     Write("replace", "feed", clean(feed), feed["_etag"]),
                     self.outbox.completion(claim),
                 ],
@@ -147,7 +159,7 @@ class FeedPublisher:
         body = serialize(retained).decode()
         etag = digest(body)
         changed = feed["payload"]["etag"] != etag
-        writes = [Write("replace", "account", clean(account), account["_etag"])]
+        writes = [self.accounts.guard(account)]
         if changed:
             generation = self.generations.prepare(pk, body, [vars(value) for value in retained])
             updated = clean(feed)

@@ -4,7 +4,7 @@
 
 ## 建议采用的组合
 
-保留 Firebase Google 登录、Python/FastAPI、Azure Functions Flex、Storage Queue、Key Vault 和托管身份；数据库选为**独立 Cosmos DB for NoSQL Serverless，East Asia 单区域**。Functions 无常驻实例。初期仅准备一个独立开发环境，公测/生产环境另行评估。
+保留 Firebase Google 登录、Python/FastAPI、Azure Functions Flex、Storage Queue、Key Vault 和托管身份；数据库选为**独立 Cosmos DB for NoSQL Serverless，East Asia 单区域**。Functions 无常驻实例。开发与生产都采用 Serverless + Periodic；初期先准备独立开发环境，生产的具体资源与部署另行落实，不因生产环境名称自动改用 Provisioned 或 Autoscale。
 
 早先只读快照曾记录 Anke Money 开发为 Serverless、生产为 Autoscale。用户最新说明生产也已改为 **Serverless + Periodic**，并计划流量增长后原地转 Provisioned，再调整 Autoscale；以该说明更新参考基准，本批未重新读取或修改 Money 资源。只参考计费、升级路径与分区事务设计，不复制账号、数据、凭据或资源；历史账单保持在 Git 忽略文件，不进入开源资料。
 
