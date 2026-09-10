@@ -12,7 +12,7 @@ import re
 from types import SimpleNamespace
 
 from app.document_accounts import document, now, projection_job
-from app.document_store import Conflict, StoreError, Write, encode, partition_items
+from app.document_store import Conflict, StoreError, Write, clean, encode, partition_items
 from app.schemas import EventView, SourceView
 from app.security import digest
 
@@ -83,7 +83,7 @@ class Catalog:
         if not existing or existing["payload"] != route["payload"]:
             raise StoreError("CATALOG_IDENTITY_CONFLICT")
 
-    def publish(self, provider, events, sources, *, expected_revision, complete):
+    def publish(self, provider, events, sources, *, expected_revision, complete, finalize=None):
         pk = provider_partition(provider)
         if complete is not True:
             raise StoreError("PROVIDER_FETCH_INCOMPLETE", retryable=True)
@@ -150,6 +150,10 @@ class Catalog:
         }
         generation = digest(encode(content))
         if old and old["payload"]["generation"] == generation:
+            if finalize:
+                self.store.batch(
+                    "state", pk, [Write("replace", "schedule", clean(old), old["_etag"]), *finalize()]
+                )
             return old
         route = document("catalog", provider, "provider_route")
         try:
@@ -174,6 +178,7 @@ class Catalog:
             [
                 Write("replace" if old else "create", "schedule", root, old["_etag"] if old else None),
                 Write("create", job["id"], job),
+                *(finalize() if finalize else []),
             ],
         )
         return self.store.get("state", pk, "schedule")

@@ -1,8 +1,10 @@
 """Durable Change Feed -> Queue delivery and shared leased job handlers."""
 
 from contextlib import contextmanager
+import argparse
 from datetime import datetime, timedelta, timezone
 import json
+import logging
 import math
 import re
 import time
@@ -138,6 +140,11 @@ def run_job(runtime, message):
     claim = outbox.claim(value["pk"], value["job_id"])
     if not claim:
         return False
+    if claim["payload"]["operation"] == "provider_sync":
+        # This handler owns the atomic provider state + failure/success record.
+        # A persistence failure must propagate, never fall back to job-only failure.
+        runtime.providers.process(claim)
+        return True
     try:
         operation = claim["payload"]["operation"]
         if operation == "projection" and claim["pk"].startswith("user:"):
@@ -185,17 +192,47 @@ def runtime_context():
         store.close()
 
 
-def main():
+def schedule_calendar_window(runtime, *, instant=None):
+    instant = instant or datetime.now(timezone.utc)
+    job = projection_job("provider:calendar-window", 0)
+    job["id"] = "job:" + digest("calendar-window:" + instant.date().isoformat())[:32]
+    job["payload"]["operation"] = "catalog_changed"
+    if runtime.store.get("state", job["pk"], job["id"]):
+        return False
+    try:
+        runtime.store.batch("state", job["pk"], [Write("create", job["id"], job)])
+    except Conflict:
+        return False
+    return True
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--once", action="store_true")
+    args = parser.parse_args(argv)
     if settings().storage_backend != "documents-local":
         raise StoreError("LOCAL_DOCUMENT_WORKER_REQUIRES_LOCAL_ADAPTER")
     with runtime_context() as runtime:
         queue = LocalQueue(runtime.store)
+        next_schedule = 0
         while True:
-            advanced = dispatch(runtime.store, queue.send)
-            consumed = queue.consume(runtime)
+            healthy, advanced, consumed = True, False, False
+            try:
+                if time.monotonic() >= next_schedule:
+                    runtime.providers.schedule()
+                    schedule_calendar_window(runtime)
+                    next_schedule = time.monotonic() + 60
+                advanced = dispatch(runtime.store, queue.send)
+                consumed = queue.consume(runtime)
+            except Exception as error:
+                code = error.code if isinstance(error, StoreError) else "DOCUMENT_WORKER_CYCLE_FAILED"
+                logging.warning("DOCUMENT_WORKER_CYCLE_FAILED code=%s", code)
+                healthy = False
+            if args.once:
+                return 0 if healthy else 1
             if not advanced and not consumed:
                 time.sleep(2)
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

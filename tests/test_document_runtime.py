@@ -274,6 +274,9 @@ import sys
 from fastapi.testclient import TestClient
 from app.main import app
 import function_app
+assert {'update_schedules', 'advance_calendar_window', 'dispatch_outbox', 'process_job'} <= {
+    function.get_function_name() for function in function_app.app.get_functions()
+}
 with TestClient(app, headers={'Origin': 'http://127.0.0.1:3000'}) as client:
     assert client.get('/api/v1/health').json()['storage_backend'] == 'documents-local'
     assert client.post('/api/v1/auth/local').status_code == 200

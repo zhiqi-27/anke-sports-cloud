@@ -60,6 +60,8 @@ Cosmos transactional batch 仅覆盖同容器、同逻辑分区；大小/操作�
 
 ## 当前代码与明确边界
 
+最新Provider批次：三类共用解析器、文档状态/发布事务、定时抓取与每日窗口已接入；真实Jolpica到85条个人ICS通过。生产启用来源需显式配置；302项回归及最后20项针对性检查见 [证据](../evidence/document-providers-2026-09-10.md)。真实云仍未验收。
+
 当前新增：个人链接/屏蔽/固定、单场选择、配置导入和大配置/回执分块；288项回归及独立UI/HTTP检查通过，见 [最新证据](../evidence/document-content-2026-09-10.md)。下文保留前两批的证据范围。
 
 最新批次：新增 document_catalog、document_runtime、document_api、document_worker；app.main/function_app 按存储类型组合，原 SQL 入口移至 sql_app。277项回归通过，独立进程和浏览器/HTTP确认12条演示事件已发布。内容、公共 Feed、OAuth/MCP、删除等尚未迁移，真实云与设备未验收。[说明](document-runtime.md) / [证据](../evidence/document-runtime-2026-09-10.md)。以下首批仓储证据保留。

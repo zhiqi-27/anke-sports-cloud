@@ -10,11 +10,13 @@
 
 本批新增个人原链接附加、屏蔽/固定、单场加入/排除/重置、配置导入预览与确认。链接、配置、新任务和精确幂等回执在个人分区同事务提交；屏蔽后重新附加不会撤销屏蔽。共享链接筛选和导入规则由 SQL 与文档模式共用，合并超出配置上限返回明确错误。预览不修改配置或创建任务，确认绑定账号、版本和完整配置。未迁移创作者在导入中标为 unresolved，拒绝应用。
 
-尚未接入文档模式：体育 Provider 抓取/定时更新、创作者/YouTube、直播、公共 Feed、账号删除、OAuth/MCP、Google 直连。相关接口明确返回 `DOCUMENT_FEATURE_UNAVAILABLE`。包含尚未迁移创作者配置的账号不能被静默发布为空链接日历。设置页的 Provider/YouTube 不代表后台已启用。
+尚未接入文档模式：创作者/YouTube、直播、公共 Feed、账号删除、OAuth/MCP、Google 直连。相关接口明确返回 `DOCUMENT_FEATURE_UNAVAILABLE`。包含尚未迁移创作者配置的账号不能被静默发布为空链接日历。设置页的 Provider/YouTube 不代表后台已启用。
 
 完整客户端合同继续以 SQL 基线导出，并已核对未变化。导出脚本拒绝在文档模式下覆盖完整合同，避免误把当前接口子集作为产品全部接口。新路径不是完整 Cosmos 迁移，也不是可直接公测的部署包。
 
 ## 公共赛程与身份
+
+Provider抓取、状态和定期更新已接入新存储。SQL/文档共用解析器，Provider状态、赛程发布和任务完成同事务提交；生产以 `ANKE_SPORTS_ENABLED_SPORTS_PROVIDERS` 显式启用来源。本地与Azure共用日历窗口维护，见 [抓取与调度](document-providers.md)。
 
 可信 Provider/迁移器通过 `Catalog.publish` 提交规范化事件和来源，传入抓取前的 `expected_revision` 与明确的完整抓取结果；没有开放上传真实赛程的 HTTP 入口。
 
@@ -36,7 +38,7 @@
 
 SDK 固定 4.17.0，离线实测发现：跨多个物理分区只读取第一分页后，其初始续读令牌仍可能含未访问分区的空 token，SDK 自身恢复时拒绝。实现使用公开 `read_feed_ranges` 和分页 API 完成首轮，再保存原始 opaque token，不解析/篡改 SDK 令牌。首次最多100个范围，后续一次有界分页；物理分区真实拆分/恢复还需云验收。[SDK 源码](https://github.com/Azure/azure-sdk-for-python/blob/azure-cosmos_4.17.0/sdk/cosmos/azure-cosmos/azure/cosmos/_change_feed/composite_continuation_token.py)、[公开接口](https://learn.microsoft.com/en-us/python/api/azure-cosmos/azure.cosmos.containerproxy?view=azure-python)。
 
-文档模式的 Azure Functions 注册 HTTP、分钟投递、Queue 处理和每日窗口任务；不会启动尚未迁移的 SQL Provider/YouTube 定时器。每日窗口任务与公共赛程变更按每页100个已登记 owner 生成幂等个人任务。当前每次变化仍遍历 owner 目录，反向关注索引及费用验证是后续工作，不能声称已具备规模化成本证据。
+文档模式的 Azure Functions 注册 HTTP、分钟投递、来源更新、Queue处理和每日窗口任务；Provider使用文档任务与状态，YouTube定时器尚未迁移。每日窗口任务与公共赛程变更按每页100个已登记 owner 生成幂等个人任务。当前每次变化仍遍历 owner 目录，反向关注索引及费用验证是后续工作，不能声称已具备规模化成本证据。
 
 ## 本地检查
 
@@ -46,14 +48,16 @@ SDK 固定 4.17.0，离线实测发现：跨多个物理分区只读取第一分
 ANKE_DOCUMENT_UI_PORT=3007 uv run python -m experiments.document_ui
 ```
 
-打开 [日历](http://localhost:3007/calendar) 或 [我的关注](http://localhost:3007/following)，进入本地体验，选择演示联赛、预览、保存；也可以单场加入并手动附加原链接。12条演示比赛包含历史场次。该实验的持久文档/本地队列都使用独立 SQLite 文件，只是显式本地适配器，**不是 Cosmos 或 Azure Queue 模拟器**。不会读写原用户数据库或调用平台。端口未指定时默认3006；本次3007为新代码，旧3006预览保持原进程。
+打开 [日历](http://localhost:3007/calendar) 或 [我的关注](http://localhost:3007/following)，进入本地体验，选择演示联赛、预览、保存；也可以单场加入并手动附加原链接。12条演示比赛包含历史场次。该实验的持久文档/本地队列都使用独立 SQLite 文件，只是显式本地适配器，**不是 Cosmos 或 Azure Queue 模拟器**。不会读写原用户数据库或调用平台。端口未指定时默认3006；3007已更新至Provider批次并载入F1关注，个人窗口85条事件。进入本地体验后切换“真实赛程”。旧3006保持原进程。
 
-最新288项回归通过、2项条件MySQL跳过。浏览器单场加入→附加演示链接→移除→再次附加仍屏蔽，以及独立HTTP/worker的同UID与SEQUENCE 2→3已读回，见 [链接与配置证据](../evidence/document-content-2026-09-10.md)。演示URL未访问，不是视频匹配、可播放性或设备证据。
+链接批次288项回归通过、2项条件MySQL跳过。浏览器单场加入→附加演示链接→移除→再次附加仍屏蔽，以及独立HTTP/worker的同UID与SEQUENCE 2→3已读回，见 [链接与配置证据](../evidence/document-content-2026-09-10.md)。演示URL未访问，不是视频匹配、可播放性或设备证据。
 
-普通文档模式需明确配置 `ANKE_SPORTS_STORAGE_BACKEND=documents-local`、独立 `ANKE_SPORTS_DOCUMENT_LOCAL_PATH`、加密密钥及本地身份开关，再分别启动 `uvicorn app.main:app` 与 `python -m app.document_worker`。本地队列支持持久延迟消息；普通本地 worker 还没有接入每日窗口调度，不替代 Azure Timer 验收。
+普通文档模式需明确配置 `ANKE_SPORTS_STORAGE_BACKEND=documents-local`、独立 `ANKE_SPORTS_DOCUMENT_LOCAL_PATH`、加密密钥及本地身份开关，再分别启动 `uvicorn app.main:app` 与 `python -m app.document_worker`。本地队列支持持久延迟消息；普通本地worker已在启动及每分钟检查Provider和每日窗口；重启读取持久时间，不提前抓取。Azure Timer仍需真实环境验收。
 
 本地日志只存变更的容器/分区/文档身份，不保存历史私人正文；事务回滚同时回滚变更日志。旧的本地文档库会补建日志并登记当前文档，不允许打开原业务 SQLite 库。
 
 ## 剩余验收
 
 真实 Cosmos 身份权限、RU/429、分区拆分和吞吐、Azure Queue/poison/Timer、Periodic 恢复、删除决定重放、SQL 数据迁移仍未通过。历史任务/孤立块 GC、超大 Feed 流式读取与反向索引仍需实现；当前链接列表按用户分页加载，规模/RU仍待验证。容量转换保持独立管理流程，参见 [存储与扩容方案](cosmos-storage-design.md)。
+
+最新Provider批次完整302项回归通过；最后禁用状态细化后20项相关检查通过。真实Jolpica→HTTP关注→独立worker→85条ICS的8项验证通过，见 [证据](../evidence/document-providers-2026-09-10.md)。本批未操作锁定Mac的浏览器，新预览的渲染尚未重查。

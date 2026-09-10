@@ -148,7 +148,7 @@ def create_app(store=None, cfg=None):
         }
 
     @app.get("/api/v1/status", response_model=ServiceStatusView)
-    def status(request: Request):
+    def status(request: Request, rt=Depends(runtime)):
         return {
             "local_preview": local_allowed(request),
             "firebase_configured": bool(cfg.firebase_project_id),
@@ -161,7 +161,7 @@ def create_app(store=None, cfg=None):
                 "reset_at": None,
                 "resume_at": None,
             },
-            "providers": [],
+            "providers": rt.providers.statuses(),
             "integrations": {
                 "storage": cfg.storage_backend,
                 "content_migration": "not_ready",
@@ -290,6 +290,17 @@ def create_app(store=None, cfg=None):
     @app.get("/api/v1/me/config/export", response_model=Config)
     def export(user=Depends(me)):
         return user["config"]
+
+    @app.post("/api/v1/local/providers/{provider}/sync")
+    def trigger_sync(provider: str, request: Request, user=Depends(me), rt=Depends(runtime)):
+        if not local_allowed(request):
+            problem("NOT_FOUND", "未找到", 404)
+        from app.provider_adapters import PROVIDERS
+
+        if provider not in PROVIDERS:
+            problem("UNKNOWN_PROVIDER", "未知数据源")
+        rt.providers.enqueue(provider)
+        return {"queued": True}
 
     @app.get("/api/v1/me/feed/address")
     def address(user=Depends(me), rt=Depends(runtime)):

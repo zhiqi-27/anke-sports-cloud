@@ -67,13 +67,20 @@ def process_job(message: func.QueueMessage):
         raise RuntimeError("JOB_DISPATCH_FAILED_" + error_code(exc)) from None
 
 
+@app.timer_trigger(schedule="0 * * * * *", arg_name="timer", use_monitor=True)
+def update_schedules(timer: func.TimerRequest):
+    if DOCUMENTS:
+        from app.document_worker import runtime_context
+
+        with runtime_context() as runtime:
+            runtime.providers.schedule()
+        return
+    from app.worker import schedule_providers
+
+    schedule_providers()
+
+
 if not DOCUMENTS:
-
-    @app.timer_trigger(schedule="0 * * * * *", arg_name="timer", use_monitor=True)
-    def update_schedules(timer: func.TimerRequest):
-        from app.worker import schedule_providers
-
-        schedule_providers()
 
     @app.timer_trigger(schedule="0 */5 * * * *", arg_name="timer", use_monitor=True)
     def update_content(timer: func.TimerRequest):
@@ -85,16 +92,7 @@ else:
 
     @app.timer_trigger(schedule="0 0 0 * * *", arg_name="timer", use_monitor=True)
     def advance_calendar_window(timer: func.TimerRequest):
-        from app.document_accounts import now, projection_job
-        from app.document_store import Conflict, Write
-        from app.document_worker import runtime_context
-        from app.security import digest
+        from app.document_worker import runtime_context, schedule_calendar_window
 
         with runtime_context() as runtime:
-            job = projection_job("provider:calendar-window", 0)
-            job["id"] = "job:" + digest("calendar-window:" + now()[:10])[:32]
-            job["payload"]["operation"] = "catalog_changed"
-            try:
-                runtime.store.batch("state", job["pk"], [Write("create", job["id"], job)])
-            except Conflict:
-                pass
+            schedule_calendar_window(runtime)

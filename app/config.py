@@ -34,6 +34,9 @@ class Settings(BaseSettings):
     maintainer_ids: list[str] = []
     broadcast_checks_enabled: bool = False
     public_feed_source_keys: list[str] = []
+    enabled_sports_providers: list[Literal["jolpica", "balldontlie", "football-data"]] = Field(
+        default_factory=list
+    )
     balldontlie_api_key: SecretStr = Field(
         default=SecretStr(""), validation_alias="BALLDONTLIE_API_KEY", repr=False
     )
@@ -66,7 +69,9 @@ def settings() -> Settings:
     if result.storage_backend == "cosmos":
         if not result.cosmos_endpoint or not result.cosmos_database:
             raise RuntimeError("Cosmos requires an explicit independent endpoint and database")
-        if result.env != "local" and (result.cosmos_auth != "managed_identity" or not result.cosmos_client_id):
+        if result.env != "local" and (
+            result.cosmos_auth != "managed_identity" or not result.cosmos_client_id
+        ):
             raise RuntimeError("Deployed Cosmos requires the dedicated managed identity")
     if os.getenv("WEBSITE_INSTANCE_ID") and result.env == "local":
         raise RuntimeError("Azure Functions requires an explicit staging or production environment")

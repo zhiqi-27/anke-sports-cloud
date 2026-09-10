@@ -4,7 +4,7 @@
 
 开发、生产目标架构统一：Python/FastAPI + Firebase Authentication + Azure Functions + Cosmos DB for NoSQL **Serverless + Periodic** + Azure Storage Queue。参考 FormaLM 的服务分层，使用独立账号、密钥与资源。文档日历 HTTP、完整赛程快照、Change Feed/Queue 投递和 Feed 发布已接入，独立本地 UI 验收通过；当前主预览仍运行 SQL，创作者/直播/OAuth 等完整适配尚未完成。`anke-sports` 为独立客户端仓库。
 
-独立文档模式验收：[日历](http://localhost:3007/calendar)，运行说明见 [文档存储路径](docs/document-runtime.md)。已接入个人链接、屏蔽/固定、单场选择与配置导入；[288 项回归及 UI/HTTP 证据](evidence/document-content-2026-09-10.md) 不代表真实 Cosmos/Azure 验收。
+独立文档模式验收：[日历](http://localhost:3007/calendar)（重新进入本地体验，切换“真实赛程”；已载入F1关注及85条窗口内事件），运行说明见 [文档存储路径](docs/document-runtime.md)。已接入个人链接、屏蔽/固定、单场选择、配置导入和Provider更新；[302 项回归及真实 F1 HTTP/worker 证据](evidence/document-providers-2026-09-10.md) 不代表真实 Cosmos/Azure 验收。
 
 ## 本地运行
 
@@ -78,3 +78,5 @@ MCP 已提供匿名与私人 Streamable HTTP、网页授权、短期令牌和撤
 通知到1,000账号发布的本机容量、关注候选筛选、个人发布任务合并及重复通知验收见 [内容容量](docs/content-capacity.md)。真实 YouTube 小规模 API/worker 预算已验证，长期多频道、Google 实际余额与云端容量仍待完成。
 
 YouTube Data API 需要独立项目ID及Key，API与worker共用持久预算。默认9,000是本服务上限，不是Google实际余额。配置、迁移与恢复见 [项目预算](docs/youtube-budget.md)。
+
+新存储抓取与定时启动、生产显式来源配置、失败/限流和范围见 [Provider说明](docs/document-providers.md)。本批未操作浏览器；新实例数据已通过HTTP读回，渲染检查待继续。

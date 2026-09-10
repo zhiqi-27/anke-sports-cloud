@@ -21,12 +21,14 @@ def user_value(payload):
 class Runtime:
     def __init__(self, store, cfg):
         from app.document_content import Content
+        from app.document_providers import Providers
 
         self.store, self.cfg = store, cfg
         self.accounts = Accounts(store, cfg.cipher())
         self.catalog = Catalog(store)
         self.publisher = FeedPublisher(store, cfg.cipher())
         self.content = Content(self)
+        self.providers = Providers(self)
 
     def calendar_supported(self, payload):
         # Never silently publish an imported configuration with missing content.

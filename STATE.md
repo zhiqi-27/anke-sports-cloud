@@ -1,6 +1,6 @@
 # Anke Sports 服务端状态
 
-当前摘要：2026-09-10，开发、生产云目标均为 Cosmos NoSQL Serverless + Periodic，Azure资源未创建。文档模式新增个人链接/屏蔽/固定、单场选择、导入预览/确认及大配置/回执分块。完整288 passed/2 skipped/2既有警告，Ruff及完整OpenAPI一致。独立浏览器与HTTP/worker验证同UID、屏蔽后SEQUENCE2→3及重新附加仍屏蔽。最新预览 localhost:3007/calendar?event=document-demo-03（session70275/API PID91533、worker PID91534），IAB标签29保留；旧3006、主SQL及Firebase实例未重启。创作者/直播/公共Feed/OAuth/删除等文档路径、真实云与设备仍待验收；无push或部署。以下历史批次保留当时状态。
+当前摘要：2026-09-10，开发、生产云目标均为 Cosmos NoSQL Serverless + Periodic，Azure资源未创建。文档模式已接入体育来源抓取、持久六小时调度和本地每日窗口；真实Jolpica经独立HTTP/worker发布85条个人ICS事件。完整302 passed/2 skipped/2既有警告；最终禁用状态细化后相关20项通过，Ruff及完整OpenAPI/config schema一致。当前独立预览 http://localhost:3007/calendar（session7461/API PID94103、worker PID94104），需重新进入本地体验并切换真实赛程；新页面未做浏览器渲染检查。用户Mac锁定，需解锁、登录或电脑确认的步骤暂停；可独立完成的本地工作继续。主SQL/Firebase实例未重启。内容等剩余迁移、真实云与设备仍待验收；无push或部署。以下历史批次保留当时状态，以本摘要和最新批次为准。
 
 更新：2026-09-10。主 API 127.0.0.1:8787，session43380/PID44497；worker session62679/PID44496；显式启用本地体验并关闭访问日志。显式本地SQLite/体验身份。主库163条比赛（48演示+115 Jolpica F1分场次），无合成频道/视频或公共直播记录。
 
@@ -307,3 +307,19 @@ experiments.youtube_live 只复制原库115条公共 Jolpica缓存事件到临�
 新独立预览localhost:3007，API/HTML代理session70275/PID91533、worker PID91534，IAB标签29已保留。浏览器登录本地体验，单场加入document-demo-03，附加明确标注的合成URL、移除、再附加仍屏蔽，描述预览与渲染检查通过，console error为空。独立HTTP读取同一体验账号：revision2/SEQUENCE2/一条已发布事件，屏蔽后revision3/SEQUENCE3/同UID且URL消失；304和HEAD通过，脚本会话已退出，浏览器会话保留。未访问演示URL，不代表真实视频、比赛匹配或可播放性。实验停止即清理临时库。旧3006进程PID83337/83338在开头读回存活，原主/Firebase/YouTube配置未改、未重启，本批没有逐项复验其他常驻实例。
 
 证据：anke-sports-cloud/evidence/document-content-2026-09-10.md及JSON；范围：docs/document-runtime.md。主服务仍SQL；内容未完整迁移，创作者/YouTube/直播/公共Feed/OAuth/MCP/删除/Google直连继续。GC、反向索引、真实Cosmos/RU/429/分区/权限、Azure Queue/Timer、Periodic恢复、SQL迁移、设备验收均未完成。普通文档worker的每日窗口调度仍待接入。T12/T18/T22/T30保持in_progress，不以本地接口通过认定外部验收完成。未push、部署或迁移主数据，完整产品目标继续。
+
+
+## 2026-09-10 · 文档赛程抓取与持久调度
+
+SQL与文档模式共用独立体育来源适配器。文档模式新增单来源持久状态、手动/定时去重、最后成功/尝试、冷却和租约；完整赛程指针、成功状态、任务完成和变更outbox同分区原子提交。分页或持久化失败保留上次赛程，过期worker不能覆盖新结果；相同内容不改变日历版本，已导入的比赛ID继续保留。NBA/足球校验仍为离线样本，真实权限未验证。
+
+本地worker启动及每分钟检查六小时条件，和Azure分钟Timer共用服务；每日UTC窗口使用同一日期任务ID。部署模式必须显式设置 ANKE_SPORTS_ENABLED_SPORTS_PROVIDERS（默认空列表），关闭来源后停止抓取并保留旧赛程。本批没有修改云应用设置。长Retry-After通过最多六天的队列唤醒分段等待，早醒不联网、不消耗尝试次数；失败状态与任务原子记录，无法保存时交回租约恢复。
+
+新增14项Provider测试；全量302 passed/2 skipped/2条既有弃用警告（15.58秒），最终仅细化禁用来源状态后相关20项通过（2.11秒）。Ruff、完整OpenAPI/config schema一致和差异格式检查通过。真实Jolpica实验绑定最终源码摘要，经独立API/worker完成8项检查：关注后的个人滚动窗口85条ICS、UID唯一、GET304/HEAD、另一查询窗口60条真实事件、worker新进程重启不提前抓取。85和60属于不同查询窗口，不是上游整年总数。实验会话、进程和临时库均清理；自然六小时周期尚未观察。
+
+独立检查入口 http://localhost:3007/calendar 已重建到最终后端，API/HTML代理session7461/PID94103、worker PID94104。HTTP已载入Jolpica F1关注和85条已发布事件；重新进入本地体验并切换“真实赛程”即可检查，12条演示赛程仍明确标识。旧3007 session70275/PID91533与worker91534正常退出，旧临时库清理；原浏览器本地会话随旧库失效。本批没有操作浏览器/原生UI或请求解锁，因此新页面渲染未验收。旧3006、主SQL、Firebase及其他产品服务未重启，也未逐项复核其他历史进程。
+
+用户当前Mac锁定且不在旁边：需要解锁、交互登录或电脑确认的步骤暂停，等待用户回来；不设置自动提醒，不重新诊断已停止的Codex浏览器登录问题。没有主数据迁移、云资源创建、push或部署。客户端仅同步README/STATE，无源码、依赖或契约变化，没有重复构建。
+
+下一步：创作者/YouTube、直播、公共Feed、OAuth/MCP、账号删除等文档路径；SQL迁移、孤立块GC、反向关注索引；真实Cosmos身份/RU/429、Azure Queue/Timer与Periodic恢复；真实NBA/足球权限及手机日历/内容直达。T03/T08/T09/T10/T12/T13继续in_progress，原开发包任务JSON未在本批改写，不能把本批局部验证等同完整任务或产品完成。
+证据：[evidence/document-providers-2026-09-10.md](evidence/document-providers-2026-09-10.md)及同名JSON；操作说明：[docs/document-providers.md](docs/document-providers.md)。本批实现和验证作为独立本地提交保存，不push或部署；提交编号在工作区根STATE.md记录。完整产品目标继续。

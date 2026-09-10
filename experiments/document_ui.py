@@ -31,6 +31,7 @@ os.environ.update(
         "ANKE_SPORTS_WEB_URL": f"http://localhost:{preview_port}",
         "ANKE_SPORTS_PUBLIC_URL": f"http://localhost:{preview_port}",
         "ANKE_SPORTS_FIREBASE_PROJECT_ID": "",
+        "ANKE_SPORTS_ENABLED_SPORTS_PROVIDERS": "[]",
         "ANKE_SPORTS_ENCRYPTION_KEY": Fernet.generate_key().decode(),
     }
 )

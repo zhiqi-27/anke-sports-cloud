@@ -1,0 +1,100 @@
+{
+  "recorded_at": "2026-09-10T04:39:48.980929+00:00",
+  "full_regression": {
+    "passed": 302,
+    "skipped": 2,
+    "warnings": 2,
+    "seconds": 15.58
+  },
+  "final_provider_http_regression": {
+    "passed": 20,
+    "warnings": 2,
+    "seconds": 2.11
+  },
+  "new_provider_tests": 14,
+  "ruff_passed": true,
+  "full_contracts_unchanged": true,
+  "real_experiment": {
+    "started_at": "2026-09-10T04:34:05.693551+00:00",
+    "checks": [
+      "real_provider_completed_via_http_and_worker",
+      "personal_follow_and_published_ics",
+      "unique_uids",
+      "conditional_304",
+      "head_200",
+      "real_calendar_provenance_and_inclusion",
+      "worker_restart_preserves_deadline_and_published_feed",
+      "local_session_signed_out"
+    ],
+    "environment": "documents-local",
+    "upstream": "jolpica",
+    "browser_used": false,
+    "source_sha256": {
+      "app/config.py": "c333fbba16d690c46e6142946825e16c61147e66b957518ee05c1a421ba235d1",
+      "app/document_api.py": "38c04ace1716844d94943db5f99977b40ac8ecb98781d8259ce15198d43a85e5",
+      "app/document_accounts.py": "a0e865129e3950a9021e5a71e752ca6114f473731b6b8d3ff9e0f9492682196f",
+      "app/document_catalog.py": "4498d7d3860df1b6afdd155c2802e799f2507344c2299e09549130f4d9b75dce",
+      "app/document_providers.py": "a5e0fcfc84e19de113b4b68eecd35f0bdee766b88dca7587cac18de323978c06",
+      "app/document_runtime.py": "0c79a66c13d4a947063ae53875c7f53a8fc402c35cf2c07c9e1af564901a8db0",
+      "app/document_worker.py": "d11b32930da25c28785743c1a6dc367b51b2e91cf41b443fa586bd54a07b1220",
+      "app/document_store.py": "208de07ce9e25ffac75e9bc68c08dae50de4aac8a5d6cfacb4644af06e90e838",
+      "app/provider_adapters.py": "2016bf7ebcaf35c1957beb9f3c15f59c339fa6de6fdcd0c17eecc42f065e0984",
+      "app/job_rules.py": "f46d58b2eb06be052b67c05823a924a1fb161d115b5e422710afca0ad23db57f",
+      "experiments/document_provider_live.py": "ad1774ccddce9f28072612c9831cdf1aa4e18691de978b14d78b14a24f972a0f"
+    },
+    "provider": {
+      "id": "jolpica",
+      "last_success": "2026-09-10T04:34:07.331849+00:00",
+      "error": "",
+      "enabled": true,
+      "consecutive_failures": 0,
+      "next_attempt_at": null,
+      "activity": "idle"
+    },
+    "event_count": 85,
+    "feed_revision": 2,
+    "uid_digest": "5ba3c9e5ff3de00465cd194f8454cc074f9046a1579b4a7b47b1743f05aa01ee",
+    "body_sha256": "313a4efe05d03dcb43a2a40d6693e9f6c9f256867cbff85c67071d6c915f6eb9",
+    "calendar_rows": 60,
+    "processes_stopped": true,
+    "temporary_directory_removed": true,
+    "finished_at": "2026-09-10T04:34:09.898226+00:00"
+  },
+  "review_preview": {
+    "ui_url": "http://localhost:3007/calendar",
+    "ui_http_status": 200,
+    "provider": {
+      "id": "jolpica",
+      "last_success": "2026-09-10T04:36:14.670588+00:00",
+      "error": "",
+      "enabled": true,
+      "consecutive_failures": 0,
+      "next_attempt_at": null,
+      "activity": "idle"
+    },
+    "user_revision": 1,
+    "feed": {
+      "revision": 2,
+      "updated_at": "2026-09-10T04:36:16.733899+00:00",
+      "paused": false,
+      "status": "published",
+      "event_count": 85
+    },
+    "browser_inspected": false,
+    "requires_unlock_operations_performed": false
+  },
+  "preview_processes": {
+    "session": 7461,
+    "api_pid": 94103,
+    "worker_pid": 94104
+  },
+  "capacity": {
+    "development": "Serverless + Periodic",
+    "production": "Serverless + Periodic",
+    "azure_resources_created": false
+  },
+  "mac_locked": true,
+  "browser_used": false,
+  "cloud_or_device_verified": false,
+  "push_or_deploy": false
+}
