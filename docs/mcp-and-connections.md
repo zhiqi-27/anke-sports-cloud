@@ -97,12 +97,22 @@ uv run python -m scripts.check_codex_discovery --expect unavailable
 codex -c 'mcp_servers.anke_sports_local_check.url="http://localhost:8787/mcp"' mcp logout anke_sports_local_check
 ```
 
-脚本调用安装版本的 Codex App Server `config/read` 和 `mcpServerStatus/list`，只接受 loopback HTTP。它先读取有效配置，再通过本进程覆盖禁用其他已配置 MCP；不会创建任务、调用模型、执行业务工具、读取令牌或改配置文件。可用 `--codex` 指定可执行文件、`--output` 写入新的脱敏 JSON。CLI 登录会按 Codex 自身设置保存 OAuth 凭据，需按上述步骤清理。
+脚本调用安装版本的 Codex App Server `config/read` 和 `mcpServerStatus/list`，只接受 loopback HTTP。它先读取有效配置，再通过本进程覆盖禁用其他已配置 MCP、插件和 apps，并检查全部 inventory 页；不会创建任务、调用模型、执行业务工具、读取令牌或改配置文件。无thread的条目可能返回null运行状态，须结合明确disabled配置和零工具判断。可用 `--codex` 指定可执行文件、`--output` 写入新的脱敏 JSON。CLI 登录会按 Codex 自身设置保存 OAuth 凭据，需按上述步骤清理。
 
 本机验证结果：私人11个工具、匿名3个；网页撤销后私人0个工具。撤销后 `authStatus` 仍可能是 `oAuth`，它表示客户端有已保存凭据，不能作为服务端仍接受授权的证据。退出登录后为 `notLoggedIn`。只有结合 Web 撤销、服务端健康和授权记录清理，才能把失败发现归因于本次撤销；单独的 `--expect unavailable` 也可能是网络或启动失败。
 
 本次 Chrome 回调最终页显示 `ERR_BLOCKED_BY_CLIENT`，未重试被拦截页面。Codex CLI 已明确报告登录成功，随后独立 Codex 进程发现11个工具；授权传输成功与浏览器完成页显示分别记录。详见 [Codex 实测证据](../evidence/codex-client-2026-09-10.md)。
 
-完整客户端验收仍需让目标客户端实际查询赛程、修改/重试关注、刷新令牌和观察连接过期。当前脚本不替代这些测试。云端还需独立 Firebase 实际登录、HTTPS 公网回调、Azure ASGI 启停与 MySQL 并发、限流/滥用、Chrome 安装及 service worker 生命周期验证。当前注册数量和请求体上限不能代替生产限流。
+### 实际 Codex 业务调用
+
+```sh
+uv run python -m experiments.codex_business --output data/codex-business-new.json
+```
+
+该实验自动创建独立临时SQLite/API/合成身份，经同一HTTP授权接口允许明确的测试权限。安装的Codex使用不落盘的临时协议上下文调用工具；没有模型回合或用户持久任务，也不更改用户Codex配置。临时授权和客户端凭据在finally中撤销/退出，服务与数据库清理。不要连接现有业务库运行该实验。
+
+本机25项检查通过：查询与分页、只读权限拒绝、关注写入/重试/参数冲突、身份参数拒绝、跨HTTP/MCP同键链接、持久屏蔽、配置导出/预览/应用、真实HTTP ICS稳定UID与200/304、模拟access过期后的实际Codex刷新轮换，以及撤销后拒绝调用。完整证据和旧探测隔离范围更正见 [实际业务验收](../evidence/codex-business-2026-09-10.md)。
+
+完整客户端验收仍需自然时间过期、模型自行选择工具及真实YouTube创作者接入。云端还需独立 Firebase 身份与MCP组合、HTTPS 公网回调、Azure ASGI 启停与数据库并发、限流/滥用、Chrome 安装及 service worker 生命周期验证。当前注册数量和请求体上限不能代替生产限流。
 
 依据：[MCP 官方 Python SDK](https://github.com/modelcontextprotocol/python-sdk)、[MCP 2026-07-28 授权规范](https://modelcontextprotocol.io/specification/2026-07-28/basic/authorization)、[OAuth 令牌撤销 RFC 7009](https://www.rfc-editor.org/rfc/rfc7009)。

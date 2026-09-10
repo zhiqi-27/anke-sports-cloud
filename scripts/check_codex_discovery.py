@@ -103,15 +103,16 @@ def client(binary, overrides):
             stream.close()
 
 
-def check(binary, name, url, expect):
-    # CLI table overrides merge into existing tables. Discover names first,
-    # then disable unrelated servers in this process only, before inventory.
+def isolated_overrides(binary, name, url):
+    """Process-only configuration; plugin names must be quoted inside TOML tables."""
     with client(binary, []) as rpc:
-        servers = rpc("config/read", {})["config"].get("mcp_servers", {})
+        config = rpc("config/read", {})["config"]
+        servers = config.get("mcp_servers", {})
     if name in servers:
         raise ProbeError("Use a unique probe name; do not reuse an existing server configuration")
     disabled = ",".join(f"{json.dumps(n)}={{enabled=false}}" for n in servers)
-    overrides = [f"mcp_servers={{{disabled}}}"]
+    plugins = ",".join(f"{json.dumps(n)}={{enabled=false}}" for n in config.get("plugins", {}))
+    overrides = [f"mcp_servers={{{disabled}}}", f"plugins={{{plugins}}}", "features.apps=false"]
     overrides.extend(
         [
             f"mcp_servers.{name}.url={json.dumps(url)}",
@@ -119,15 +120,60 @@ def check(binary, name, url, expect):
             f"mcp_servers.{name}.startup_timeout_sec=10",
         ]
     )
+    return overrides
+
+
+def verify_isolation(rpc, name):
+    effective = rpc("config/read", {})["config"]
+    if (
+        {n for n, v in effective.get("mcp_servers", {}).items() if v.get("enabled", True)} != {name}
+        or any(v.get("enabled", True) for v in effective.get("plugins", {}).values())
+        or effective.get("features", {}).get("apps") is not False
+    ):
+        raise ProbeError("Could not disable unrelated MCP servers, plugins and apps in this process")
+
+
+def inventory(rpc, name, thread_id=None):
+    params = {"detail": "toolsAndAuthOnly", "limit": 100}
+    if thread_id:
+        params["threadId"] = thread_id
+    items = []
+    while True:
+        result = rpc("mcpServerStatus/list", params)
+        items.extend(result["data"])
+        cursor = result.get("nextCursor")
+        if not cursor:
+            break
+        if cursor == params.get("cursor"):
+            raise ProbeError("Codex inventory repeated a pagination cursor")
+        params["cursor"] = cursor
+    # Unscoped inventory has null runtimeStatus even for disabled entries;
+    # thread-scoped inventory reports the actual runtime. Neither may expose
+    # tools from another server. Null is allowed only for a configured disable.
+    disabled = {
+        n for n, v in rpc("config/read", {})["config"].get("mcp_servers", {}).items()
+        if v.get("enabled") is False
+    }
+    if any(
+        row.get("tools") or not (
+            row.get("runtimeStatus") == "disabled" or (
+                not thread_id and row.get("runtimeStatus") is None and row["name"] in disabled
+            )
+        )
+        for row in items if row["name"] != name
+    ):
+        raise ProbeError("Unrelated MCP runtime was not disabled; refusing tool calls")
+    rows = [item for item in items if item["name"] == name]
+    if len(rows) != 1:
+        raise ProbeError("Expected exactly one result for the requested server")
+    return rows[0]
+
+
+def check(binary, name, url, expect):
+    overrides = isolated_overrides(binary, name, url)
     with client(binary, overrides) as rpc:
-        effective = rpc("config/read", {})["config"].get("mcp_servers", {})
-        if {n for n, v in effective.items() if v.get("enabled", True)} != {name}:
-            raise ProbeError("Could not isolate MCP discovery from other configured servers")
-        result = rpc("mcpServerStatus/list", {"detail": "toolsAndAuthOnly", "limit": 100})
-        rows = [item for item in result["data"] if item["name"] == name]
-        if len(rows) != 1:
-            raise ProbeError("Expected exactly one result for the requested server")
-        row = rows[0]
+        verify_isolation(rpc, name)
+        row = inventory(rpc, name)
     expected = (
         set() if expect == "unavailable" else PUBLIC_TOOLS if url.endswith("/public") else PRIVATE_TOOLS
     )
@@ -149,6 +195,8 @@ def check(binary, name, url, expect):
         "tool_calls_performed": False,
         "model_turns_started": False,
         "configuration_files_changed": False,
+        "unrelated_mcp_config_disabled": True,
+        "unrelated_tools_exposed": False,
         "limitations": [
             "No model tool selection, calendar query or write was exercised",
             "Unavailable alone does not establish why authentication or startup failed",

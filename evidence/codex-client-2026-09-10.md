@@ -2,6 +2,8 @@
 
 环境：安装的 `codex-cli 0.153.4`，Anke Sports 本机 API8787/Web3000，SQLite、本地体验账号。主后端业务代码 `07c0ad9`，未部署或使用 Firebase。日期按 Asia/Shanghai 记录。
 
+后续更正：本批脚本只禁用了显式MCP配置，不能证明插件/apps运行时也被禁用。新一批已修正并验证此隔离，完成实际业务调用；详见 [后续业务验收](codex-business-2026-09-10.md)。下述原始目标服务结果按当时范围保留。
+
 ## 实际操作与结果
 
 1. 使用进程级 `-c` 配置与独立名称 `anke_sports_local_check` 执行 `codex mcp login --scopes calendar:read`。Codex 默认策略成功动态注册，授权请求携带 `S256`、loopback callback 和规范 `resource=http://localhost:8787/mcp`。

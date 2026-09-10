@@ -1,0 +1,24 @@
+{
+  "client": "codex-cli 0.153.4",
+  "transport": "Streamable HTTP",
+  "endpoint": "http://localhost:8787/mcp/public",
+  "expect": "available",
+  "passed": true,
+  "auth_status": "notLoggedIn",
+  "tools": [
+    "get_event",
+    "get_schedule",
+    "search_sources"
+  ],
+  "tool_count": 3,
+  "evidence": "Installed Codex app-server MCP inventory; nonempty tools confirm HTTP discovery",
+  "tool_calls_performed": false,
+  "model_turns_started": false,
+  "configuration_files_changed": false,
+  "unrelated_mcp_config_disabled": true,
+  "unrelated_tools_exposed": false,
+  "limitations": [
+    "No model tool selection, calendar query or write was exercised",
+    "Unavailable alone does not establish why authentication or startup failed"
+  ]
+}

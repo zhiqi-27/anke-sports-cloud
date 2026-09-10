@@ -1,6 +1,6 @@
 # Anke Sports 服务端状态
 
-当前摘要：2026-09-10，匹配v2/离线回放已完成本地验证，后端214项通过；真实Firebase登录先前在Chrome通过。Azure选型待成本决定，尚未部署。最新进程与证据见文末；下列旧批次保留当时状态。
+当前摘要：2026-09-10，实际Codex MCP业务与HTTP ICS的25项隔离检查通过，25项针对性pytest/ruff通过；业务源码/契约/UI未改。本批修正探测器对插件/apps的隔离。真实Firebase登录先前在Chrome通过；Azure低成本选型待决定，尚未部署。最新证据见文末，旧批次保留当时状态。
 
 更新：2026-09-10。主 API 127.0.0.1:8787，session43380/PID44497；worker session62679/PID44496；显式启用本地体验并关闭访问日志。显式本地SQLite/体验身份。主库163条比赛（48演示+115 Jolpica F1分场次），无合成频道/视频或公共直播记录。
 
@@ -229,3 +229,16 @@ Codex内置浏览器未完成Google弹窗，曾返回auth/popup-closed-by-user�
 说明docs/matching-replay.md；证据evidence/matching-replay-before/after-2026-09-10.json、matching-ui-2026-09-10.json、matching-main-readback-2026-09-10.json。源码包已重建为44文件，SHA256 1a7c4b12cf7867724824ee0c8de7516b18fef89f3ddebdd250c4b32f870049b8，本批没有重复Core Tools宿主验收。前一轮云身份/未获批准的资源与价格候选已本地提交2263269；没有push或Azure创建/部署。
 
 继续完整产品目标：低成本数据库选型待用户决定；真实YouTube采集/Hub与人工标注质量、真实体育来源覆盖、目标MCP业务调用、Chrome安装/生命周期、Azure及设备日历验收仍未完成。用户已停止IAB Google登录排查，保持该范围。此次为实际实现与运行证据进展，未把任务标done。
+
+
+## 2026-09-10 · Codex实际业务调用与探测隔离（T28/T29）
+
+安装的codex-cli 0.153.4在ephemeral/path=null的临时协议上下文实际调用MCP，没有模型回合或持久用户任务。25项隔离检查通过：公开来源/分页/事件、只读拒写、关注与链接写入、重复与冲突、任意userId拒绝、私人地址权限、跨HTTP/MCP同键、持久屏蔽、配置导出/预览/确认导入、受控access过期后的refresh轮换和撤销后实际401。worker发布后真实HTTP ICS正文与投影一致，UID不变、SEQUENCE递增、200/304通过。未把受控过期当作自然15分钟/7天验收。
+
+修正旧探测脚本仅禁用显式MCP、未禁用插件/apps的问题。新脚本以进程覆盖禁用插件和apps，核对配置与全部inventory页；有thread时其他运行时须disabled且零工具，无thread的null状态须同时匹配明确disabled配置。旧授权/发现证据保留并补充范围更正。25项针对性pytest/ruff通过（11项新增隔离测试，2条既有弃用警告）；未重复全量后端或Web构建。
+
+复现：后端 uv run python -m experiments.codex_business --output data/codex-business-new.json 。证据anke-sports-cloud/evidence/codex-business-2026-09-10.md及JSON，最终源码哈希已核对。临时SQLite/API/本地cookie、服务端grant、unique-name Codex凭据均清理，没写用户Codex配置。主预览和Firebase数据库未用于测试，没有迁移、实际上游或云资源调用；本批客户端只有README/STATE变化，服务端没有业务处理器/契约/依赖变化。
+
+现有进程PID均读回存活，8787/8788健康及3000/3002/3003页面均200。主API session43380/PID44497、worker62679/PID44496、Web43940/PID53698；Firebase API92869/PID44563、worker24522/PID44564、Web91087/PID38482；构建预览31276/PID44147、合成匹配63263/PID44193均未重启。本批未操作浏览器标签；用户明确停止的IAB登录排查没有恢复。
+
+T28/T29保持in_progress；真实Firebase身份与MCP组合、自然时间过期、模型自行选择工具、真实YouTube、HTTPS/Azure与设备日历尚未验收。低成本Cosmos候选仍未选定，未创建收费资源或改造SQL架构。无push/部署，完整目标继续。

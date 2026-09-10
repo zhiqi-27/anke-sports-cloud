@@ -1,0 +1,62 @@
+{
+  "passed": true,
+  "checks": [
+    "public_source_query",
+    "public_cursor_pagination",
+    "public_event_read",
+    "readonly_write_denied",
+    "readonly_feed_secret_denied",
+    "readonly_credentials_cleared",
+    "follow_write",
+    "idempotent_follow_retry",
+    "changed_payload_same_key_rejected",
+    "caller_identity_spoof_rejected",
+    "write_scope_does_not_reveal_feed",
+    "private_followed_schedule",
+    "cross_transport_link_retry",
+    "link_publish_preserves_uid",
+    "link_removed",
+    "removed_link_stays_blocked",
+    "blocked_link_removed_from_feed",
+    "identical_publish_stable",
+    "published_feed_http_200_and_304",
+    "export_without_credentials",
+    "import_preview_readonly",
+    "import_requires_exact_preview",
+    "controlled_expiry_refresh_rotation",
+    "revoked_client_call_rejected",
+    "write_credentials_cleared"
+  ],
+  "client": "codex-cli 0.153.4",
+  "transport": "installed Codex app-server mcpServer/tool/call -> Streamable HTTP",
+  "dataset": "synthetic seed; isolated temporary SQLite; explicit local identity",
+  "http_observations": {
+    "GET /authorize 302": 2,
+    "GET /mcp 401": 10,
+    "GET /mcp/public 406": 2,
+    "POST /mcp 200": 29,
+    "POST /mcp 202": 4,
+    "POST /mcp 401": 6,
+    "POST /mcp/public 200": 10,
+    "POST /mcp/public 202": 3,
+    "POST /register 201": 2,
+    "POST /token 200": 3,
+    "POST /token 400": 1
+  },
+  "temporary_database_removed": true,
+  "unrelated_mcp_runtimes_disabled": true,
+  "model_turns_started": false,
+  "persistent_threads_created": false,
+  "configuration_files_changed": false,
+  "limitations": [
+    "No model-driven tool selection",
+    "No elapsed-time refresh or seven-day expiry test",
+    "No Firebase, HTTPS, Azure, MySQL or real YouTube call in this experiment"
+  ],
+  "source_sha256": {
+    "scripts/check_codex_discovery.py": "0b2c22004cfa11f882d5ec436fb72cb819dd34b7bfd3eaeb39f5b1aa17a39c2c",
+    "experiments/codex_business.py": "2a1430e11bfeae9590edfcb8502071babfc423f2b01fa3b37f774603d8fd7de9",
+    "app/mcp_server.py": "8f9f5b8f8c48627fee3d14e904ecdef95cb0179cd1b7ebe6e6baa07079d34178",
+    "app/oauth.py": "d862033a799250a1c29ed89ef04142a992a281338ab1390d6762a3dd86eab351"
+  }
+}
