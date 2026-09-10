@@ -1,6 +1,8 @@
 # YouTube 项目级请求预算
 
-HTTP 频道解析、MCP 添加创作者、后台 uploads 补查、视频详情与频道元数据共用 `youtube_budgets`。所有实例必须使用同一权威 SQL 数据库及拥有 API key 的同一个 `ANKE_SPORTS_YOUTUBE_PROJECT_ID`。Key 轮换不改变桶；不允许通过轮换项目绕过额度。不会复制 FormaLM 配置。
+SQL完整内容流程中的HTTP频道解析、MCP添加创作者、后台uploads补查、视频详情与频道元数据共用 `youtube_budgets`。所有实例必须使用同一权威SQL数据库及拥有API key的同一个 `ANKE_SPORTS_YOUTUBE_PROJECT_ID`。Key轮换不改变桶；不允许通过轮换项目绕过额度。不会复制FormaLM配置。
+
+文档模式已接入ETag项目账本和HTTP频道解析，SQL/文档共用传输、太平洋窗口与安全等待规则；Key改为请求头传递，已通过真实YouTube读取。新存储的持续发现/匹配尚未接入，迁移时不能并行启用同项目两份独立账本，见 [文档YouTube范围](document-youtube.md)。
 
 配置 `YOUTUBE_API_KEY`、`ANKE_SPORTS_YOUTUBE_PROJECT_ID` 与 `ANKE_SPORTS_YOUTUBE_DAILY_BUDGET`。默认 9,000 是本服务自己的每日上限，不是 Google 已批准额度、实际用量或余额。此版本只允许 `channels`、`playlistItems`、`videos`，每次请求预留 1 单位；分页逐请求计数，不使用 search。依据 [官方成本表](https://developers.google.com/youtube/v3/determine_quota_cost)（2026-09-10 核对，页面更新于 2026-09-04），日界线为太平洋时间午夜，含夏令时。
 

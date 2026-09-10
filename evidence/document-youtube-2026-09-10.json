@@ -1,0 +1,80 @@
+{
+  "recorded_at": "2026-09-10T05:01:29.805717+00:00",
+  "full_regression": {
+    "passed": 327,
+    "skipped": 2,
+    "warnings": 2,
+    "seconds": 16.01
+  },
+  "related_regression": {
+    "passed": 66,
+    "warnings": 2,
+    "seconds": 2.55
+  },
+  "new_document_youtube_test_cases": 25,
+  "ruff_passed": true,
+  "full_contracts_unchanged": true,
+  "real_experiment": {
+    "started_at": "2026-09-10T04:57:16.307343+00:00",
+    "checks": [
+      "channel_id_resolved",
+      "handle_resolved",
+      "two_reservations_retained",
+      "reopened_ledger_matches",
+      "no_business_state_written",
+      "sql_runtime_absent"
+    ],
+    "success": true,
+    "environment": "documents-local",
+    "upstream": "YouTube Data API",
+    "key_transport": "X-Goog-Api-Key header",
+    "browser_used": false,
+    "cloud_resources_changed": false,
+    "creator_discovery_verified": false,
+    "quota_scope": "This experiment ledger only; previous callers and Google usage are not counted",
+    "source_sha256": {
+      "app/document_youtube_budget.py": "027fc6ba66276f4784fd9ac5bc2fe010a5725095b5e08df84f2139c902b44519",
+      "app/youtube_transport.py": "22e2b3d9629975192d15bce590f433c948272e6369e53aa4eb917df09edafae3",
+      "app/youtube_rules.py": "ae87bf0035e238e25f625fad0813ade2c9e22e666b904db6477b2544d1dd6388",
+      "app/document_runtime.py": "95bb35a748fcff17f910cedab04d50bad4314b34c6d8649704159ead6a34c29e",
+      "app/document_store.py": "208de07ce9e25ffac75e9bc68c08dae50de4aac8a5d6cfacb4644af06e90e838",
+      "app/provider_adapters.py": "2016bf7ebcaf35c1957beb9f3c15f59c339fa6de6fdcd0c17eecc42f065e0984",
+      "experiments/document_youtube_live.py": "16fb6f6d8627828c5bb4927283f07e24a6f633b9da21395b8f72aef109d4ae71"
+    },
+    "budget_before": {
+      "configured": true,
+      "state": "available",
+      "daily_limit": 4,
+      "reserved_units": 0,
+      "available_units": 4,
+      "reset_at": "2026-09-10T07:00:00+00:00",
+      "resume_at": null
+    },
+    "channel": {
+      "id": "UCB_qr75-ydFVKSF9Dmo6izg",
+      "name": "FORMULA 1"
+    },
+    "budget_after": {
+      "configured": true,
+      "state": "available",
+      "daily_limit": 4,
+      "reserved_units": 2,
+      "available_units": 2,
+      "reset_at": "2026-09-10T07:00:00+00:00",
+      "resume_at": null
+    },
+    "ledger_retained": "data/document-youtube-live.db",
+    "finished_at": "2026-09-10T04:57:17.457495+00:00"
+  },
+  "local_http_evidence": "ASGI TestClient; real external transport verified separately",
+  "browser_used": false,
+  "unlock_dependent_steps_paused": true,
+  "standing_services_restarted": false,
+  "azure_resources_created": false,
+  "creator_discovery_migrated": false,
+  "push_or_deploy": false,
+  "capacity": {
+    "development": "Serverless + Periodic",
+    "production": "Serverless + Periodic"
+  }
+}

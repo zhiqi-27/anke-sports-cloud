@@ -20,6 +20,7 @@ from app.schemas import (
     AddLink,
     CalendarUserView,
     Config,
+    CreatorIdentity,
     EventList,
     EventView,
     FeedAction,
@@ -28,6 +29,7 @@ from app.schemas import (
     ImportPreviewView,
     LinkAddedView,
     OverrideInput,
+    ResolveCreator,
     SaveFollows,
     SavePreferences,
     ServiceStatusView,
@@ -152,23 +154,25 @@ def create_app(store=None, cfg=None):
         return {
             "local_preview": local_allowed(request),
             "firebase_configured": bool(cfg.firebase_project_id),
-            "youtube_budget": {
-                "configured": False,
-                "state": "unconfigured",
-                "daily_limit": cfg.youtube_daily_budget,
-                "reserved_units": 0,
-                "available_units": None,
-                "reset_at": None,
-                "resume_at": None,
-            },
+            "youtube_budget": rt.youtube_budget.status(),
             "providers": rt.providers.statuses(),
             "integrations": {
                 "storage": cfg.storage_backend,
                 "content_migration": "not_ready",
                 "ics_device_test": "not_tested",
                 "youtube_push": "not_tested",
+                "youtube_discovery": "not_migrated",
                 "app_links": "not_tested",
             },
+        }
+
+    @app.post("/api/v1/me/creators/resolve", response_model=CreatorIdentity)
+    def creator_resolve(data: ResolveCreator, user=Depends(me), rt=Depends(runtime)):
+        details = rt.resolve_creator(data.url)
+        return {
+            "channel_id": details["channel_id"],
+            "name": details["name"],
+            "url": "https://www.youtube.com/channel/" + details["channel_id"],
         }
 
     @app.post("/api/v1/auth/local", response_model=CalendarUserView)

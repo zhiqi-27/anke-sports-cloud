@@ -1,13 +1,12 @@
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
-import httpx
+import httpx as httpx  # Preserve the injectable HTTP transport used by integration tests.
 from sqlalchemy import and_, case, func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 
 from app.db import BroadcastRecord, Event, Job, Link, ProviderState, Source, now
 from app.config import settings
-from app.security import problem
 
 PROVIDER_REFRESH = timedelta(hours=6)
 
@@ -177,83 +176,13 @@ def sync_provider(db, provider):
 
 
 def youtube_request(endpoint, params):
-    key = provider_key("YOUTUBE_API_KEY")
-    if not key:
-        problem("YOUTUBE_KEY_REQUIRED", "YouTube 频道服务尚未配置，暂时无法读取创作者", 503)
-    from app.youtube_budget import reserve, upstream_wait
+    from app import youtube_budget
+    from app.youtube_transport import request
 
-    ticket = reserve(endpoint)
-    try:
-        with httpx.Client(timeout=20, follow_redirects=False) as client:
-            response = client.get(
-                "https://www.googleapis.com/youtube/v3/" + endpoint, params={**params, "key": key}
-            )
-        try:
-            payload = response.json()
-        except ValueError:
-            if response.status_code < 400:
-                raise
-            payload = {}
-        if not isinstance(payload, dict):
-            if response.status_code < 400:
-                raise ValueError("INVALID_YOUTUBE_RESPONSE")
-            payload = {}
-        if response.status_code >= 400:
-            error = payload.get("error")
-            errors = error.get("errors") if isinstance(error, dict) else None
-            reasons = {
-                x.get("reason")
-                for x in (errors if isinstance(errors, list) else [])
-                if isinstance(x, dict) and isinstance(x.get("reason"), str)
-            }
-            if response.status_code == 403 and reasons.intersection({"quotaExceeded", "dailyLimitExceeded"}):
-                raise upstream_wait(ticket, "YOUTUBE_QUOTA_EXHAUSTED")
-            if response.status_code == 429 or reasons.intersection(
-                {"rateLimitExceeded", "userRateLimitExceeded"}
-            ):
-                from app.jobs import retry_seconds
-
-                delay = retry_seconds(
-                    httpx.HTTPStatusError("upstream", request=response.request, response=response),
-                    1,
-                    datetime.now(timezone.utc),
-                )
-                raise upstream_wait(ticket, "YOUTUBE_RATE_LIMITED", max(60, delay))
-            problem("YOUTUBE_API_UNAVAILABLE", "YouTube 暂时无法读取，请检查服务配置或稍后重试", 503)
-        return payload
-    except (httpx.HTTPError, ValueError):
-        problem("YOUTUBE_API_UNAVAILABLE", "YouTube 暂时无法读取，请检查服务配置或稍后重试", 503)
+    return request(endpoint, params, key=provider_key("YOUTUBE_API_KEY"), budget=youtube_budget)
 
 
 def resolve_creator(value):
-    import re
-    from urllib.parse import urlsplit
-    from app.security import canonical_url
+    from app.youtube_transport import resolve_creator as resolve
 
-    if re.fullmatch(r"UC[A-Za-z0-9_-]{22}", value):
-        params = {"id": value}
-    elif value.startswith("@"):
-        params = {"forHandle": value}
-    else:
-        parsed = urlsplit(value)
-        if parsed.hostname not in {"www.youtube.com", "youtube.com", "m.youtube.com", "youtu.be"}:
-            problem("INVALID_CHANNEL", "请输入 YouTube 频道或视频链接")
-        if parsed.path.startswith("/channel/"):
-            params = {"id": parsed.path.split("/")[2]}
-        elif parsed.path.startswith("/@"):
-            params = {"forHandle": parsed.path.split("/")[1]}
-        else:
-            canonical, _ = canonical_url(value)
-            video = youtube_request("videos", {"id": canonical.split("v=")[1], "part": "snippet"})["items"]
-            if not video:
-                problem("CHANNEL_NOT_FOUND", "无法读取此公开视频")
-            params = {"id": video[0]["snippet"]["channelId"]}
-    results = youtube_request("channels", {**params, "part": "snippet,contentDetails"})["items"]
-    if not results:
-        problem("CHANNEL_NOT_FOUND", "没有找到此公开频道")
-    row = results[0]
-    return {
-        "channel_id": row["id"],
-        "name": row["snippet"]["title"],
-        "uploads_id": row["contentDetails"]["relatedPlaylists"]["uploads"],
-    }
+    return resolve(value, youtube_request)

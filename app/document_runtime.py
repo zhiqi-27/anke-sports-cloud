@@ -22,6 +22,7 @@ class Runtime:
     def __init__(self, store, cfg):
         from app.document_content import Content
         from app.document_providers import Providers
+        from app.document_youtube_budget import Budget
 
         self.store, self.cfg = store, cfg
         self.accounts = Accounts(store, cfg.cipher())
@@ -29,6 +30,18 @@ class Runtime:
         self.publisher = FeedPublisher(store, cfg.cipher())
         self.content = Content(self)
         self.providers = Providers(self)
+        self.youtube_budget = Budget(store, cfg)
+
+    def youtube_request(self, endpoint, params):
+        from app.provider_adapters import provider_key
+        from app.youtube_transport import request
+
+        return request(endpoint, params, key=provider_key("YOUTUBE_API_KEY", self.cfg), budget=self.youtube_budget)
+
+    def resolve_creator(self, value):
+        from app.youtube_transport import resolve_creator
+
+        return resolve_creator(value, self.youtube_request)
 
     def calendar_supported(self, payload):
         # Never silently publish an imported configuration with missing content.

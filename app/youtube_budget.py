@@ -5,9 +5,7 @@ commit in a separate session so a failed/rolled-back business operation cannot
 refund a request already sent upstream. Keys never identify the budget bucket.
 """
 
-from dataclasses import dataclass
-from datetime import datetime, time, timedelta, timezone
-from zoneinfo import ZoneInfo
+from datetime import datetime, timedelta, timezone
 
 from fastapi import HTTPException
 from sqlalchemy import select, update
@@ -17,19 +15,18 @@ from app import db as database
 from app.config import settings
 from app.db import YouTubeBudget
 
-WAIT_CODES = {"YOUTUBE_BUDGET_EXHAUSTED", "YOUTUBE_QUOTA_EXHAUSTED", "YOUTUBE_RATE_LIMITED"}
-NETWORK_JOBS = {"youtube_poll", "youtube_videos", "youtube_channel_metadata"}
-COSTS = {"channels": 1, "playlistItems": 1, "videos": 1}
+from app.youtube_rules import (
+    COSTS,
+    NETWORK_JOBS as NETWORK_JOBS,
+    WAIT_CODES as WAIT_CODES,
+    Reservation,
+    wait_error as shared_wait_error,
+    window as window,
+)
 
 
 def clock():
     return datetime.now(timezone.utc)
-
-
-def window(instant):
-    local = instant.astimezone(ZoneInfo("America/Los_Angeles"))
-    reset = datetime.combine(local.date() + timedelta(days=1), time(), tzinfo=local.tzinfo)
-    return local.date().isoformat(), reset.astimezone(timezone.utc)
 
 
 def configured():
@@ -39,18 +36,7 @@ def configured():
 
 
 def wait_error(code, resume):
-    seconds = max(1, int((resume - clock()).total_seconds()) + 1)
-    message = "YouTube 请求额度暂不可用，将在允许时自动重试；已有日历继续保留"
-    return HTTPException(
-        503,
-        {
-            "code": code,
-            "message": message,
-            "retryable": True,
-            "resume_at": resume.isoformat(),
-            "retry_after_seconds": seconds,
-        },
-    )
+    return shared_wait_error(code, resume, clock())
 
 
 def lock_row(db, project, instant):
@@ -96,13 +82,6 @@ def lock_row(db, project, instant):
         .with_for_update()
         .execution_options(populate_existing=True)
     )
-
-
-@dataclass(frozen=True)
-class Reservation:
-    project: str
-    period: str
-    reset: datetime
 
 
 def reserve(endpoint):

@@ -1,6 +1,6 @@
 # Anke Sports 服务端状态
 
-当前摘要：2026-09-10，开发、生产云目标均为 Cosmos NoSQL Serverless + Periodic，Azure资源未创建。文档模式已接入体育来源抓取、持久六小时调度和本地每日窗口；真实Jolpica经独立HTTP/worker发布85条个人ICS事件。完整302 passed/2 skipped/2既有警告；最终禁用状态细化后相关20项通过，Ruff及完整OpenAPI/config schema一致。当前独立预览 http://localhost:3007/calendar（session7461/API PID94103、worker PID94104），需重新进入本地体验并切换真实赛程；新页面未做浏览器渲染检查。用户Mac锁定，需解锁、登录或电脑确认的步骤暂停；可独立完成的本地工作继续。主SQL/Firebase实例未重启。内容等剩余迁移、真实云与设备仍待验收；无push或部署。以下历史批次保留当时状态，以本摘要和最新批次为准。
+当前摘要：2026-09-10，新存储已接入YouTube项目额度账本和只读频道解析；SQL/文档共用请求传输及太平洋窗口。真实频道ID与handle读取共6项检查通过，保留2次请求计数；完整327 passed/2 skipped/2既有警告，Ruff与完整OpenAPI/config schema一致。创作者保存/持续发现/匹配尚未迁移，完整内容流程仍需继续。开发、生产目标均为Cosmos Serverless + Periodic，Azure资源未创建。3007 F1预览保留上一批Provider代码（session7461/API PID94103、worker PID94104），本批未重启常驻服务；本轮未复核这些历史句柄。用户Mac锁定，需解锁/登录/电脑确认的步骤暂停，独立本地工作继续。没有浏览器、主数据迁移、push或部署。以下历史批次保留当时状态，以本摘要和最新批次为准。
 
 更新：2026-09-10。主 API 127.0.0.1:8787，session43380/PID44497；worker session62679/PID44496；显式启用本地体验并关闭访问日志。显式本地SQLite/体验身份。主库163条比赛（48演示+115 Jolpica F1分场次），无合成频道/视频或公共直播记录。
 
@@ -323,3 +323,19 @@ SQL与文档模式共用独立体育来源适配器。文档模式新增单来�
 
 下一步：创作者/YouTube、直播、公共Feed、OAuth/MCP、账号删除等文档路径；SQL迁移、孤立块GC、反向关注索引；真实Cosmos身份/RU/429、Azure Queue/Timer与Periodic恢复；真实NBA/足球权限及手机日历/内容直达。T03/T08/T09/T10/T12/T13继续in_progress，原开发包任务JSON未在本批改写，不能把本批局部验证等同完整任务或产品完成。
 证据：[evidence/document-providers-2026-09-10.md](evidence/document-providers-2026-09-10.md)及同名JSON；操作说明：[docs/document-providers.md](docs/document-providers.md)。本批实现和验证作为独立本地提交保存，不push或部署；提交编号在工作区根STATE.md记录。完整产品目标继续。
+
+
+## 2026-09-10 · 文档YouTube额度与频道解析
+
+本轮为progress：新增文档项目账本、共享请求/窗口规则和同路径频道解析，完成真实外部读取及完整回归。额度记录使用indexes独立项目分区ETag，HTTP前提交预留；并发或Key轮换不能重置，提交失败/结果不确定时不发HTTP。跨日/夏令时、限流恢复和较低配置上限沿用原语义。SQL完整内容流程继续使用SQL账本，未切换常驻实例；实际迁移不能让同项目两套独立账本并行联网。
+
+SQL与文档共用YouTube传输，Key进入X-Goog-Api-Key请求头，不跟随重定向。新存储POST /api/v1/me/creators/resolve检查身份/Origin，解析频道ID、handle、频道页和公开视频；不修改个人配置、关注、链接或任务。错误或不完整身份拒绝。状态页返回实际内部预算并明确youtube_discovery=not_migrated，不把额度配置当持续抓取已启用。
+
+新增25项文档YouTube测试；首轮相关66项通过（2.55秒），完整327 passed/2 skipped/2条既有警告（16.01秒）。12并发独立连接在额度6时恰好6次模拟HTTP，换Key后仍拒绝；独立新进程读回预算，文档HTTP不导入SQL。预算损坏、旧日迟到响应、提交回复丢失、认证/来源、只读账号与DEBUG日志脱敏均覆盖。Ruff、完整OpenAPI/config schema及diff检查通过。客户端无业务源码、契约、依赖变化，未重复构建。
+
+真实实验使用既有独立Anke Sports专用Key，频道ID及@Formula1均解析到同一频道，共2次请求、6项检查；实际Google读取确认请求头方式可用。专用本地账本data/document-youtube-live.db以0600保留，实验上限4，重跑不重置计数；只计算此实验，不代表Google总使用量，也未合并历史实验账本。源摘要前后匹配，没有创建业务state、用户关注、视频或任务。实验结束，无浏览器、Firebase身份或Azure数据面操作；Key不进入输出和Git。
+
+3007独立F1预览及主SQL/Firebase服务未重启，保留上一批运行代码；本轮不以历史句柄声称重新验证存活或UI。需要Mac解锁的操作继续暂停，用户已停止的Codex浏览器登录排查不恢复。没有主数据迁移、远端设置、push或部署。
+
+下一步仍是完整创作者链路：保存/暂停/删除、共享频道工作和uploads分页/视频详情、通知与续订、匹配与待确认、个人覆盖到稳定ICS；之后补齐直播/公共Feed/OAuth/MCP/删除及存储迁移与GC、真实Azure和设备验收。T13/T14/T15/T33仍in_progress；本批没有把频道解析视作持续发现或完整产品完成，原开发包任务JSON未改写。
+证据：[evidence/document-youtube-2026-09-10.md](evidence/document-youtube-2026-09-10.md)及同名JSON；说明：[docs/document-youtube.md](docs/document-youtube.md)。实现和文档作为独立本地提交保存，提交编号记录在根STATE.md；完整目标继续。

@@ -6,6 +6,8 @@
 
 独立文档模式验收：[日历](http://localhost:3007/calendar)（重新进入本地体验，切换“真实赛程”；已载入F1关注及85条窗口内事件），运行说明见 [文档存储路径](docs/document-runtime.md)。已接入个人链接、屏蔽/固定、单场选择、配置导入和Provider更新；[302 项回归及真实 F1 HTTP/worker 证据](evidence/document-providers-2026-09-10.md) 不代表真实 Cosmos/Azure 验收。
 
+后续新存储已补齐YouTube项目额度账本与频道解析，真实频道ID/handle读取通过，完整327项回归通过。创作者保存、持续发现与匹配仍待迁移，见 [范围与运行说明](docs/document-youtube.md) 和 [验收证据](evidence/document-youtube-2026-09-10.md)；3007常驻预览未为本批重启。
+
 ## 本地运行
 
 需要 Python 3.12 与 uv。

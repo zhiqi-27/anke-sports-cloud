@@ -10,7 +10,7 @@
 
 本批新增个人原链接附加、屏蔽/固定、单场加入/排除/重置、配置导入预览与确认。链接、配置、新任务和精确幂等回执在个人分区同事务提交；屏蔽后重新附加不会撤销屏蔽。共享链接筛选和导入规则由 SQL 与文档模式共用，合并超出配置上限返回明确错误。预览不修改配置或创建任务，确认绑定账号、版本和完整配置。未迁移创作者在导入中标为 unresolved，拒绝应用。
 
-尚未接入文档模式：创作者/YouTube、直播、公共 Feed、账号删除、OAuth/MCP、Google 直连。相关接口明确返回 `DOCUMENT_FEATURE_UNAVAILABLE`。包含尚未迁移创作者配置的账号不能被静默发布为空链接日历。设置页的 Provider/YouTube 不代表后台已启用。
+文档模式已接入YouTube项目额度记录与只读频道解析，SQL/文档共用请求传输，见 [YouTube请求与解析](document-youtube.md)。尚未接入：创作者保存/YouTube持续发现与匹配、直播、公共 Feed、账号删除、OAuth/MCP、Google直连。未迁移接口明确返回 `DOCUMENT_FEATURE_UNAVAILABLE`。包含尚未迁移创作者配置的账号不能被静默发布为空链接日历。额度configured状态不代表后台发现已启用。
 
 完整客户端合同继续以 SQL 基线导出，并已核对未变化。导出脚本拒绝在文档模式下覆盖完整合同，避免误把当前接口子集作为产品全部接口。新路径不是完整 Cosmos 迁移，也不是可直接公测的部署包。
 
@@ -61,3 +61,5 @@ ANKE_DOCUMENT_UI_PORT=3007 uv run python -m experiments.document_ui
 真实 Cosmos 身份权限、RU/429、分区拆分和吞吐、Azure Queue/poison/Timer、Periodic 恢复、删除决定重放、SQL 数据迁移仍未通过。历史任务/孤立块 GC、超大 Feed 流式读取与反向索引仍需实现；当前链接列表按用户分页加载，规模/RU仍待验证。容量转换保持独立管理流程，参见 [存储与扩容方案](cosmos-storage-design.md)。
 
 最新Provider批次完整302项回归通过；最后禁用状态细化后20项相关检查通过。真实Jolpica→HTTP关注→独立worker→85条ICS的8项验证通过，见 [证据](../evidence/document-providers-2026-09-10.md)。本批未操作锁定Mac的浏览器，新预览的渲染尚未重查。
+
+其后频道解析与额度批次完整327项回归通过，真实YouTube双次读取和持久账本共6项检查通过，见 [新证据](../evidence/document-youtube-2026-09-10.md)。3007预览保留Provider批次运行代码，本批没有重启常驻服务。
