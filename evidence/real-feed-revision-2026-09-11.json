@@ -1,0 +1,12 @@
+{
+  "environment": "live loopback HTTP; local identity and document worker",
+  "device_tested": false,
+  "version_before": 2,
+  "version_changed": 3,
+  "events": 83,
+  "success": true,
+  "preferences_restored": true,
+  "version_restored": 4,
+  "uid_stable": true,
+  "conditional_304": true
+}

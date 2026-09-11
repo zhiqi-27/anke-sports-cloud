@@ -1,0 +1,632 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.46.1.21595",
+      "templateHash": "1792205326899968045"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string",
+      "defaultValue": "eastasia",
+      "allowedValues": [
+        "eastasia"
+      ]
+    },
+    "resourceGroupName": {
+      "type": "string",
+      "defaultValue": "anke-sports-dev",
+      "allowedValues": [
+        "anke-sports-dev"
+      ]
+    },
+    "webUrl": {
+      "type": "string",
+      "metadata": {
+        "description": "Confirmed HTTPS desktop Web origin; no trailing slash. Required before deployment."
+      }
+    },
+    "developerIpRules": {
+      "type": "array",
+      "defaultValue": [],
+      "metadata": {
+        "description": "Optional explicit developer public IPv4 rules; empty by default. Runtime uses its own VNet service endpoint."
+      }
+    }
+  },
+  "variables": {
+    "tags": {
+      "product": "Anke Sports",
+      "environment": "development",
+      "managedBy": "bicep"
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Resources/resourceGroups",
+      "apiVersion": "2024-11-01",
+      "name": "[parameters('resourceGroupName')]",
+      "location": "[parameters('location')]",
+      "tags": "[variables('tags')]"
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "anke-sports-dev-services",
+      "resourceGroup": "[parameters('resourceGroupName')]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "tags": {
+            "value": "[variables('tags')]"
+          },
+          "webUrl": {
+            "value": "[parameters('webUrl')]"
+          },
+          "developerIpRules": {
+            "value": "[parameters('developerIpRules')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.46.1.21595",
+              "templateHash": "12406287866466470827"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string"
+            },
+            "tags": {
+              "type": "object"
+            },
+            "webUrl": {
+              "type": "string"
+            },
+            "developerIpRules": {
+              "type": "array"
+            }
+          },
+          "variables": {
+            "suffix": "[take(uniqueString(subscription().id, resourceGroup().name), 8)]",
+            "appName": "[format('anke-sports-dev-{0}', variables('suffix'))]",
+            "storageName": "[format('ankesportsdev{0}', variables('suffix'))]",
+            "vaultName": "[format('ankesports-dev-{0}', variables('suffix'))]",
+            "cosmosName": "[format('anke-sports-dev-{0}', variables('suffix'))]",
+            "blobOwnerRole": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b7e6dc6d-f1e8-4753-8033-0f276bb0955b')]",
+            "queueRoleId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '974c5e8b-45b9-4653-ba55-5f855dd0fb88')]",
+            "secretsRole": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')]"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+              "apiVersion": "2023-01-31",
+              "name": "anke-sports-dev-runtime",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]"
+            },
+            {
+              "type": "Microsoft.Network/virtualNetworks",
+              "apiVersion": "2024-05-01",
+              "name": "anke-sports-dev-network",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "addressSpace": {
+                  "addressPrefixes": [
+                    "10.87.0.0/16"
+                  ]
+                },
+                "subnets": [
+                  {
+                    "name": "functions",
+                    "properties": {
+                      "addressPrefix": "10.87.0.0/26",
+                      "delegations": [
+                        {
+                          "name": "flex",
+                          "properties": {
+                            "serviceName": "Microsoft.App/environments"
+                          }
+                        }
+                      ],
+                      "serviceEndpoints": [
+                        {
+                          "service": "Microsoft.AzureCosmosDB"
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "type": "Microsoft.DocumentDB/databaseAccounts",
+              "apiVersion": "2025-04-15",
+              "name": "[variables('cosmosName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "kind": "GlobalDocumentDB",
+              "properties": {
+                "copy": [
+                  {
+                    "name": "ipRules",
+                    "count": "[length(parameters('developerIpRules'))]",
+                    "input": {
+                      "ipAddressOrRange": "[parameters('developerIpRules')[copyIndex('ipRules')]]"
+                    }
+                  }
+                ],
+                "databaseAccountOfferType": "Standard",
+                "capabilities": [
+                  {
+                    "name": "EnableServerless"
+                  }
+                ],
+                "enableFreeTier": false,
+                "enableAutomaticFailover": false,
+                "enableMultipleWriteLocations": false,
+                "enableAnalyticalStorage": false,
+                "locations": [
+                  {
+                    "locationName": "[parameters('location')]",
+                    "failoverPriority": 0,
+                    "isZoneRedundant": false
+                  }
+                ],
+                "consistencyPolicy": {
+                  "defaultConsistencyLevel": "Strong"
+                },
+                "backupPolicy": {
+                  "type": "Periodic",
+                  "periodicModeProperties": {
+                    "backupIntervalInMinutes": 240,
+                    "backupRetentionIntervalInHours": 8,
+                    "backupStorageRedundancy": "Geo"
+                  }
+                },
+                "disableLocalAuth": true,
+                "disableKeyBasedMetadataWriteAccess": true,
+                "minimalTlsVersion": "Tls12",
+                "publicNetworkAccess": "Enabled",
+                "isVirtualNetworkFilterEnabled": true,
+                "virtualNetworkRules": [
+                  {
+                    "id": "[format('{0}/subnets/functions', resourceId('Microsoft.Network/virtualNetworks', 'anke-sports-dev-network'))]",
+                    "ignoreMissingVNetServiceEndpoint": false
+                  }
+                ],
+                "networkAclBypass": "None"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', 'anke-sports-dev-network')]"
+              ]
+            },
+            {
+              "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
+              "apiVersion": "2025-04-15",
+              "name": "[format('{0}/{1}', variables('cosmosName'), 'anke-sports')]",
+              "properties": {
+                "resource": {
+                  "id": "anke-sports"
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
+              "apiVersion": "2025-04-15",
+              "name": "[format('{0}/{1}/{2}', variables('cosmosName'), 'anke-sports', 'state')]",
+              "properties": {
+                "resource": {
+                  "id": "state",
+                  "partitionKey": {
+                    "paths": [
+                      "/pk"
+                    ],
+                    "kind": "Hash",
+                    "version": 2
+                  },
+                  "defaultTtl": -1,
+                  "indexingPolicy": {
+                    "automatic": true,
+                    "indexingMode": "consistent",
+                    "includedPaths": [
+                      {
+                        "path": "/*"
+                      }
+                    ],
+                    "excludedPaths": [
+                      {
+                        "path": "/payload/*"
+                      },
+                      {
+                        "path": "/ciphertext/?"
+                      },
+                      {
+                        "path": "/body/?"
+                      }
+                    ],
+                    "compositeIndexes": [
+                      [
+                        {
+                          "path": "/kind",
+                          "order": "ascending"
+                        },
+                        {
+                          "path": "/state",
+                          "order": "ascending"
+                        },
+                        {
+                          "path": "/due_at",
+                          "order": "ascending"
+                        }
+                      ]
+                    ]
+                  }
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', variables('cosmosName'), 'anke-sports')]"
+              ]
+            },
+            {
+              "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
+              "apiVersion": "2025-04-15",
+              "name": "[format('{0}/{1}/{2}', variables('cosmosName'), 'anke-sports', 'indexes')]",
+              "properties": {
+                "resource": {
+                  "id": "indexes",
+                  "partitionKey": {
+                    "paths": [
+                      "/pk"
+                    ],
+                    "kind": "Hash",
+                    "version": 2
+                  },
+                  "defaultTtl": -1,
+                  "indexingPolicy": {
+                    "automatic": true,
+                    "indexingMode": "consistent",
+                    "includedPaths": [
+                      {
+                        "path": "/*"
+                      }
+                    ],
+                    "excludedPaths": [
+                      {
+                        "path": "/payload/*"
+                      }
+                    ],
+                    "compositeIndexes": [
+                      [
+                        {
+                          "path": "/starts_at",
+                          "order": "ascending"
+                        },
+                        {
+                          "path": "/event_id",
+                          "order": "ascending"
+                        }
+                      ]
+                    ]
+                  }
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', variables('cosmosName'), 'anke-sports')]"
+              ]
+            },
+            {
+              "type": "Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments",
+              "apiVersion": "2025-04-15",
+              "name": "[format('{0}/{1}', variables('cosmosName'), guid(resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosName')), resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', variables('cosmosName'), 'anke-sports'), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'anke-sports-dev-runtime'), 'data-contributor'))]",
+              "properties": {
+                "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'anke-sports-dev-runtime'), '2023-01-31').principalId]",
+                "roleDefinitionId": "[format('{0}/sqlRoleDefinitions/00000000-0000-0000-0000-000000000002', resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosName')))]",
+                "scope": "[format('{0}/dbs/{1}', resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosName')), 'anke-sports')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosName'))]",
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', variables('cosmosName'), 'anke-sports')]",
+                "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'anke-sports-dev-runtime')]"
+              ]
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts",
+              "apiVersion": "2024-01-01",
+              "name": "[variables('storageName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "kind": "StorageV2",
+              "sku": {
+                "name": "Standard_LRS"
+              },
+              "properties": {
+                "accessTier": "Hot",
+                "allowBlobPublicAccess": false,
+                "allowSharedKeyAccess": false,
+                "supportsHttpsTrafficOnly": true,
+                "minimumTlsVersion": "TLS1_2"
+              }
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/blobServices",
+              "apiVersion": "2024-01-01",
+              "name": "[format('{0}/{1}', variables('storageName'), 'default')]",
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', variables('storageName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+              "apiVersion": "2024-01-01",
+              "name": "[format('{0}/{1}/{2}', variables('storageName'), 'default', 'function-packages')]",
+              "properties": {
+                "publicAccess": "None"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts/blobServices', variables('storageName'), 'default')]"
+              ]
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/queueServices",
+              "apiVersion": "2024-01-01",
+              "name": "[format('{0}/{1}', variables('storageName'), 'default')]",
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', variables('storageName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/queueServices/queues",
+              "apiVersion": "2024-01-01",
+              "name": "[format('{0}/{1}/{2}', variables('storageName'), 'default', 'anke-sports-jobs')]",
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts/queueServices', variables('storageName'), 'default')]"
+              ]
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/tableServices",
+              "apiVersion": "2024-01-01",
+              "name": "[format('{0}/{1}', variables('storageName'), 'default')]",
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', variables('storageName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.KeyVault/vaults",
+              "apiVersion": "2024-11-01",
+              "name": "[variables('vaultName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "tenantId": "[subscription().tenantId]",
+                "sku": {
+                  "family": "A",
+                  "name": "standard"
+                },
+                "enableRbacAuthorization": true,
+                "enablePurgeProtection": true,
+                "softDeleteRetentionInDays": 7
+              }
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.Storage/storageAccounts', variables('storageName'))]",
+              "name": "[guid(resourceId('Microsoft.Storage/storageAccounts', variables('storageName')), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'anke-sports-dev-runtime'), variables('blobOwnerRole'))]",
+              "properties": {
+                "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'anke-sports-dev-runtime'), '2023-01-31').principalId]",
+                "principalType": "ServicePrincipal",
+                "roleDefinitionId": "[variables('blobOwnerRole')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'anke-sports-dev-runtime')]",
+                "[resourceId('Microsoft.Storage/storageAccounts', variables('storageName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.Storage/storageAccounts', variables('storageName'))]",
+              "name": "[guid(resourceId('Microsoft.Storage/storageAccounts', variables('storageName')), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'anke-sports-dev-runtime'), variables('queueRoleId'))]",
+              "properties": {
+                "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'anke-sports-dev-runtime'), '2023-01-31').principalId]",
+                "principalType": "ServicePrincipal",
+                "roleDefinitionId": "[variables('queueRoleId')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'anke-sports-dev-runtime')]",
+                "[resourceId('Microsoft.Storage/storageAccounts', variables('storageName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.KeyVault/vaults', variables('vaultName'))]",
+              "name": "[guid(resourceId('Microsoft.KeyVault/vaults', variables('vaultName')), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'anke-sports-dev-runtime'), variables('secretsRole'))]",
+              "properties": {
+                "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'anke-sports-dev-runtime'), '2023-01-31').principalId]",
+                "principalType": "ServicePrincipal",
+                "roleDefinitionId": "[variables('secretsRole')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'anke-sports-dev-runtime')]",
+                "[resourceId('Microsoft.KeyVault/vaults', variables('vaultName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Web/serverfarms",
+              "apiVersion": "2024-11-01",
+              "name": "anke-sports-dev-flex",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "kind": "functionapp",
+              "sku": {
+                "name": "FC1",
+                "tier": "FlexConsumption"
+              },
+              "properties": {
+                "reserved": true
+              }
+            },
+            {
+              "type": "Microsoft.Web/sites",
+              "apiVersion": "2024-11-01",
+              "name": "[variables('appName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "kind": "functionapp,linux",
+              "identity": {
+                "type": "UserAssigned",
+                "userAssignedIdentities": {
+                  "[format('{0}', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'anke-sports-dev-runtime'))]": {}
+                }
+              },
+              "properties": {
+                "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', 'anke-sports-dev-flex')]",
+                "httpsOnly": true,
+                "publicNetworkAccess": "Enabled",
+                "virtualNetworkSubnetId": "[format('{0}/subnets/functions', resourceId('Microsoft.Network/virtualNetworks', 'anke-sports-dev-network'))]",
+                "keyVaultReferenceIdentity": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'anke-sports-dev-runtime')]",
+                "functionAppConfig": {
+                  "runtime": {
+                    "name": "python",
+                    "version": "3.12"
+                  },
+                  "deployment": {
+                    "storage": {
+                      "type": "blobContainer",
+                      "value": "[format('{0}{1}', reference(resourceId('Microsoft.Storage/storageAccounts', variables('storageName')), '2024-01-01').primaryEndpoints.blob, 'function-packages')]",
+                      "authentication": {
+                        "type": "UserAssignedIdentity",
+                        "userAssignedIdentityResourceId": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'anke-sports-dev-runtime')]"
+                      }
+                    }
+                  },
+                  "scaleAndConcurrency": {
+                    "maximumInstanceCount": 40,
+                    "instanceMemoryMB": 2048,
+                    "alwaysReady": [],
+                    "triggers": {
+                      "http": {
+                        "perInstanceConcurrency": 8
+                      }
+                    }
+                  }
+                },
+                "siteConfig": {
+                  "minTlsVersion": "1.2",
+                  "ftpsState": "Disabled",
+                  "httpLoggingEnabled": false,
+                  "detailedErrorLoggingEnabled": false
+                }
+              },
+              "dependsOn": [
+                "[extensionResourceId(resourceId('Microsoft.Storage/storageAccounts', variables('storageName')), 'Microsoft.Authorization/roleAssignments', guid(resourceId('Microsoft.Storage/storageAccounts', variables('storageName')), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'anke-sports-dev-runtime'), variables('blobOwnerRole')))]",
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments', variables('cosmosName'), guid(resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosName')), resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', variables('cosmosName'), 'anke-sports'), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'anke-sports-dev-runtime'), 'data-contributor'))]",
+                "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'anke-sports-dev-runtime')]",
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers', variables('cosmosName'), 'anke-sports', 'indexes')]",
+                "[resourceId('Microsoft.Storage/storageAccounts/queueServices/queues', variables('storageName'), 'default', 'anke-sports-jobs')]",
+                "[resourceId('Microsoft.Network/virtualNetworks', 'anke-sports-dev-network')]",
+                "[resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', variables('storageName'), 'default', 'function-packages')]",
+                "[resourceId('Microsoft.Web/serverfarms', 'anke-sports-dev-flex')]",
+                "[extensionResourceId(resourceId('Microsoft.Storage/storageAccounts', variables('storageName')), 'Microsoft.Authorization/roleAssignments', guid(resourceId('Microsoft.Storage/storageAccounts', variables('storageName')), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'anke-sports-dev-runtime'), variables('queueRoleId')))]",
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers', variables('cosmosName'), 'anke-sports', 'state')]",
+                "[resourceId('Microsoft.Storage/storageAccounts', variables('storageName'))]",
+                "[resourceId('Microsoft.Storage/storageAccounts/tableServices', variables('storageName'), 'default')]",
+                "[extensionResourceId(resourceId('Microsoft.KeyVault/vaults', variables('vaultName')), 'Microsoft.Authorization/roleAssignments', guid(resourceId('Microsoft.KeyVault/vaults', variables('vaultName')), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'anke-sports-dev-runtime'), variables('secretsRole')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Web/sites/config",
+              "apiVersion": "2024-11-01",
+              "name": "[format('{0}/{1}', variables('appName'), 'appsettings')]",
+              "properties": {
+                "AzureWebJobsStorage__blobServiceUri": "[reference(resourceId('Microsoft.Storage/storageAccounts', variables('storageName')), '2024-01-01').primaryEndpoints.blob]",
+                "AzureWebJobsStorage__queueServiceUri": "[reference(resourceId('Microsoft.Storage/storageAccounts', variables('storageName')), '2024-01-01').primaryEndpoints.queue]",
+                "AzureWebJobsStorage__tableServiceUri": "[reference(resourceId('Microsoft.Storage/storageAccounts', variables('storageName')), '2024-01-01').primaryEndpoints.table]",
+                "AzureWebJobsStorage__credential": "managedidentity",
+                "AzureWebJobsStorage__clientId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'anke-sports-dev-runtime'), '2023-01-31').clientId]",
+                "AzureQueueConnection__queueServiceUri": "[reference(resourceId('Microsoft.Storage/storageAccounts', variables('storageName')), '2024-01-01').primaryEndpoints.queue]",
+                "AzureQueueConnection__credential": "managedidentity",
+                "AzureQueueConnection__clientId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'anke-sports-dev-runtime'), '2023-01-31').clientId]",
+                "ANKE_SPORTS_ENV": "staging",
+                "ANKE_SPORTS_LOCAL_PREVIEW": "false",
+                "ANKE_SPORTS_FIREBASE_PROJECT_ID": "anke-sports-dev",
+                "ANKE_SPORTS_WEB_URL": "[parameters('webUrl')]",
+                "ANKE_SPORTS_PUBLIC_URL": "[format('https://{0}', reference(resourceId('Microsoft.Web/sites', variables('appName')), '2024-11-01').defaultHostName)]",
+                "ANKE_SPORTS_STORAGE_BACKEND": "cosmos",
+                "ANKE_SPORTS_COSMOS_ENDPOINT": "[reference(resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosName')), '2025-04-15').documentEndpoint]",
+                "ANKE_SPORTS_COSMOS_DATABASE": "anke-sports",
+                "ANKE_SPORTS_COSMOS_STATE_CONTAINER": "state",
+                "ANKE_SPORTS_COSMOS_INDEX_CONTAINER": "indexes",
+                "ANKE_SPORTS_COSMOS_CLIENT_ID": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'anke-sports-dev-runtime'), '2023-01-31').clientId]",
+                "ANKE_SPORTS_ENCRYPTION_KEY": "[format('@Microsoft.KeyVault(SecretUri={0}secrets/feed-encryption-key)', reference(resourceId('Microsoft.KeyVault/vaults', variables('vaultName')), '2024-11-01').vaultUri)]",
+                "ANKE_SPORTS_FIREBASE_CREDENTIALS_JSON": "[format('@Microsoft.KeyVault(SecretUri={0}secrets/firebase-credentials)', reference(resourceId('Microsoft.KeyVault/vaults', variables('vaultName')), '2024-11-01').vaultUri)]",
+                "ANKE_SPORTS_YOUTUBE_PROJECT_ID": "anke-sports-dev",
+                "ANKE_SPORTS_YOUTUBE_DAILY_BUDGET": "20",
+                "YOUTUBE_API_KEY": "[format('@Microsoft.KeyVault(SecretUri={0}secrets/youtube-api-key)', reference(resourceId('Microsoft.KeyVault/vaults', variables('vaultName')), '2024-11-01').vaultUri)]",
+                "ANKE_SPORTS_YOUTUBE_WEBSUB_ENABLED": "false",
+                "ANKE_SPORTS_BROADCAST_CHECKS_ENABLED": "false",
+                "ANKE_SPORTS_PUBLIC_FEED_SOURCE_KEYS": "[[]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', variables('appName'))]",
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosName'))]",
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', variables('cosmosName'), 'anke-sports')]",
+                "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'anke-sports-dev-runtime')]",
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers', variables('cosmosName'), 'anke-sports', 'indexes')]",
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers', variables('cosmosName'), 'anke-sports', 'state')]",
+                "[resourceId('Microsoft.Storage/storageAccounts', variables('storageName'))]",
+                "[resourceId('Microsoft.KeyVault/vaults', variables('vaultName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "resources": {
+              "type": "object",
+              "value": {
+                "functionName": "[variables('appName')]",
+                "apiUrl": "[format('https://{0}', reference(resourceId('Microsoft.Web/sites', variables('appName')), '2024-11-01').defaultHostName)]",
+                "storageAccount": "[variables('storageName')]",
+                "keyVault": "[variables('vaultName')]",
+                "cosmosAccount": "[variables('cosmosName')]",
+                "cosmosEndpoint": "[reference(resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosName')), '2025-04-15').documentEndpoint]",
+                "capacityMode": "Serverless",
+                "backupMode": "Periodic",
+                "database": "anke-sports",
+                "identityClientId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'anke-sports-dev-runtime'), '2023-01-31').clientId]",
+                "virtualNetwork": "anke-sports-dev-network"
+              }
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('resourceGroupName'))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "resources": {
+      "type": "object",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'anke-sports-dev-services'), '2025-04-01').outputs.resources.value]"
+    }
+  }
+}

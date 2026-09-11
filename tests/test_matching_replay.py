@@ -119,3 +119,28 @@ def test_candidate_order_does_not_resolve_doubleheaders():
     after = {row["event_id"]: row for row in evaluate(case.video, list(reversed(events)))}
     assert before == after
     assert all(row["decision"] == "needs_review" for row in before.values())
+
+
+@pytest.mark.parametrize("title,automatic", [
+    ("Race Highlights | 2026 Italian Grand Prix", True),
+    ("Race Highlights | 2025 Italian Grand Prix", False),
+    ("Race Highlights Preview | 2026 Italian Grand Prix", False),
+    ("My favourite race highlights | 2026 Italian Grand Prix", False),
+    ("Race Highlights | 2026 Italian Grand Prix preview", False),
+])
+def test_session_highlights_require_clear_heading_year_and_phase(title, automatic):
+    from types import SimpleNamespace
+
+    events = [SimpleNamespace(
+        id=session, sport="racing", title="Italian Grand Prix · " + session,
+        source_key="jolpica:2026:italian:" + session,
+        starts_at="2026-09-06T13:00:00+00:00", timezone="UTC",
+        duration=120, status="scheduled", participants=[],
+    ) for session in ["race", "Qualifying", "FirstPractice"]]
+    video = SimpleNamespace(title=title, description="", published_at="2026-09-06T16:00:00+00:00")
+    results = evaluate(video, events)
+    assert [r["event_id"] for r in results if r["decision"] == "automatic"] == (["race"] if automatic else [])
+    video.published_at = "2026-09-06T13:30:00+00:00"
+    assert not any(r["decision"] == "automatic" for r in evaluate(video, events))
+    video.title, video.description = "2026 Italian Grand Prix", title
+    assert not any(r["decision"] == "automatic" for r in evaluate(video, events))

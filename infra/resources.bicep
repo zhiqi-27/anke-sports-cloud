@@ -280,6 +280,10 @@ resource appSettings 'Microsoft.Web/sites/config@2024-11-01' = {
     ANKE_SPORTS_COSMOS_CLIENT_ID: identity.properties.clientId
     ANKE_SPORTS_ENCRYPTION_KEY: '@Microsoft.KeyVault(SecretUri=${vault.properties.vaultUri}secrets/feed-encryption-key)'
     ANKE_SPORTS_FIREBASE_CREDENTIALS_JSON: '@Microsoft.KeyVault(SecretUri=${vault.properties.vaultUri}secrets/firebase-credentials)'
+    ANKE_SPORTS_YOUTUBE_PROJECT_ID: 'anke-sports-dev'
+    ANKE_SPORTS_ENABLED_SPORTS_PROVIDERS: '["jolpica"]'
+    ANKE_SPORTS_YOUTUBE_DAILY_BUDGET: '20'
+    YOUTUBE_API_KEY: '@Microsoft.KeyVault(SecretUri=${vault.properties.vaultUri}secrets/youtube-api-key)'
     ANKE_SPORTS_YOUTUBE_WEBSUB_ENABLED: 'false'
     ANKE_SPORTS_BROADCAST_CHECKS_ENABLED: 'false'
     ANKE_SPORTS_PUBLIC_FEED_SOURCE_KEYS: '[]'

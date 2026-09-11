@@ -5,7 +5,7 @@ import unicodedata
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
-RULE_VERSION = "matching-v2"
+RULE_VERSION = "matching-v3"
 ALIASES = {
     "LAL": ["lakers", "湖人", "洛杉矶湖人"],
     "GSW": ["warriors", "勇士", "金州勇士"],
@@ -116,6 +116,12 @@ def explicit_date(text, event):
 
 def phase(text):
     before, after = any(contains(text, x) for x in PREVIEW), any(contains(text, x) for x in RECAP)
+    # Recognize a session recap heading, not a generic mention of highlights
+    # in commentary or a description playlist. Subject/date/session gates still apply.
+    after = after or bool(re.match(
+        r"^(?:race|qualifying|sprint|sprint qualifying|practice [123]) highlights\s*[|:–—-]",
+        text,
+    ))
     return "preview" if before and not after else "recap" if after and not before else "unknown"
 
 

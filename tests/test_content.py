@@ -152,7 +152,7 @@ def test_rule_upgrade_withdraws_description_only_auto_link_but_keeps_personal_ch
         if choice == "automatic":
             assert feed.revision == old_revision + 1
             assert int(after["SEQUENCE"]) == int(before["SEQUENCE"]) + 1
-            assert match.rule_version == "matching-v2"
+            assert match.rule_version == "matching-v3"
             assert match.decision == "needs_review"
         elif choice == "block":
             assert match.decision == "ignored"
