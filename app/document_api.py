@@ -48,6 +48,7 @@ from app.schemas import (
     UpdateCreator,
 )
 from app.security import check_origin, digest, firebase_subject, local_allowed, problem
+from app.source_rules import source_logo_url
 
 
 def create_app(store=None, cfg=None):
@@ -380,7 +381,12 @@ def create_app(store=None, cfg=None):
         rows = sorted(snapshot.sources(), key=lambda row: (row.kind, row.name))
         return {
             "items": [
-                vars(row)
+                {
+                    **vars(row),
+                    "logo_url": source_logo_url(
+                        row.id, row.short_name, getattr(row, "logo_url", None)
+                    ),
+                }
                 for row in rows
                 if row.demo == (dataset == "demo") and q.casefold() in (row.name + row.short_name).casefold()
             ]

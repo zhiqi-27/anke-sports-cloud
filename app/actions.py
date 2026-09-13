@@ -13,6 +13,7 @@ from app.db import CommandReceipt, Event, Feed, Link, Source, User
 from app.schemas import Config
 from app.security import digest, problem
 from app.service import active_user, attach_link, import_preview, save_config, user_view
+from app.source_rules import source_logo_url
 
 
 def find_event(db, event_id):
@@ -37,7 +38,11 @@ def search_sources(db, q="", dataset="real"):
                 "sport": s.sport,
                 "kind": s.kind,
                 "color": s.color,
-                **({"logo_url": s.logo_url} if s.logo_url else {}),
+                **(
+                    {"logo_url": logo}
+                    if (logo := source_logo_url(s.id, s.short_name, s.logo_url))
+                    else {}
+                ),
                 "demo": s.demo,
             }
             for s in rows

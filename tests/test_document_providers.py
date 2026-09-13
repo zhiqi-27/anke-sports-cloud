@@ -371,10 +371,13 @@ def test_basketball_pagination_date_precision_and_metadata_failure():
         "balldontlie", request_json=request, key_reader=lambda _: "fixture-key"
     )
     assert len(events) == 2 and len(sources) == 4
-    assert provider_adapters.nba_logo_url("LAL") == (
+    assert provider_adapters.source_logo_url("balldontlie:team:14", "LAL") == (
         "https://cdn.nba.com/logos/nba/1610612747/primary/L/logo.svg"
     )
-    assert provider_adapters.nba_logo_url("FIX") is None
+    assert provider_adapters.source_logo_url("balldontlie:team:1", "FIX") is None
+    assert provider_adapters.source_logo_url("football-data:team:64", "LIV") == (
+        "https://crests.football-data.org/64.png"
+    )
     assert calls[1]["cursor"] == 10
     assert events[0]["time_precision"] == "date_only" and events[1]["status"] == "finished"
     with pytest.raises(KeyError):
