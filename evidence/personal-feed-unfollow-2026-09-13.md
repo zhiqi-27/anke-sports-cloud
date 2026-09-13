@@ -20,4 +20,4 @@ iPhone 收到个人 Feed 更新后，把已取消关注的 F1 未来比赛显示
 
 ## 证据边界
 
-这是本地候选实现，尚未部署 Azure，也没有修改真实账号或个人 Feed。部署后需要让当前账号触发一次 Feed 重建，再在 iPhone/Mac 刷新 Anke Sports 日历，确认未来 F1 事件消失；历史 F1 和赛事源真实取消仍应按上述语义保留。
+实现已作为提交`cfb3798`发布到Azure开发环境，OneDeploy `9ea4685d-a09a-4eef-b33f-5ca5fa3ef60d`为active/complete；详见[部署记录](personal-feed-unfollow-deployment-2026-09-13.md)。部署没有修改真实账号或立即重写已有个人Feed。仍需等待/触发当前账号的Feed重建，再在iPhone/Mac刷新Anke Sports日历，确认未来F1事件消失；历史F1和赛事源真实取消仍应按上述语义保留。

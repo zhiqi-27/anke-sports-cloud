@@ -105,3 +105,11 @@ Owner explicitly approved deployment of candidate aff58eb to existing anke-sport
 ### P2 deployment proof
 
 OneDeploy 3a2b84d5-b398-4781-a102-6fd69fac5edd completed 2026-09-13T03:03:05Z, status4/active/complete. Six functions and dual-origin health/new API routes verified. Public feed remains unavailable per empty allowlist; actual user identity and playback not exercised. See evidence/p2-deployment-2026-09-13.md.
+
+## 10. Personal Feed unfollow visibility update · 2026-09-13
+
+Owner explicitly approved deployment of commit `cfb3798` to the same development Function App. Scope is code-only: personal Feeds omit user-removed projections while retaining them internally for stable UID reuse; upstream cancellation and public Feed tombstones remain unchanged. No infrastructure, settings, RBAC, data migration, frontend, Feed-token rotation or Git push.
+
+Validation: full suite 383 passed / 2 skipped, targeted personal/public Feed suite 60 passed, package tests 3 passed, Ruff and diff checks passed. Deterministic archive SHA-256 is `0097eb0ffacbaf9dd3211e5a3a24598145a7987175907eced2e0509bf845e9a4`; exact P2 recovery archive SHA-256 is `3a237a834315addccb1c46d63bb015f7936bb6899c58d3561ea4620c870ce663`. Bicep output remained byte-identical and was not deployed.
+
+OneDeploy `9ea4685d-a09a-4eef-b33f-5ca5fa3ef60d` completed 2026-09-13T11:44:53Z with status 4, active/complete and remote build. Six Functions and both Azure/direct and Cloudflare-routed health/status endpoints were verified. Live Storage, Queue, Vault and database-scoped Cosmos roles remain unchanged. Existing personal Feed content was not mutated during deployment; daily window maintenance must republish it before Apple Calendar can remove old future F1 entries. See `evidence/personal-feed-unfollow-deployment-2026-09-13.md`.
