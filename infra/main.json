@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.46.1.21595",
-      "templateHash": "1792205326899968045"
+      "templateHash": "7567021681994773901"
     }
   },
   "parameters": {
@@ -83,7 +83,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.46.1.21595",
-              "templateHash": "12406287866466470827"
+              "templateHash": "14883146107376347407"
             }
           },
           "parameters": {
@@ -580,8 +580,11 @@
                 "ANKE_SPORTS_ENCRYPTION_KEY": "[format('@Microsoft.KeyVault(SecretUri={0}secrets/feed-encryption-key)', reference(resourceId('Microsoft.KeyVault/vaults', variables('vaultName')), '2024-11-01').vaultUri)]",
                 "ANKE_SPORTS_FIREBASE_CREDENTIALS_JSON": "[format('@Microsoft.KeyVault(SecretUri={0}secrets/firebase-credentials)', reference(resourceId('Microsoft.KeyVault/vaults', variables('vaultName')), '2024-11-01').vaultUri)]",
                 "ANKE_SPORTS_YOUTUBE_PROJECT_ID": "anke-sports-dev",
+                "ANKE_SPORTS_ENABLED_SPORTS_PROVIDERS": "[[\"jolpica\",\"balldontlie\",\"football-data\"]",
                 "ANKE_SPORTS_YOUTUBE_DAILY_BUDGET": "20",
                 "YOUTUBE_API_KEY": "[format('@Microsoft.KeyVault(SecretUri={0}secrets/youtube-api-key)', reference(resourceId('Microsoft.KeyVault/vaults', variables('vaultName')), '2024-11-01').vaultUri)]",
+                "BALLDONTLIE_API_KEY": "[format('@Microsoft.KeyVault(SecretUri={0}secrets/balldontlie-api-key)', reference(resourceId('Microsoft.KeyVault/vaults', variables('vaultName')), '2024-11-01').vaultUri)]",
+                "FOOTBALL_DATA_API_KEY": "[format('@Microsoft.KeyVault(SecretUri={0}secrets/football-data-api-key)', reference(resourceId('Microsoft.KeyVault/vaults', variables('vaultName')), '2024-11-01').vaultUri)]",
                 "ANKE_SPORTS_YOUTUBE_WEBSUB_ENABLED": "false",
                 "ANKE_SPORTS_BROADCAST_CHECKS_ENABLED": "false",
                 "ANKE_SPORTS_PUBLIC_FEED_SOURCE_KEYS": "[[]"

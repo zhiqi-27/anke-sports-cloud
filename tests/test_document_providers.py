@@ -359,6 +359,8 @@ def test_basketball_pagination_date_precision_and_metadata_failure():
     calls = []
 
     def request(client, url, **kwargs):
+        if url.endswith("/teams"):
+            return {"data": [{**team(3), "conference": "East", "division": "Atlantic"}]}
         calls.append(dict(kwargs["params"]))
         index = int("cursor" in kwargs["params"])
         return {"data": [games[index]], "meta": {"next_cursor": 10} if index == 0 else {"per_page": 100}}
@@ -366,7 +368,7 @@ def test_basketball_pagination_date_precision_and_metadata_failure():
     events, sources = provider_adapters.fetch_schedule(
         "balldontlie", request_json=request, key_reader=lambda _: "fixture-key"
     )
-    assert len(events) == 2 and len(sources) == 3
+    assert len(events) == 2 and len(sources) == 4
     assert calls[1]["cursor"] == 10
     assert events[0]["time_precision"] == "date_only" and events[1]["status"] == "finished"
     with pytest.raises(KeyError):
@@ -397,8 +399,19 @@ def test_football_count_status_and_unknown_time_are_preserved():
         match(3, "CANCELLED", "2026-09-12T12:00:00Z"),
     ]
     payload = {"matches": matches, "resultSet": {"count": 3}}
+
+    def request(client, url, **kwargs):
+        if url.endswith("/teams"):
+            return {
+                "season": {"startDate": "2026-08-01"},
+                "count": 1,
+                "teams": [{"id": 3, "name": "No fixtures yet"}],
+            }
+        assert kwargs["params"] == {"season": "2026"}
+        return payload
+
     events, _ = provider_adapters.fetch_schedule(
-        "football-data", request_json=lambda *a, **k: payload, key_reader=lambda _: "fixture-key"
+        "football-data", request_json=request, key_reader=lambda _: "fixture-key"
     )
     assert [(r["time_precision"], r["status"]) for r in events] == [
         ("date_only", "scheduled"),
@@ -408,7 +421,7 @@ def test_football_count_status_and_unknown_time_are_preserved():
     payload["resultSet"]["count"] = 4
     with pytest.raises(ValueError, match="INCOMPLETE"):
         provider_adapters.fetch_schedule(
-            "football-data", request_json=lambda *a, **k: payload, key_reader=lambda _: "fixture-key"
+            "football-data", request_json=request, key_reader=lambda _: "fixture-key"
         )
 
 
@@ -470,3 +483,66 @@ def test_provider_configuration_accepts_only_known_sources():
     ]
     with pytest.raises(ValidationError):
         Settings(_env_file=None, enabled_sports_providers=["arbitrary-url"])
+
+
+def test_nba_catalog_without_games_and_free_tier_pacing(monkeypatch):
+    clock = [0.0]
+    calls = []
+    monkeypatch.setattr(provider_adapters, "monotonic", lambda: clock[0])
+    monkeypatch.setattr(provider_adapters, "sleep", lambda seconds: clock.__setitem__(0, clock[0] + seconds))
+
+    def request(client, url, **kwargs):
+        calls.append(clock[0])
+        if url.endswith("/teams"):
+            return {
+                "data": [
+                    {
+                        "id": 1,
+                        "full_name": "Fixture team",
+                        "abbreviation": "FIX",
+                        "conference": "East",
+                        "division": "Atlantic",
+                    }
+                ]
+            }
+        return {"data": [], "meta": {"next_cursor": None}}
+
+    monkeypatch.setattr(provider_adapters, "get_json", request)
+    events, sources = provider_adapters.fetch_schedule("balldontlie", key_reader=lambda _: "fixture")
+    assert events == []
+    assert {s["id"] for s in sources} == {"balldontlie:nba", "balldontlie:team:1"}
+    assert calls == [0, 13]
+
+
+@pytest.mark.parametrize(
+    "state,expected",
+    [
+        ("postponed", "postponed"),
+        ("suspended", "postponed"),
+        ("canceled", "cancelled"),
+        ("final", "finished"),
+    ],
+)
+def test_nba_structured_status(state, expected):
+    team = {"id": 1, "full_name": "Fixture", "abbreviation": "FIX"}
+
+    def request(client, url, **kwargs):
+        if url.endswith("/teams"):
+            return {"data": []}
+        return {
+            "data": [
+                {
+                    "id": 1,
+                    "date": "2026-09-12",
+                    "status_state": state,
+                    "visitor_team": team,
+                    "home_team": {**team, "id": 2},
+                }
+            ],
+            "meta": {},
+        }
+
+    events, _ = provider_adapters.fetch_schedule(
+        "balldontlie", request_json=request, key_reader=lambda _: "fixture"
+    )
+    assert events[0]["status"] == expected

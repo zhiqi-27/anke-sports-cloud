@@ -35,8 +35,6 @@ def main():
     from app.document_runtime import Runtime
     from app.document_store import LocalDocumentStore
     from app.document_worker import LocalQueue, dispatch
-    from app.provider_adapters import fetch_schedule
-
     cfg = settings()
     store = LocalDocumentStore(cfg.document_local_path)
     rt = Runtime(store, cfg)

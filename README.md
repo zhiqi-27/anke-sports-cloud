@@ -2,7 +2,7 @@
 
 体育赛程、个人配置、原始观看链接与ICS的权威业务服务。客户端在独立仓`anke-sports`。
 
-目标：Firebase认证、Python/FastAPI、Azure Functions、Cosmos NoSQL **Serverless + Periodic**、Storage Queue/timer。开发和生产都从该模式开始。当前主预览仍为SQL/SQLite；文档存储只有部分业务已接入，Azure尚未部署。详见[当前状态](STATE.md)与[架构](docs/architecture.md)。
+目标：Firebase认证、Python/FastAPI、Azure Functions、Cosmos NoSQL **Serverless + Periodic**、Storage Queue/timer。开发和生产都从该模式开始。独立 Azure 开发环境已部署，Cosmos 个人关注/Feed 路径已连通 Mac Apple 日历；SQL/SQLite 保留为本地基线，其余文档模块仍有适配与验收缺口。详见[当前状态](STATE.md)与[架构](docs/architecture.md)。
 
 ## 本地运行
 
@@ -23,13 +23,13 @@ ANKE_SPORTS_ENV=local ANKE_SPORTS_LOCAL_PREVIEW=true uv run python -m app.worker
 
 ## 实现边界
 
-| 路径 | 已有本地实现 | 仍未完成 |
+| 路径 | 已有实现与证据 | 仍未完成 |
 | --- | --- | --- |
 | SQL基线 | 赛程/关注/创作者/个人与公共Feed、直播维护、OAuth/MCP、账号生命周期 | 真实手机、Hub长期更新、云端全链路 |
-| 文档模式 | 日历/关注/个人链接/配置/ICS、Provider、创作者/轮询/匹配/人工确认、WebSub | 公共Feed、直播、OAuth/MCP、账号删除等完整适配，真实Cosmos验证 |
-| Azure | Bicep、Functions入口与打包、本地Core Tools/Azurite检查 | 独立资源、HTTPS、身份与真实Queue/Timer、恢复及端到端部署 |
+| 文档模式 | 日历/关注/个人链接/配置/ICS、Provider、创作者/轮询/匹配/人工确认、WebSub | 公共Feed、直播、OAuth/MCP、账号删除等完整适配；核心关注与个人Feed已有真实Cosmos链路证据 |
+| Azure | 独立开发资源、HTTPS、Firebase 登录、云任务更新及个人 Feed 至 Mac 日历 | 云故障与 Periodic 恢复演练、告警、持续更新与手机验收 |
 
-[3008合成创作者](http://localhost:3008/creators)可检查个人链接与ICS；公共订阅尚未开放。3008后端是创作者批次，最新WebSub实验已退出。运行版本、PID和其他入口见STATE。
+[3008合成创作者](http://localhost:3008/creators)可检查个人链接与ICS；公共订阅尚未开放。3008后端是创作者批次，最新WebSub实验已退出。这是历史本地入口，当前存活状态须重新检查；公网进展见 STATE。
 
 ## 检查与证据
 
@@ -41,7 +41,7 @@ uv run python -m scripts.export_contracts
 
 仅在契约变化时导出并在客户端运行`npm run contracts`。完整OpenAPI由SQL基线导出，不能以文档模式接口子集覆盖。锁定依赖见`uv.lock`，Functions打包使用`requirements.txt`。
 
-最近完整回归记录为[361 passed / 2 skipped](evidence/document-websub-2026-09-10.md)，这是本地证据，本次文档刷新没有重新执行。其他主要证据：
+当前发布基线完整回归为371 passed / 2 skipped（2026-09-13，本地SQL/文档适配器测试）；既有[361项WebSub阶段记录](evidence/document-websub-2026-09-10.md)保留为当时证据。其他主要证据：
 
 - [真实F1样本及文档Provider](evidence/document-providers-2026-09-10.md)
 - [创作者合成链路](evidence/document-creators-2026-09-10.md)、[真实YouTube读取](evidence/youtube-live-2026-09-10.md)

@@ -49,3 +49,11 @@ Key Vault 中准备独立 feed-encryption-key、firebase-credentials、youtube-a
 静态权限：Cosmos Data Contributor 限定本数据库；Blob Data Owner/Queue Data Contributor 限本Storage；Key Vault Secrets User 限本Vault，均授予专用MI。未授予订阅级权限；部署后仍须实测传播、网络、Feed撤销和应用身份。
 
 2026-09-11，独立 what-if 已 Succeeded，21 Create/0 Modify/0 Delete，见 ../evidence/azure-preflight-2026-09-11.md。Bicep 参数编译与源码打包已通过。该项单独不代表完整验证；以上补充记录为本轮工作流证据。
+
+## 2026-09-12 Multi-sport update validation — historical blocked checkpoint
+
+This paragraph records the temporary pre-authorization checkpoint and is superseded by section 7 below. At that checkpoint provider/package tests were 22 passed and runtime archive SHA256 was 540961d4c13f32db9866a46703652ed91794e34d47522b6110822dfdb5a2bf46; Vault metadata access was blocked by RBAC and no update had yet been deployed. No infrastructure recreation or database migration was planned.
+
+## 7. Validation Proof — 2026-09-12 update
+
+Azure validate workflow resumed after owner authorization. Two Vault secrets written successfully; temporary Secrets Officer role removed and assignment readback empty. Existing application Secrets User remains vault-scoped. validate-deployment.sh --scope sub --location eastasia --template infra/main.bicep --parameters infra/dev.bicepparam: OVERALL PASS (CLI/auth/build/ARM validation/what-if). Initial resource-group scope mismatch corrected. What-if text line counts include unrelated infrastructure drift; no ARM deployment is authorized or executed in this update. Execute only remote-build zip publication and explicit three-setting merge. Policy assignment remains SecurityCenterBuiltIn. Provider/package tests 22 passed, compiled runtime package hash recorded above. Prior recovery package affc54da6e77664888403be3cc32fcc5927a84c42687ab5cad6623d1d9ba96da verified. No schema changes or RBAC expansion for application identity.

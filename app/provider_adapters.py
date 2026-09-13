@@ -5,7 +5,7 @@ Only returns normalized data after every page succeeds. No database imports.
 
 from datetime import datetime, timedelta, timezone
 import os
-from time import monotonic
+from time import monotonic, sleep
 
 import httpx
 
@@ -35,14 +35,24 @@ def provider_key(name, cfg=None):
 
 def fetch_schedule(provider, *, request_json=None, key_reader=None, instant=None):
     instant = instant or datetime.now(timezone.utc)
+    pace_requests = request_json is None
     request_json = request_json or get_json
     read_key = key_reader or provider_key
     deadline = monotonic() + 180
     events, sources = {}, {}
+    last_request = None
 
     def request(client, path, **kwargs):
+        nonlocal last_request
+        interval = {"balldontlie": 13, "football-data": 6.1}.get(provider, 0)
+        if pace_requests and last_request is not None and interval:
+            wait = max(0, last_request + interval - monotonic())
+            if monotonic() + wait >= deadline:
+                raise ValueError("PROVIDER_FETCH_DEADLINE")
+            sleep(wait)
         if monotonic() >= deadline:
             raise ValueError("PROVIDER_FETCH_DEADLINE")
+        last_request = monotonic() if pace_requests else None
         result = request_json(client, path, **kwargs)
         if monotonic() >= deadline:
             raise ValueError("PROVIDER_FETCH_DEADLINE")
@@ -136,6 +146,20 @@ def fetch_schedule(provider, *, request_json=None, key_reader=None, instant=None
             key = read_key("BALLDONTLIE_API_KEY")
             if not key:
                 raise ValueError("PROVIDER_KEY_REQUIRED")
+            catalog = request(client, "https://api.balldontlie.io/v1/teams", headers={"Authorization": key})[
+                "data"
+            ]
+            for team in catalog:
+                # Historical franchises have no current conference/division assignment.
+                if team.get("conference") in {"East", "West"} and team.get("division"):
+                    source(
+                        f"balldontlie:team:{team['id']}",
+                        team["full_name"],
+                        team["abbreviation"],
+                        "basketball",
+                        "team",
+                        provider,
+                    )
             start = instant.date()
             params = {
                 "start_date": str(start - timedelta(days=7)),
@@ -186,7 +210,20 @@ def fetch_schedule(provider, *, request_json=None, key_reader=None, instant=None
                     time_precision="exact" if start else "date_only",
                     duration=150,
                     venue="",
-                    status="finished" if game.get("status") == "Final" else "scheduled",
+                    status=(
+                        "postponed"
+                        if game.get("postponed")
+                        else {
+                            "final": "finished",
+                            "postponed": "postponed",
+                            "suspended": "postponed",
+                            "canceled": "cancelled",
+                            "abandoned": "cancelled",
+                        }.get(
+                            game.get("status_state"),
+                            "finished" if game.get("status") == "Final" else "scheduled",
+                        )
+                    ),
                     participants=participants,
                     provider=provider,
                     source_url="",
@@ -196,10 +233,28 @@ def fetch_schedule(provider, *, request_json=None, key_reader=None, instant=None
             key = read_key("FOOTBALL_DATA_API_KEY")
             if not key:
                 raise ValueError("PROVIDER_KEY_REQUIRED")
+            catalog = request(
+                client,
+                "https://api.football-data.org/v4/competitions/PL/teams",
+                headers={"X-Auth-Token": key},
+            )
+            season = catalog["season"]["startDate"][:4]
+            if len(catalog["teams"]) != catalog["count"]:
+                raise ValueError("INCOMPLETE_TEAM_CATALOG")
+            for team in catalog["teams"]:
+                source(
+                    f"football-data:team:{team['id']}",
+                    team["name"],
+                    team.get("tla") or team["name"][:3],
+                    "football",
+                    "team",
+                    provider,
+                )
             payload = request(
                 client,
                 "https://api.football-data.org/v4/competitions/PL/matches",
                 headers={"X-Auth-Token": key},
+                params={"season": season},
             )
             matches = payload["matches"]
             if "resultSet" in payload and len(matches) != payload["resultSet"]["count"]:
