@@ -41,9 +41,10 @@ uv run python -m scripts.export_contracts
 
 仅在契约变化时导出并在客户端运行`npm run contracts`。完整OpenAPI由SQL基线导出，不能以文档模式接口子集覆盖。锁定依赖见`uv.lock`，Functions打包使用`requirements.txt`。
 
-当前发布基线完整回归为371 passed / 2 skipped（2026-09-13，本地SQL/文档适配器测试）；既有[361项WebSub阶段记录](evidence/document-websub-2026-09-10.md)保留为当时证据。其他主要证据：
+当前本地P1工作树完整回归为374 passed / 2 skipped（2026-09-13，本地SQL/文档适配器测试）；尚未部署或push。既有[361项WebSub阶段记录](evidence/document-websub-2026-09-10.md)保留为当时证据。其他主要证据：
 
 - [真实F1样本及文档Provider](evidence/document-providers-2026-09-10.md)
+- [P1三运动与内容最小矩阵](evidence/p1-core-matrix-2026-09-13.md)、[开发环境部署](evidence/p1-deployment-2026-09-13.md)、[客户端支持矩阵](docs/support-matrix.md)
 - [创作者合成链路](evidence/document-creators-2026-09-10.md)、[真实YouTube读取](evidence/youtube-live-2026-09-10.md)
 - [Codex实际业务调用](evidence/codex-business-2026-09-10.md)、[Firebase专用身份生命周期](evidence/firebase-lifecycle-2026-09-10.md)
 - [最新Web/ICS实操](../anke-sports/output/playwright/lean-check-2026-09-10.md)

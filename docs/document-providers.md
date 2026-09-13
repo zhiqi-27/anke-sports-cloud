@@ -9,10 +9,10 @@
 | 来源 | 当前范围 | 校验与证据 |
 | --- | --- | --- |
 | Jolpica | 当前年份 F1，各分站的正赛、练习、排位和冲刺独立事件 | 总数匹配、重复赛道身份拒绝、无时间时保留日期；真实抓取/个人 ICS 通过 |
-| BALLDONTLIE | NBA，过去7天至未来90天查询窗口 | 完整 cursor 分页、metadata、循环/页数限制、未知时间、失败保留旧数据；目前仅离线样本，无独立真实 Key 验收 |
+| BALLDONTLIE | NBA，过去7天至未来90天查询窗口；默认非季前赛与显式 `season_type=preseason` 分组抓取，季前赛标题明确标注 | 两组均完整 cursor 分页、metadata、循环/页数限制、未知时间、失败保留旧数据；新版本已部署开发环境，部署后首次真实同步/季前赛读回尚待完成 |
 | football-data | 英超 PL | 数量声明一致、延后/取消/未知时间、只知日期时不伪造开始时间；目前仅离线样本，无独立真实 Key 验收 |
 
-字段和范围对应来源文档：[Jolpica race/session 字段](https://github.com/jolpica/jolpica-f1/blob/main/docs/endpoints/races.md)、[BALLDONTLIE games 与分页](https://docs.balldontlie.io/#get-all-games)、[football-data match 状态](https://docs.football-data.org/general/v4/match.html)。Jolpica 是赛程来源，不因此获得赛事官方或直播认证；授权、覆盖和展示许可继续按 T03 单独记录。
+字段和范围对应来源文档：[Jolpica race/session 字段](https://github.com/jolpica/jolpica-f1/blob/main/docs/endpoints/races.md)、[BALLDONTLIE games、分页与 season_type](https://docs.balldontlie.io/#get-all-games)、[football-data match 状态](https://docs.football-data.org/general/v4/match.html)。BALLDONTLIE 明确说明省略 `season_type` 时不返回季前赛，所以实现必须单独抓取；这仍只是滚动窗口，不称为完整赛季。Jolpica 是赛程来源，不因此获得赛事官方或直播认证；授权、覆盖和展示许可继续按 T03 单独记录。
 
 每个HTTP请求30秒超时；分页前后检查180秒抓取预算，超过预算的结果不提交。抓取不跟随重定向。缺少 Key 直接失败，错误保存为安全代码，不保存上游异常正文、请求头或凭据。
 

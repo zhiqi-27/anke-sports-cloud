@@ -5,17 +5,21 @@ import unicodedata
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
-RULE_VERSION = "matching-v3"
+RULE_VERSION = "matching-v4"
 ALIASES = {
     "LAL": ["lakers", "湖人", "洛杉矶湖人"],
     "GSW": ["warriors", "勇士", "金州勇士"],
     "BOS": ["celtics", "凯尔特人"],
     "NYK": ["knicks", "尼克斯"],
+    "OKC": ["thunder", "雷霆"],
+    "SAS": ["san antonio spurs", "spurs", "马刺"],
     "ARS": ["arsenal", "阿森纳"],
     "MCI": ["manchester city", "曼城"],
     "LIV": ["liverpool", "利物浦"],
     "CHE": ["chelsea", "切尔西"],
+    "TOT": ["tottenham hotspur", "tottenham", "spurs", "热刺"],
 }
+AMBIGUOUS_ALIASES = {"spurs"}
 RACE_ALIASES = {
     "italian grand prix": ["monza", "意大利站", "意大利大奖赛"],
     "spanish grand prix": ["西班牙站", "西班牙大奖赛"],
@@ -126,10 +130,17 @@ def phase(text):
 
 
 def team_hits(text, event):
-    return sum(
-        any(contains(text, a) for a in [p["name"], p["short_name"], *ALIASES.get(p["short_name"], [])])
-        for p in event.participants
-    )
+    hits, ambiguous_only = 0, 0
+    for participant in event.participants:
+        distinct = [participant["name"], participant["short_name"]]
+        aliases = ALIASES.get(participant["short_name"], [])
+        if any(contains(text, value) for value in distinct + aliases):
+            hits += 1
+            if not any(contains(text, value) for value in distinct + [
+                alias for alias in aliases if alias not in AMBIGUOUS_ALIASES
+            ]):
+                ambiguous_only += 1
+    return hits, ambiguous_only
 
 
 def detected_sessions(text):
@@ -173,10 +184,14 @@ def evaluate(video, events):
             strong = title_subject and detected_sessions(title) == {session}
             reasons.append("SESSION_FOUND" if strong else "SESSION_AMBIGUOUS")
         else:
-            hits = team_hits(text, event)
-            if not hits:
+            hits, ambiguous_hits = team_hits(text, event)
+            # A nickname shared by teams in different sports is not enough to
+            # create even a review candidate. A second identified participant
+            # disambiguates the actual fixture.
+            if not hits or (hits == 1 and ambiguous_hits == 1):
                 continue
-            title_subject = team_hits(title, event) == 2 and len(event.participants) == 2
+            title_hits, _ = team_hits(title, event)
+            title_subject = title_hits == 2 and len(event.participants) == 2
             strong = title_subject
             reasons.append("BOTH_TEAMS_FOUND" if hits == 2 else "ONE_TEAM_ONLY")
         if not title_subject:

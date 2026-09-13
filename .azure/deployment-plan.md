@@ -57,3 +57,35 @@ This paragraph records the temporary pre-authorization checkpoint and is superse
 ## 7. Validation Proof — 2026-09-12 update
 
 Azure validate workflow resumed after owner authorization. Two Vault secrets written successfully; temporary Secrets Officer role removed and assignment readback empty. Existing application Secrets User remains vault-scoped. validate-deployment.sh --scope sub --location eastasia --template infra/main.bicep --parameters infra/dev.bicepparam: OVERALL PASS (CLI/auth/build/ARM validation/what-if). Initial resource-group scope mismatch corrected. What-if text line counts include unrelated infrastructure drift; no ARM deployment is authorized or executed in this update. Execute only remote-build zip publication and explicit three-setting merge. Policy assignment remains SecurityCenterBuiltIn. Provider/package tests 22 passed, compiled runtime package hash recorded above. Prior recovery package affc54da6e77664888403be3cc32fcc5927a84c42687ab5cad6623d1d9ba96da verified. No schema changes or RBAC expansion for application identity.
+
+## 8. 2026-09-13 P1 code-only update
+
+Approved target remains subscription `a1187bf2-2e2f-4e05-aaea-407163a009f5`, East Asia, resource group `anke-sports-dev`, Function App `anke-sports-dev-mtcflttk`. The owner explicitly requested deployment after reviewing the local P1 result.
+
+Scope is code-only Functions publication: explicit NBA preseason fetch/label, delayed-state normalization, and `matching-v4` Spurs cross-sport disambiguation. No infrastructure deployment, schema migration, app-setting mutation, RBAC change, frontend publication, Git push, or production action.
+
+Validation steps:
+
+- [x] Azure CLI context, target Function state, current deployment and recovery package read back
+- [x] Full test suite, Ruff, deterministic Functions package and manifest validation
+- [x] Bicep build equivalence and static least-privilege role review remain unchanged
+- [x] Remote-build zip publication completes and registers the existing six functions
+- [x] HTTPS health/status/calendar readback and managed-identity role assignments verified
+- [ ] Provider sync completes; preseason and Spurs results recorded without reading secrets
+
+Recovery: retain the current successful deployment package and deployment ID before publication. If the new package cannot start or pass health checks, republish that exact prior package; do not change infrastructure or delete data.
+
+### Validation proof · 2026-09-13
+
+- Azure CLI account is `Azure subscription 1` / `a1187bf2-2e2f-4e05-aaea-407163a009f5`; target resource readback is Running in East Asia at `anke-sports-dev-mtcflttk.azurewebsites.net`.
+- Current active OneDeploy is `c802a62c-1f93-45bd-8731-fe55e62421f7`, status 4, complete and active. Recovery archive `data/anke-sports-20260912-multisport.zip` remains present with SHA-256 `540961d4c13f32db9866a46703652ed91794e34d47522b6110822dfdb5a2bf46`.
+- Full suite immediately before this deployment request: 374 passed / 2 skipped / 2 dependency warnings. Deployment-focused provider, matching, content and package suite: 70 passed / 2 dependency warnings. Ruff and diff checks passed.
+- Deterministic source package `data/anke-sports-20260913-p1.zip`: SHA-256 `3509a4bd56827bfc224fbf539993e608cb2049dc48dcabe465fb21788010ff28`, 160233 bytes, 71 allowlisted runtime files; manifest includes both changed runtime modules.
+- Fresh Bicep compilation is byte-identical to tracked `infra/main.json`. Infrastructure is not being deployed. Static roles remain scoped to the dedicated Cosmos database, Storage account and Key Vault for the existing user-assigned runtime identity; no subscription-level data role or new assignment was introduced.
+- Traditional publishing-profile listing is unsupported for Flex Consumption. Target and recovery were instead verified through the supported resource and OneDeploy management endpoints; this requires no configuration change.
+
+### Deployment proof · 2026-09-13
+
+OneDeploy `a80acfdd-d2bb-49f1-9d17-cecc1183969f` completed with status 4 and is active. Six functions registered. Direct Azure and Cloudflare-routed health endpoints returned 200 with staging/Cosmos identity, public calendar returned 200, and status was dynamic/no-store. Live Storage, Queue, Vault and database-scoped Cosmos roles match the static plan.
+
+The remaining Provider checkbox stays open: NBA `last_success` 00:52:31 UTC preceded deployment completion 01:29:25 UTC. The normal six-hour refresh was not bypassed by mutating Cosmos state, so real preseason readback remains pending even though deployment itself is healthy.

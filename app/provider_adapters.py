@@ -161,29 +161,37 @@ def fetch_schedule(provider, *, request_json=None, key_reader=None, instant=None
                         provider,
                     )
             start = instant.date()
-            params = {
+            base_params = {
                 "start_date": str(start - timedelta(days=7)),
                 "end_date": str(start + timedelta(days=90)),
                 "per_page": 100,
             }
-            games, seen = [], set()
-            for _ in range(100):
-                page = request(
-                    client,
-                    "https://api.balldontlie.io/v1/games",
-                    headers={"Authorization": key},
-                    params=params,
-                )
-                games.extend(page["data"])
-                cursor = page["meta"].get("next_cursor")
-                if cursor is None:
-                    break
-                if cursor in seen:
-                    raise ValueError("PAGINATION_LOOP")
-                seen.add(cursor)
-                params["cursor"] = cursor
-            else:
-                raise ValueError("PAGINATION_LIMIT")
+            games = []
+            # BALLDONTLIE omits preseason games unless explicitly requested.
+            # Fetch both result sets as complete snapshots; never infer a game type
+            # from its date or from the legacy postseason boolean.
+            for season_type in (None, "preseason"):
+                params = dict(base_params)
+                if season_type:
+                    params["season_type"] = season_type
+                seen = set()
+                for _ in range(100):
+                    page = request(
+                        client,
+                        "https://api.balldontlie.io/v1/games",
+                        headers={"Authorization": key},
+                        params=params,
+                    )
+                    games.extend({**game, "_anke_season_type": season_type} for game in page["data"])
+                    cursor = page["meta"].get("next_cursor")
+                    if cursor is None:
+                        break
+                    if cursor in seen:
+                        raise ValueError("PAGINATION_LOOP")
+                    seen.add(cursor)
+                    params["cursor"] = cursor
+                else:
+                    raise ValueError("PAGINATION_LIMIT")
             source("balldontlie:nba", "NBA", "NBA", "basketball", "competition", provider, "#f3b56a")
             for game in games:
                 participants = [
@@ -204,7 +212,8 @@ def fetch_schedule(provider, *, request_json=None, key_reader=None, instant=None
                     f"balldontlie:game:{game['id']}",
                     competition_id="balldontlie:nba",
                     sport="basketball",
-                    title=f"{participants[0]['name']} @ {participants[1]['name']}",
+                    title=("[季前赛] " if game["_anke_season_type"] == "preseason" else "")
+                    + f"{participants[0]['name']} @ {participants[1]['name']}",
                     starts_at=start,
                     local_date=game["date"][:10],
                     time_precision="exact" if start else "date_only",
@@ -217,6 +226,7 @@ def fetch_schedule(provider, *, request_json=None, key_reader=None, instant=None
                             "final": "finished",
                             "postponed": "postponed",
                             "suspended": "postponed",
+                            "delayed": "postponed",
                             "canceled": "cancelled",
                             "abandoned": "cancelled",
                         }.get(

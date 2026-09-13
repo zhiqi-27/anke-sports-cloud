@@ -362,6 +362,8 @@ def test_basketball_pagination_date_precision_and_metadata_failure():
         if url.endswith("/teams"):
             return {"data": [{**team(3), "conference": "East", "division": "Atlantic"}]}
         calls.append(dict(kwargs["params"]))
+        if kwargs["params"].get("season_type") == "preseason":
+            return {"data": [], "meta": {}}
         index = int("cursor" in kwargs["params"])
         return {"data": [games[index]], "meta": {"next_cursor": 10} if index == 0 else {"per_page": 100}}
 
@@ -511,7 +513,45 @@ def test_nba_catalog_without_games_and_free_tier_pacing(monkeypatch):
     events, sources = provider_adapters.fetch_schedule("balldontlie", key_reader=lambda _: "fixture")
     assert events == []
     assert {s["id"] for s in sources} == {"balldontlie:nba", "balldontlie:team:1"}
-    assert calls == [0, 13]
+    assert calls == [0, 13, 26]
+
+
+def test_nba_preseason_is_explicitly_fetched_and_labeled():
+    calls = []
+    team = {"id": 1, "full_name": "San Antonio Spurs", "abbreviation": "SAS"}
+
+    def request(client, url, **kwargs):
+        if url.endswith("/teams"):
+            return {"data": []}
+        calls.append(dict(kwargs["params"]))
+        if kwargs["params"].get("season_type") != "preseason":
+            return {"data": [], "meta": {}}
+        return {
+            "data": [
+                {
+                    "id": 7,
+                    "date": "2026-10-08",
+                    "datetime": "2026-10-08T00:00:00Z",
+                    "status_state": "scheduled",
+                    "visitor_team": {
+                        **team,
+                        "id": 2,
+                        "full_name": "Oklahoma City Thunder",
+                        "abbreviation": "OKC",
+                    },
+                    "home_team": team,
+                }
+            ],
+            "meta": {},
+        }
+
+    events, _ = provider_adapters.fetch_schedule(
+        "balldontlie", request_json=request, key_reader=lambda _: "fixture"
+    )
+    assert [call.get("season_type") for call in calls] == [None, "preseason"]
+    assert len(events) == 1
+    assert events[0]["title"] == "[季前赛] Oklahoma City Thunder @ San Antonio Spurs"
+    assert events[0]["source_key"] == "balldontlie:game:7"
 
 
 @pytest.mark.parametrize(
@@ -519,6 +559,7 @@ def test_nba_catalog_without_games_and_free_tier_pacing(monkeypatch):
     [
         ("postponed", "postponed"),
         ("suspended", "postponed"),
+        ("delayed", "postponed"),
         ("canceled", "cancelled"),
         ("final", "finished"),
     ],
@@ -529,6 +570,8 @@ def test_nba_structured_status(state, expected):
     def request(client, url, **kwargs):
         if url.endswith("/teams"):
             return {"data": []}
+        if kwargs["params"].get("season_type") == "preseason":
+            return {"data": [], "meta": {}}
         return {
             "data": [
                 {

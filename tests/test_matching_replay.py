@@ -121,6 +121,52 @@ def test_candidate_order_does_not_resolve_doubleheaders():
     assert all(row["decision"] == "needs_review" for row in before.values())
 
 
+def test_spurs_alias_requires_an_opponent_and_does_not_cross_sports():
+    from types import SimpleNamespace
+
+    def event(ident, sport, start, participants):
+        return SimpleNamespace(
+            id=ident,
+            sport=sport,
+            title=" @ ".join(row["name"] for row in participants),
+            source_key="fixture:" + ident,
+            starts_at=start,
+            timezone="UTC",
+            duration=150,
+            status="scheduled",
+            participants=participants,
+        )
+
+    nba = event(
+        "nba-spurs",
+        "basketball",
+        "2026-10-08T00:00:00+00:00",
+        [
+            {"name": "Oklahoma City Thunder", "short_name": "OKC"},
+            {"name": "San Antonio Spurs", "short_name": "SAS"},
+        ],
+    )
+    epl = event(
+        "epl-spurs",
+        "football",
+        "2026-10-08T19:00:00+00:00",
+        [
+            {"name": "Arsenal", "short_name": "ARS"},
+            {"name": "Tottenham Hotspur", "short_name": "TOT"},
+        ],
+    )
+    video = SimpleNamespace(
+        title="Spurs vs Thunder 2026-10-08 preview",
+        description="",
+        published_at="2026-10-07T12:00:00+00:00",
+    )
+    assert [(row["event_id"], row["decision"]) for row in evaluate(video, [nba, epl])] == [
+        ("nba-spurs", "automatic")
+    ]
+    video.title = "Spurs season preview"
+    assert evaluate(video, [nba, epl]) == []
+
+
 @pytest.mark.parametrize("title,automatic", [
     ("Race Highlights | 2026 Italian Grand Prix", True),
     ("Race Highlights | 2025 Italian Grand Prix", False),
