@@ -14,9 +14,13 @@ from pydantic import AnyHttpUrl
 from starlette.responses import JSONResponse, Response
 from starlette.routing import Route, request_response
 
-from app.oauth import SCOPES, TOKEN_RESOURCE, SportsOAuthProvider, issuer, resource
+from app.oauth_rules import SCOPES, TOKEN_RESOURCE, issuer, resource
 
-provider = SportsOAuthProvider()
+
+def default_provider():
+    from app.oauth import SportsOAuthProvider
+
+    return SportsOAuthProvider()
 
 
 class BoundAuthorizationHandler(AuthorizationHandler):
@@ -49,26 +53,34 @@ class BoundTokenHandler(TokenHandler):
             TOKEN_RESOURCE.reset(context)
 
 
-async def revoke(request):
+async def revoke(request, oauth_provider=None):
+    active_provider = oauth_provider or default_provider()
     # SDK 1.30.0's RevocationRequest requires client_secret even for public
     # clients. Keep its authenticator and provider, but accept RFC 7009 forms.
     headers = {"Cache-Control": "no-store", "Pragma": "no-cache"}
     try:
-        client = await ClientAuthenticator(provider).authenticate_request(request)
+        client = await ClientAuthenticator(active_provider).authenticate_request(request)
     except AuthenticationError:
         return JSONResponse({"error": "unauthorized_client"}, status_code=401, headers=headers)
     form = await request.form()
     raw = form.get("token")
     if len(form.getlist("token")) != 1 or not isinstance(raw, str) or not raw or len(raw) > 200:
         return JSONResponse({"error": "invalid_request"}, status_code=400, headers=headers)
-    token = await provider.load_access_token(raw) or await provider.load_refresh_token(client, raw)
+    token = await active_provider.load_access_token(raw) or await active_provider.load_refresh_token(
+        client, raw
+    )
     if token and token.client_id == client.client_id:
-        await provider.revoke_token(token)
+        await active_provider.revoke_token(token)
     # Unknown tokens and tokens belonging to other clients have the same result.
     return Response(status_code=200, headers=headers)
 
 
-def auth_routes():
+def auth_routes(oauth_provider=None):
+    provider = oauth_provider or default_provider()
+
+    async def revoke_current(request):
+        return await revoke(request, provider)
+
     registration = ClientRegistrationOptions(
         enabled=True, valid_scopes=SCOPES, default_scopes=["calendar:read"]
     )
@@ -102,7 +114,7 @@ def auth_routes():
             ),
             16384,
         ),
-        "/revoke": RequestBodyLimitMiddleware(cors_middleware(revoke, ["POST", "OPTIONS"]), 16384),
+        "/revoke": RequestBodyLimitMiddleware(cors_middleware(revoke_current, ["POST", "OPTIONS"]), 16384),
     }
     return [
         Route(route.path, endpoint=replacements.get(route.path, route.app), methods=route.methods)

@@ -56,3 +56,7 @@ uv run python -m scripts.export_contracts
 [云配置现状](docs/cloud-development.md)、[Cosmos设计](docs/cosmos-storage-design.md)、[文档运行边界](docs/document-runtime.md)、[Functions运行](docs/functions-runtime.md)、[MCP](docs/mcp-and-connections.md)。旧MySQL模板/费用文档只作历史记录，不能直接执行。已授权的托管Chrome方式保留，具体部署必须使用核对过的独立目标，禁止复用其他产品资源。
 
 模块手册与必要验收保留在`docs/`、`evidence/`；旧STATE流水已删除，下一步只看当前STATE。双仓分别提交，无push或部署。
+
+## P2 文档模式候选（2026-09-13）
+
+账号删除、OAuth、公共ICS与官方转播已接入文档模式本地候选；运行方式沿用现有API与worker命令。见 [实现与部署边界](docs/p2-cloud-business.md)及[本地验收](evidence/p2-local-2026-09-13.md)。尚未部署到开发环境；现有公网版本不会因本地修改自动更新。

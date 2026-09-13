@@ -21,10 +21,11 @@ class Content:
         ]
 
     def selected(self, event, payload, *, rows=None):
+        public = self.runtime.broadcasts.selected(event, payload)
         if payload is None:
-            return []  # Public broadcasts use their own, not-yet-migrated repository.
+            return public
         rows = self.rows(payload["user_id"]) if rows is None else rows
-        return selected_links(
+        return public + selected_links(
             event,
             payload["config"],
             [row for row in rows if row.event_id == event.id],
@@ -110,7 +111,11 @@ class Content:
 
     def override_link(self, user_id, ident, state, key=None):
         def perform(previous):
-            link = self.owned_link(user_id, ident)["payload"]
+            public = self.store.get("state", self.runtime.broadcasts.pk, ident)
+            if public and public["kind"] == "broadcast" and public["payload"]["published"]:
+                link = public["payload"]["published"]
+            else:
+                link = self.owned_link(user_id, ident)["payload"]
             event = self.event(link["event_id"])
             config = link_override(previous["config"], event.source_key, link["url"], state)
             return Change(

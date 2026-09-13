@@ -215,9 +215,9 @@ class LocalDocumentStore:
             raise StoreError("DOCUMENT_QUERY_INVALID")
         with self.connection() as db:
             rows = db.execute(
-                "SELECT body,etag FROM documents WHERE bucket=? AND pk=? AND kind=? AND id>? "
+                "SELECT body,etag FROM documents WHERE bucket=? AND pk=? AND (? IS NULL OR kind=?) AND id>? "
                 "ORDER BY id LIMIT ?",
-                (container, pk, kind, after, limit),
+                (container, pk, kind, kind, after, limit),
             ).fetchall()
         return [{**json.loads(row[0]), "_etag": row[1]} for row in rows]
 
@@ -339,7 +339,7 @@ class CosmosDocumentStore:
             container,
             lambda c, hook: list(
                 c.query_items(
-                    query="SELECT TOP @limit * FROM c WHERE c.kind=@kind AND c.id>@after ORDER BY c.id",
+                    query="SELECT TOP @limit * FROM c WHERE (IS_NULL(@kind) OR c.kind=@kind) AND c.id>@after ORDER BY c.id",
                     parameters=[
                         {"name": "@limit", "value": limit},
                         {"name": "@kind", "value": kind},

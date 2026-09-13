@@ -39,6 +39,18 @@ class Runtime:
         self.creators = Creators(self)
         self.matches = Matches(self)
         self.websub = WebSub(self)
+        from app.document_privacy import Privacy
+
+        self.privacy = Privacy(self)
+        from app.document_oauth import DocumentOAuthProvider
+
+        self.oauth = DocumentOAuthProvider(self)
+        from app.document_public_feeds import PublicFeeds
+
+        self.public_feeds = PublicFeeds(self)
+        from app.document_broadcasts import Broadcasts
+
+        self.broadcasts = Broadcasts(self)
 
     def youtube_request(self, endpoint, params):
         from app.provider_adapters import provider_key

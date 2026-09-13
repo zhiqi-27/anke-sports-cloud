@@ -18,6 +18,12 @@ from app.document_runtime import Runtime
 from app.document_store import Conflict, StoreError, Write, open_document_store
 from app.feed_delivery import calendar_response
 from app.schemas import (
+    PublicFeedView,
+    AccountDeletionView,
+    ConsentDecision,
+    ConsentRequestView,
+    ConsentRedirectView,
+    ConnectionList,
     AddLink,
     AddCreator,
     CalendarUserView,
@@ -63,6 +69,7 @@ def create_app(store=None, cfg=None):
         CORSMiddleware,
         allow_origins=[cfg.web_url],
         allow_credentials=True,
+        allow_origin_regex=r"chrome-extension://[a-p]{32}",
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
         allow_headers=["Authorization", "Content-Type", "Idempotency-Key"],
     )
@@ -100,7 +107,30 @@ def create_app(store=None, cfg=None):
         request.state.request_id = uuid4().hex[:16]
         try:
             if request.method not in {"GET", "HEAD", "OPTIONS"}:
-                check_origin(request)
+                origin = request.headers.get("origin", "")
+                bearer = request.headers.get("Authorization", "")
+                if origin.startswith("chrome-extension://") and bearer.startswith("Bearer as_at_"):
+                    import re
+                    from urllib.parse import urlsplit
+                    from app.oauth_rules import resource
+
+                    oauth = request.app.state.runtime.oauth
+                    principal = oauth.verify_access(bearer[7:])
+                    client = await oauth.get_client(principal.client_id) if principal else None
+                    extension_id = origin.removeprefix("chrome-extension://")
+                    if (
+                        not principal
+                        or principal.resource != resource("extension")
+                        or not client
+                        or not re.fullmatch(r"[a-p]{32}", extension_id)
+                        or not any(
+                            urlsplit(str(uri)).hostname == extension_id + ".chromiumapp.org"
+                            for uri in client.redirect_uris
+                        )
+                    ):
+                        problem("ORIGIN_REJECTED", "请求来源不受支持", 403)
+                else:
+                    check_origin(request)
             response = await call_next(request)
         except HTTPException as exc:
             response = await http_error(request, exc)
@@ -119,7 +149,7 @@ def create_app(store=None, cfg=None):
                 "Referrer-Policy": "no-referrer",
             }
         )
-        if not request.url.path.startswith("/feeds/"):
+        if response.status_code >= 400 or not request.url.path.startswith(("/feeds/", "/public-feeds/")):
             response.headers["Cache-Control"] = "no-store"
         return response
 
@@ -130,7 +160,14 @@ def create_app(store=None, cfg=None):
         bearer = request.headers.get("Authorization", "")
         uid = None
         if bearer.startswith("Bearer as_at_"):
-            problem("DOCUMENT_FEATURE_UNAVAILABLE", "此存储环境尚未启用外部应用授权", 503)
+            from app.oauth_rules import resource
+            from app.security import require_scope
+
+            principal = rt.oauth.verify_access(bearer[7:])
+            if not principal or principal.resource != resource("extension"):
+                problem("AUTH_REQUIRED", "连接已失效，请重新授权", 401)
+            require_scope(request, principal)
+            return rt.accounts.active(principal.subject)["payload"]
         if bearer.startswith("Bearer "):
             uid = firebase_subject(bearer[7:])
         elif (token := request.cookies.get("anke_sports_session")) and local_allowed(request):
@@ -261,6 +298,80 @@ def create_app(store=None, cfg=None):
         response.delete_cookie("anke_sports_session")
         return {"signed_out": True}
 
+    from app.broadcast_schemas import (
+        BroadcastDraft,
+        BroadcastEdit,
+        BroadcastDecision,
+        BroadcastAction,
+        DeviceEvidence,
+        BroadcastView,
+        BroadcastList,
+    )
+    from app.document_store import partition_items
+    from app.platforms import registry
+
+    def maintainer(user=Depends(me)):
+        if user["user_id"] not in cfg.maintainer_ids:
+            problem("MAINTAINER_REQUIRED", "仅维护者可以管理公共直播入口", 403)
+        return user["user_id"]
+
+    @app.get("/api/v1/platforms")
+    def platforms():
+        return {"items": registry()}
+
+    @app.get("/api/v1/maintenance/broadcasts", response_model=BroadcastList)
+    def broadcast_list(
+        event_id: str | None = None,
+        limit: int = Query(50, ge=1, le=100),
+        actor=Depends(maintainer),
+        rt=Depends(runtime),
+    ):
+        rows = []
+        for row in partition_items(rt.store, "state", rt.broadcasts.pk, "broadcast"):
+            if event_id is None or row["payload"]["draft"]["event_id"] == event_id:
+                rows.append(rt.broadcasts.view(row))
+            if len(rows) > limit:
+                break
+        return {"items": rows[:limit], "has_more": len(rows) > limit}
+
+    @app.get("/api/v1/maintenance/broadcasts/{ident}", response_model=BroadcastView)
+    def broadcast_get(ident: str, actor=Depends(maintainer), rt=Depends(runtime)):
+        return rt.broadcasts.view(rt.broadcasts.get(ident))
+
+    @app.post("/api/v1/maintenance/broadcasts", response_model=BroadcastView)
+    def broadcast_create(data: BroadcastDraft, actor=Depends(maintainer), rt=Depends(runtime)):
+        return rt.broadcasts.create(actor, data)
+
+    @app.put("/api/v1/maintenance/broadcasts/{ident}", response_model=BroadcastView)
+    def broadcast_edit(ident: str, data: BroadcastEdit, actor=Depends(maintainer), rt=Depends(runtime)):
+        return rt.broadcasts.change(actor, ident, "edit", data)
+
+    @app.post("/api/v1/maintenance/broadcasts/{ident}/publish", response_model=BroadcastView)
+    def broadcast_publish(
+        ident: str, data: BroadcastDecision, actor=Depends(maintainer), rt=Depends(runtime)
+    ):
+        return rt.broadcasts.change(actor, ident, "publish", data)
+
+    @app.post("/api/v1/maintenance/broadcasts/{ident}/suspend", response_model=BroadcastView)
+    def broadcast_suspend(ident: str, data: BroadcastAction, actor=Depends(maintainer), rt=Depends(runtime)):
+        return rt.broadcasts.change(actor, ident, "suspend", data)
+
+    @app.post("/api/v1/maintenance/broadcasts/{ident}/check", response_model=BroadcastView)
+    def broadcast_check(ident: str, data: BroadcastAction, actor=Depends(maintainer), rt=Depends(runtime)):
+        return rt.broadcasts.change(actor, ident, "check", data)
+
+    @app.post("/api/v1/maintenance/broadcasts/{ident}/device-evidence", response_model=BroadcastView)
+    def broadcast_evidence(ident: str, data: DeviceEvidence, actor=Depends(maintainer), rt=Depends(runtime)):
+        return rt.broadcasts.change(actor, ident, "device-evidence", data)
+
+    @app.get("/api/v1/public-feed", response_model=PublicFeedView)
+    def public_feed_info(source_key: str = Query(min_length=1, max_length=160), rt=Depends(runtime)):
+        return rt.public_feeds.info(source_key)
+
+    @app.api_route("/public-feeds/{ident}.ics", methods=["GET", "HEAD"], include_in_schema=False)
+    def public_feed(ident: str, request: Request, rt=Depends(runtime)):
+        return calendar_response(rt.public_feeds.read(ident), request, public=True)
+
     @app.get("/api/v1/sources", response_model=SourceList)
     def sources(q: str = "", dataset: str = "real", rt=Depends(runtime)):
         if dataset not in {"real", "demo"} or len(q) > 200:
@@ -320,6 +431,38 @@ def create_app(store=None, cfg=None):
     @app.put("/api/v1/events/{event_id}/selection", response_model=EventView)
     def selection(event_id: str, data: OverrideInput, user=Depends(me), rt=Depends(runtime)):
         return rt.content.selection(user["user_id"], event_id, data)
+
+    @app.get("/api/v1/me/connections/requests/{pending}", response_model=ConsentRequestView)
+    async def consent_preview(pending: str, user=Depends(me), rt=Depends(runtime)):
+        return await rt.oauth.preview(pending)
+
+    @app.post("/api/v1/me/connections/requests/{pending}", response_model=ConsentRedirectView)
+    def consent_decision(pending: str, data: ConsentDecision, user=Depends(me), rt=Depends(runtime)):
+        return {"redirect_url": rt.oauth.consent(user["user_id"], pending, data.approved, data.scopes)}
+
+    @app.get("/api/v1/me/connections", response_model=ConnectionList)
+    async def connections(user=Depends(me), rt=Depends(runtime)):
+        return await rt.oauth.connections(user["user_id"])
+
+    @app.delete("/api/v1/me/connections/{ident}")
+    def disconnect(ident: str, user=Depends(me), rt=Depends(runtime)):
+        rt.oauth.disconnect(user["user_id"], ident)
+        return {"revoked": True}
+
+    @app.delete("/api/v1/me", response_model=AccountDeletionView)
+    def delete_account(
+        data: FeedAction, request: Request, response: Response, user=Depends(me), rt=Depends(runtime)
+    ):
+        if not data.confirmed:
+            problem("CONFIRM_REQUIRED", "请确认删除账号数据")
+        project = (
+            cfg.firebase_project_id
+            if request.headers.get("Authorization", "").startswith("Bearer ")
+            else None
+        )
+        result = rt.privacy.delete(user["user_id"], project)
+        response.delete_cookie("anke_sports_session")
+        return result
 
     @app.get("/api/v1/me/calendar", response_model=CalendarUserView)
     def calendar(user=Depends(me), rt=Depends(runtime)):
@@ -397,6 +540,19 @@ def create_app(store=None, cfg=None):
     @app.api_route("/feeds/{token}.ics", methods=["GET", "HEAD"], include_in_schema=False)
     def feed(token: str, request: Request, rt=Depends(runtime)):
         return calendar_response(rt.publisher.read(token), request)
+
+    # The SDK resolves the lifespan-owned runtime for each request, avoiding a
+    # second Cosmos client or SQL fallback in authentication handlers.
+    class OAuthProxy:
+        def __getattr__(self, name):
+            async def call(*args, **kwargs):
+                return await getattr(app.state.runtime.oauth, name)(*args, **kwargs)
+
+            return call
+
+    from app.oauth_routes import auth_routes
+
+    app.router.routes.extend(auth_routes(OAuthProxy()))
 
     @app.api_route(
         "/{path:path}", methods=["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"], include_in_schema=False

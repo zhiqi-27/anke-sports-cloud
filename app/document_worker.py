@@ -105,6 +105,7 @@ def dispatch(store, send):
 def fanout(runtime, claim):
     store, outbox = runtime.store, Outbox(runtime.store)
     job = outbox.current(claim)
+    runtime.public_feeds.schedule(claim["id"])
     routes = store.page("indexes", "owners", "owner_route", after=job["payload"].get("after", ""), limit=100)
     for route in routes:
         pk = route["payload"]["owner_pk"]
@@ -160,8 +161,14 @@ def run_job(runtime, message):
         return True
     try:
         operation = claim["payload"]["operation"]
-        if operation == "projection" and claim["pk"].startswith("user:"):
+        if operation == "account_erasure" and claim["pk"].startswith("user:"):
+            runtime.privacy.erase(claim)
+        elif operation == "projection" and claim["pk"].startswith("user:"):
             runtime.publish(claim)
+        elif operation == "broadcast_check" and claim["pk"] == "provider:broadcasts":
+            runtime.broadcasts.check(claim)
+        elif operation == "public_projection" and claim["pk"] == "provider:public-feeds":
+            runtime.public_feeds.publish(claim)
         elif operation == "catalog_changed" and claim["pk"].startswith("provider:"):
             fanout(runtime, claim)
         elif operation == "channel_changed" and claim["pk"].startswith("channel:"):
@@ -218,6 +225,7 @@ def runtime_context():
 
 def schedule_calendar_window(runtime, *, instant=None):
     instant = instant or datetime.now(timezone.utc)
+    runtime.broadcasts.schedule()
     job = projection_job("provider:calendar-window", 0)
     job["id"] = "job:" + digest("calendar-window:" + instant.date().isoformat())[:32]
     job["payload"]["operation"] = "catalog_changed"

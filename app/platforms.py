@@ -16,6 +16,41 @@ from app.security import canonical_url
 # describe candidate pages, not a verified platform/region/device support matrix.
 RULES = [
     {
+        "id": "apple-tv",
+        "name": "Apple TV",
+        "hosts": ["tv.apple.com"],
+        "paths": ["^/.+"],
+        "evidence": "https://tv.apple.com/us/info/watch-f1",
+    },
+    {
+        "id": "peacock",
+        "name": "Peacock",
+        "hosts": ["www.peacocktv.com"],
+        "paths": ["^/.+"],
+        "evidence": "https://www.peacocktv.com/sports/premier-league",
+    },
+    {
+        "id": "tencent-sports",
+        "name": "腾讯体育",
+        "hosts": ["sports.qq.com", "v.qq.com"],
+        "paths": ["^/.+"],
+        "evidence": "https://corp.formula1.com/formula-1-renews-partnership-with-tencent-to-broadcast-f1-in-mainland-china/",
+    },
+    {
+        "id": "migu",
+        "name": "咪咕视频",
+        "hosts": ["www.miguvideo.com", "m.miguvideo.com"],
+        "paths": ["^/.+"],
+        "evidence": "https://www.premierleague.com/en/media/broadcasters",
+    },
+    {
+        "id": "premier-league",
+        "name": "Premier League",
+        "hosts": ["www.premierleague.com"],
+        "paths": ["^/.+"],
+        "evidence": "https://www.premierleague.com/en/media/broadcasters",
+    },
+    {
         "id": "youtube",
         "name": "YouTube",
         "hosts": ["youtube.com", "www.youtube.com", "m.youtube.com", "youtu.be"],
@@ -25,14 +60,14 @@ RULES = [
     {
         "id": "nba",
         "name": "NBA",
-        "hosts": ["nba.com", "www.nba.com", "watch.nba.com", "tv.nba.com"],
+        "hosts": ["nba.com", "www.nba.com", "watch.nba.com", "tv.nba.com", "support.watch.nba.com"],
         "paths": [r"^/.+"],
         "evidence": "https://www.nba.com/watch/featured",
     },
     {
         "id": "f1",
         "name": "Formula 1",
-        "hosts": ["f1tv.formula1.com", "www.formula1.com"],
+        "hosts": ["f1tv.formula1.com", "www.formula1.com", "corp.formula1.com"],
         "paths": [r"^/.+"],
         "evidence": "https://f1tv.formula1.com/",
     },
