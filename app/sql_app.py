@@ -214,7 +214,7 @@ def logout(request: Request, response: Response, db=Depends(get_db)):
     return {"signed_out": True}
 
 
-@app.get("/api/v1/sources", response_model=SourceList)
+@app.get("/api/v1/sources", response_model=SourceList, response_model_exclude_none=True)
 def sources(q: str = "", dataset: str = "real", db=Depends(get_db)):
     return actions.search_sources(db, q, dataset)
 

@@ -161,6 +161,7 @@ class ParticipantView(BaseModel):
 
 
 class SourceView(ParticipantView):
+    logo_url: str | None = None
     sport: str
     kind: str
     demo: bool

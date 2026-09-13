@@ -372,7 +372,7 @@ def create_app(store=None, cfg=None):
     def public_feed(ident: str, request: Request, rt=Depends(runtime)):
         return calendar_response(rt.public_feeds.read(ident), request, public=True)
 
-    @app.get("/api/v1/sources", response_model=SourceList)
+    @app.get("/api/v1/sources", response_model=SourceList, response_model_exclude_none=True)
     def sources(q: str = "", dataset: str = "real", rt=Depends(runtime)):
         if dataset not in {"real", "demo"} or len(q) > 200:
             problem("INVALID_QUERY", "查询条件无效")

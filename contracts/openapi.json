@@ -4187,6 +4187,17 @@
             "type": "string",
             "title": "Color"
           },
+          "logo_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logo Url"
+          },
           "sport": {
             "type": "string",
             "title": "Sport"

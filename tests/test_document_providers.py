@@ -371,6 +371,10 @@ def test_basketball_pagination_date_precision_and_metadata_failure():
         "balldontlie", request_json=request, key_reader=lambda _: "fixture-key"
     )
     assert len(events) == 2 and len(sources) == 4
+    assert provider_adapters.nba_logo_url("LAL") == (
+        "https://cdn.nba.com/logos/nba/1610612747/primary/L/logo.svg"
+    )
+    assert provider_adapters.nba_logo_url("FIX") is None
     assert calls[1]["cursor"] == 10
     assert events[0]["time_precision"] == "date_only" and events[1]["status"] == "finished"
     with pytest.raises(KeyError):
@@ -407,13 +411,22 @@ def test_football_count_status_and_unknown_time_are_preserved():
             return {
                 "season": {"startDate": "2026-08-01"},
                 "count": 1,
-                "teams": [{"id": 3, "name": "No fixtures yet"}],
+                "teams": [
+                    {
+                        "id": 3,
+                        "name": "No fixtures yet",
+                        "crest": "https://crests.football-data.org/3.png",
+                    }
+                ],
             }
         assert kwargs["params"] == {"season": "2026"}
         return payload
 
-    events, _ = provider_adapters.fetch_schedule(
+    events, sources = provider_adapters.fetch_schedule(
         "football-data", request_json=request, key_reader=lambda _: "fixture-key"
+    )
+    assert next(row for row in sources if row["id"] == "football-data:team:3")["logo_url"] == (
+        "https://crests.football-data.org/3.png"
     )
     assert [(r["time_precision"], r["status"]) for r in events] == [
         ("date_only", "scheduled"),

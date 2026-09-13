@@ -47,6 +47,7 @@ class Source(Base):
     sport: Mapped[str] = mapped_column(String(30))
     kind: Mapped[str] = mapped_column(String(30))
     color: Mapped[str] = mapped_column(String(10))
+    logo_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     provider: Mapped[str] = mapped_column(String(40))
     demo: Mapped[bool] = mapped_column(Boolean, default=False)
 

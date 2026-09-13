@@ -37,6 +37,7 @@ def search_sources(db, q="", dataset="real"):
                 "sport": s.sport,
                 "kind": s.kind,
                 "color": s.color,
+                **({"logo_url": s.logo_url} if s.logo_url else {}),
                 "demo": s.demo,
             }
             for s in rows

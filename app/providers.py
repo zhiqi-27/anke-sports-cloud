@@ -111,7 +111,7 @@ def provider_statuses(db):
     ]
 
 
-def source(db, key, name, short, sport, kind, provider, color="#8bbdaa"):
+def source(db, key, name, short, sport, kind, provider, color="#8bbdaa", logo_url=None):
     obj = db.get(Source, key)
     if not obj:
         obj = Source(
@@ -122,10 +122,13 @@ def source(db, key, name, short, sport, kind, provider, color="#8bbdaa"):
             kind=kind,
             provider=provider,
             color=color,
+            logo_url=logo_url,
             demo=False,
         )
         db.add(obj)
-    return {"id": key, "name": name, "short_name": short, "color": color}
+    elif obj.logo_url != logo_url:
+        obj.logo_url = logo_url
+    return {"id": key, "name": name, "short_name": short, "color": color, "logo_url": logo_url}
 
 
 def upsert_event(db, key, **values):
@@ -157,7 +160,15 @@ def sync_provider(db, provider):
     events, sources = fetch_schedule(provider, request_json=get_json, key_reader=provider_key)
     for row in sources:
         source(
-            db, row["id"], row["name"], row["short_name"], row["sport"], row["kind"], provider, row["color"]
+            db,
+            row["id"],
+            row["name"],
+            row["short_name"],
+            row["sport"],
+            row["kind"],
+            provider,
+            row["color"],
+            row.get("logo_url"),
         )
     for row in events:
         upsert_event(
