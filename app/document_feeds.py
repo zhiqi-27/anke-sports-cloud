@@ -6,7 +6,7 @@ import json
 from types import SimpleNamespace
 from uuid import uuid4
 
-from app.calendar_rules import projection_from_links, select_candidates, serialize
+from app.calendar_rules import projection_from_links, select_candidates, serialize_personal
 from app.document_accounts import Accounts, Outbox, document, owner_partition
 from app.document_store import StoreError, Write, clean, encode
 from app.security import digest, problem
@@ -156,7 +156,7 @@ class FeedPublisher:
         retained = [
             value for value in existing.values() if not value.removed or value.updated_at[:10] >= lower
         ]
-        body = serialize(retained).decode()
+        body = serialize_personal(retained).decode()
         etag = digest(body)
         changed = feed["payload"]["etag"] != etag
         writes = [self.accounts.guard(account)]

@@ -158,7 +158,7 @@ def test_merge_omitted_preferences_preserves_user_settings(stack):
         assert merged["preferences"]["timezone"] == "UTC"
 
 
-def test_unfollow_retains_past_but_explicit_exclusion_cancels(stack):
+def test_unfollow_retains_past_but_explicit_exclusion_hides(stack):
     client, sessions = stack
     past = insert_event(sessions, days=-1, suffix="past")
     future = insert_event(sessions, suffix="future")
@@ -176,7 +176,7 @@ def test_unfollow_retains_past_but_explicit_exclusion_cancels(stack):
     ).raise_for_status()
     drain()
     _, _, events = feed_snapshot(client)
-    assert all(str(e["STATUS"]) == "CANCELLED" for e in events)
+    assert events == []
 
 
 def test_outbox_rolls_back_with_config(stack):

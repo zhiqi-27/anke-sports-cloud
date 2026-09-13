@@ -148,6 +148,16 @@ def serialize(projections: list[Projection], calendar_name="Anke Sports") -> byt
     return calendar.to_ical()
 
 
+def serialize_personal(projections: list[Projection], calendar_name="Anke Sports") -> bytes:
+    """Publish a full personal snapshot without user-removed events.
+
+    Removed projections remain in storage so a later re-follow can reuse the
+    same stable UID. Upstream-cancelled events are active projections and still
+    serialize with STATUS:CANCELLED.
+    """
+    return serialize([projection for projection in projections if not projection.removed], calendar_name)
+
+
 def event_is_past(event, instant):
     if event.time_precision == "exact" and event.starts_at:
         start = datetime.fromisoformat(event.starts_at.replace("Z", "+00:00"))

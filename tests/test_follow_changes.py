@@ -110,10 +110,14 @@ def test_preview_is_read_only_and_matches_published_removal_with_overlap_and_his
     )
     assert retry.json() == saved.json()
     _, _, events = feed_snapshot(client)
-    active = [e for e in events if not str(e["SUMMARY"]).startswith("[已移除]")]
-    assert len(active) == preview["result_count"]
-    assert {str(e["UID"]) for e in events} == old_uids
-    assert sum(str(e["SUMMARY"]).startswith("[已移除]") for e in events) == 1
+    assert len(events) == preview["result_count"]
+    current_uids = {str(e["UID"]) for e in events}
+    assert current_uids < old_uids
+    assert all(not str(e["SUMMARY"]).startswith("[已移除]") for e in events)
+    with sessions() as db:
+        removed = db.scalar(select(Projection).where(Projection.event_id == ids["a"]))
+        assert removed.removed
+        assert old_uids - current_uids == {f"{removed.id}@calendar.anke-sports"}
 
 
 def test_preview_addition_counts_unknown_dates_and_limits_examples_after_hashing(stack):

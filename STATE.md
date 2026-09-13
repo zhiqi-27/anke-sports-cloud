@@ -12,7 +12,7 @@
 
 发布基线包含三Provider目录/状态适配、免费额度请求节流、IaC Key Vault引用、部署记录和2026-09-12验收证据。新包部署ID为c802a62c-1f93-45bd-8731-fe55e62421f7；部署包与Git提交仍是不同证据。
 
-2026-09-13取消关注隐藏候选完成：SQL与文档/Cosmos路径定向60 passed，全量383 passed / 2 skipped / 2既有依赖弃用警告，Ruff与`git diff --check`通过；详见[个人Feed语义证据](evidence/personal-feed-unfollow-2026-09-13.md)。该候选尚未部署。此前开发环境 OneDeploy `a80acfdd-d2bb-49f1-9d17-cecc1183969f` 仍为当前线上后端；没有 push 或前端发布。
+2026-09-13取消关注隐藏候选完成：SQL与文档/Cosmos路径定向60 passed，全量383 passed / 2 skipped / 2既有依赖弃用警告，Ruff与`git diff --check`通过；详见[个人Feed语义证据](evidence/personal-feed-unfollow-2026-09-13.md)。该候选尚未部署。开发环境当前线上后端仍为P2 OneDeploy `3a2b84d5-b398-4781-a102-6fd69fac5edd`冻结的`aff58eb`；没有 push 或前端发布。
 
 历史过程保存在[整理前快照](<../anke-sports 文档/archive/2026-09-12-status-before-consolidation/>)；不重复放进当前状态。
 

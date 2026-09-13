@@ -276,7 +276,7 @@ def test_projection_refreshes_cached_config_after_acquiring_owner_lock(disk_stac
         assert stale.revision == old_revision + 1
         projection = old.scalar(select(Projection).where(Projection.event_id == event_id))
         assert projection.removed
-        assert "[已移除]" in old.scalar(select(Feed)).body
+        assert "VEVENT" not in old.scalar(select(Feed)).body
 
 
 def test_broken_maintenance_does_not_starve_persisted_jobs(stack, monkeypatch, caplog):

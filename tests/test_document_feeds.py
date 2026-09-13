@@ -117,6 +117,7 @@ def test_concurrent_configuration_commands_cannot_lose_changes_or_leave_receipts
 def test_reschedule_rotation_repeat_reads_and_history_keep_published_identity(documents):
     store, accounts, publisher, outbox = documents
     events = [event(1), event(2, days=-2)]
+    events[1].status = "cancelled"
     follow(accounts)
     drain(store, publisher, outbox, events)
     token = accounts.address("fixture-owner")
@@ -150,8 +151,8 @@ def test_reschedule_rotation_repeat_reads_and_history_keep_published_identity(do
     follow(accounts, ())
     drain(store, publisher, outbox, events)
     rows = Calendar.from_ical(publisher.read(rotated).body).walk("VEVENT")
-    assert {str(row["UID"]) for row in rows} == set(uids.values())
-    assert sorted(str(row["STATUS"]) for row in rows) == ["CANCELLED", "CONFIRMED"]
+    assert {str(row["UID"]) for row in rows} == {uids["演示比赛 2"]}
+    assert [str(row["STATUS"]) for row in rows] == ["CANCELLED"]
 
 
 def test_interrupted_large_generation_never_replaces_previous_calendar(documents, monkeypatch):

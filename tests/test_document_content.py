@@ -145,9 +145,8 @@ def test_explicit_selection_reset_cancellation_and_stale_revision(document_stack
         is False
     )
     drain(runtime)
-    cancelled = ics_rows(client.get(address))
-    assert cancelled.keys() == original.keys()
-    assert all(str(row["STATUS"]) == "CANCELLED" for row in cancelled.values())
+    hidden = ics_rows(client.get(address))
+    assert hidden == {}
     assert runtime.accounts.active(OWNER)["payload"]["config"]["event_overrides"] == []
 
 

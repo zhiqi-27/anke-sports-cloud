@@ -17,6 +17,7 @@ from app.calendar_rules import (
     delivery_links as delivery_links,
     describe as describe,
     serialize as serialize,
+    serialize_personal as serialize_personal,
     event_is_past as event_is_past,
 )
 
@@ -206,10 +207,12 @@ def rebuild_feed(db, owner_id: str):
         wanted.add(event.id)
         data = projection_data(db, event, user, config, link_rows=links[event.id], broadcasts=broadcasts)
         update_projection(db, feed, event, data, existing)
-    publish_snapshot(db, feed, existing, wanted, lower)
+    publish_snapshot(db, feed, existing, wanted, lower, hide_removed=True)
 
 
-def publish_snapshot(db, feed, existing, wanted, lower, calendar_name="Anke Sports"):
+def publish_snapshot(
+    db, feed, existing, wanted, lower, calendar_name="Anke Sports", *, hide_removed=False
+):
     for event_id, projection in existing.items():
         if event_id not in wanted and not projection.removed:
             projection.removed = True
@@ -217,7 +220,7 @@ def publish_snapshot(db, feed, existing, wanted, lower, calendar_name="Anke Spor
             projection.updated_at = now()
     db.flush()
     keep = [p for p in existing.values() if not p.removed or p.updated_at[:10] >= lower]
-    body = serialize(keep, calendar_name)
+    body = (serialize_personal if hide_removed else serialize)(keep, calendar_name)
     etag = digest(body.decode())
     if feed.etag != etag:
         feed.body = body.decode()
