@@ -59,4 +59,4 @@ uv run python -m scripts.export_contracts
 
 ## P2 文档模式候选（2026-09-13）
 
-账号删除、OAuth、公共ICS与官方转播已接入文档模式本地候选；运行方式沿用现有API与worker命令。见 [实现与部署边界](docs/p2-cloud-business.md)及[本地验收](evidence/p2-local-2026-09-13.md)。尚未部署到开发环境；现有公网版本不会因本地修改自动更新。
+账号删除、OAuth、公共ICS与官方转播已接入文档模式本地候选；运行方式沿用现有API与worker命令。见 [实现与部署边界](docs/p2-cloud-business.md)及[本地验收](evidence/p2-local-2026-09-13.md)。已按用户授权部署到现有开发环境；[部署记录](evidence/p2-deployment-2026-09-13.md)区分代码部署、配置开放与真实账号/播放验收。

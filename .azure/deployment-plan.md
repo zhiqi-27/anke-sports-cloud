@@ -89,3 +89,19 @@ Recovery: retain the current successful deployment package and deployment ID bef
 OneDeploy `a80acfdd-d2bb-49f1-9d17-cecc1183969f` completed with status 4 and is active. Six functions registered. Direct Azure and Cloudflare-routed health endpoints returned 200 with staging/Cosmos identity, public calendar returned 200, and status was dynamic/no-store. Live Storage, Queue, Vault and database-scoped Cosmos roles match the static plan.
 
 The remaining Provider checkbox stays open: NBA `last_success` 00:52:31 UTC preceded deployment completion 01:29:25 UTC. The normal six-hour refresh was not bypassed by mutating Cosmos state, so real preseason readback remains pending even though deployment itself is healthy.
+
+## 9. P2 code-only update · 2026-09-13
+
+Owner explicitly approved deployment of candidate aff58eb to existing anke-sports-dev / anke-sports-dev-mtcflttk. Subscription and East Asia target read back; Running. No infrastructure, settings, RBAC, data migration or frontend deployment is in this update.
+
+### Section 7: Validation Proof (P2)
+
+- azure-validate workflow: existing plan loaded, core validation with explicit subscription passed CLI/auth/Bicep compilation/ARM validation/what-if. First helper invocation hit a Bash empty-array issue; explicit subscription resolved it. What-if reports 8 Create/21 Modify/14 Delete text lines of infrastructure drift; NONE of these infrastructure operations will be applied.
+- Candidate SHA256 3a237a834315addccb1c46d63bb015f7936bb6899c58d3561ea4620c870ce663 and recovery P1 SHA256 3509a4bd56827bfc224fbf539993e608cb2049dc48dcabe465fb21788010ff28 verified. Packaging tests 3 passed, candidate runtime manifest previously matched files; final P2 related suite 121 passed.
+- Policy assignment readback remains SecurityCenterBuiltIn. No provisioning or policy change. Static and live roles match: database-scoped Cosmos contributor; dedicated Storage Blob/Queue and Vault Secrets User. No permissions expanded.
+- Current active deployment readback is a80acfdd-d2bb-49f1-9d17-cecc1183969f. If startup/health fails, republish exact P1 package; do not delete resources or data.
+- Public feed source allowlist is empty and broadcast network checks are false. Keep these existing settings; report their effect distinctly from code deployment.
+
+### P2 deployment proof
+
+OneDeploy 3a2b84d5-b398-4781-a102-6fd69fac5edd completed 2026-09-13T03:03:05Z, status4/active/complete. Six functions and dual-origin health/new API routes verified. Public feed remains unavailable per empty allowlist; actual user identity and playback not exercised. See evidence/p2-deployment-2026-09-13.md.
