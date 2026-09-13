@@ -1,6 +1,6 @@
 # MCP 与应用连接
 
-当前为本地实现与验收。已用安装的 Codex CLI 0.153.4 完成真实 HTTP OAuth、工具发现和撤销后重新发现；Codex 实际工具调用、真实 Firebase 与 Azure 仍未验收。Chrome 本地安装包已在客户端仓库生成，实际安装与授权仍待验收。
+当前为本地实现与验收。已用安装的 Codex CLI 0.153.4 完成真实 HTTP OAuth、工具发现和撤销后重新发现；Codex 实际工具调用、真实 Firebase 与 Azure 仍未验收。用户已于2026-09-13取消Chrome扩展，公网闭环只验MCP。
 
 ## 使用入口
 
@@ -37,10 +37,10 @@
 
 以下是当前可调整的实现默认值，不代表已经验证了所有外部客户端：
 
-- Firebase ID token 仅在 Web 的账号身份确认中使用。扩展/MCP 获得 Anke Sports 自有 opaque token，不转发 Google 凭据。
+- Firebase ID token 仅在 Web 的账号身份确认中使用。MCP 获得 Anke Sports 自有 opaque token，不转发 Google 凭据。既有扩展资源分支只保留历史兼容，不属于当前交付。
 - PKCE S256、10分钟授权请求、2分钟单次授权码、15分钟 access token、最多7天 grant。refresh token 每次兑换即轮换，旧 refresh token 重放撤销整个连接。
 - 数据库只保存授权码、access/refresh token 的哈希；动态客户端元数据加密保存。token 绑定 owner、client、issuer、resource、scopes 和到期时间，撤销后每次请求重新检查。
-- 扩展资源是 `${PUBLIC_URL}/api/v1`，MCP 资源是 `${PUBLIC_URL}/mcp`，两者不能混用。扩展令牌不能管理连接、再次批准授权或删除账号。
+- MCP资源是 `${PUBLIC_URL}/mcp`。既有 `${PUBLIC_URL}/api/v1` 扩展audience继续保持隔离，但不进入当前发布或验收。
 - 支持动态客户端注册、授权服务器元数据、受保护资源元数据与 `iss` 响应。仅接受已登记的 HTTPS 或 loopback 回调。客户端应校验 metadata issuer、state、iss 和精确回调，并在 authorize/token 都发送 resource。
 - `feed:read` 在网页默认不选。撤销应用使其令牌失效；已分享的 Feed 地址须独立轮换才能失效，原事件 UID 不变。
 - 最小连接只读；写入和地址权限需要客户端显式请求。当前工具返回清楚的权限错误，自动增量授权和 Client ID Metadata Documents 尚未实现；动态注册用于兼容路径。
@@ -113,6 +113,6 @@ uv run python -m experiments.codex_business --output data/codex-business-new.jso
 
 本机25项检查通过：查询与分页、只读权限拒绝、关注写入/重试/参数冲突、身份参数拒绝、跨HTTP/MCP同键链接、持久屏蔽、配置导出/预览/应用、真实HTTP ICS稳定UID与200/304、模拟access过期后的实际Codex刷新轮换，以及撤销后拒绝调用。完整证据和旧探测隔离范围更正见 [实际业务验收](../evidence/codex-business-2026-09-10.md)。
 
-完整客户端验收仍需自然时间过期、模型自行选择工具及真实YouTube创作者接入。云端还需独立 Firebase 身份与MCP组合、HTTPS 公网回调、Azure ASGI 启停与数据库并发、限流/滥用、Chrome 安装及 service worker 生命周期验证。当前注册数量和请求体上限不能代替生产限流。
+完整客户端验收仍需自然时间过期、模型自行选择工具及真实YouTube创作者接入。云端还需独立 Firebase 身份与MCP组合、HTTPS 公网回调、Azure ASGI 启停与数据库并发、限流/滥用。Chrome安装及service worker生命周期已退出范围。当前注册数量和请求体上限不能代替生产限流。
 
 依据：[MCP 官方 Python SDK](https://github.com/modelcontextprotocol/python-sdk)、[MCP 2026-07-28 授权规范](https://modelcontextprotocol.io/specification/2026-07-28/basic/authorization)、[OAuth 令牌撤销 RFC 7009](https://www.rfc-editor.org/rfc/rfc7009)。

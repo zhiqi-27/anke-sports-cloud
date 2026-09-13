@@ -53,7 +53,7 @@ uv run python -m scripts.export_contracts
 
 先让一项真实赛事和创作者通过个人ICS可用，再补该路径必需的独立开发环境与手机验证。不要为了完整架构先实施所有迁移、GC或容量项目。未实现的后台能力仍需明确提示，不能假报可用。
 
-[云配置现状](docs/cloud-development.md)、[Cosmos设计](docs/cosmos-storage-design.md)、[文档运行边界](docs/document-runtime.md)、[Functions运行](docs/functions-runtime.md)、[MCP](docs/mcp-and-connections.md)。旧MySQL模板/费用文档只作历史记录，不能直接执行。已授权的托管Chrome方式保留，具体部署必须使用核对过的独立目标，禁止复用其他产品资源。
+[云配置现状](docs/cloud-development.md)、[Cosmos设计](docs/cosmos-storage-design.md)、[文档运行边界](docs/document-runtime.md)、[Functions运行](docs/functions-runtime.md)、[MCP](docs/mcp-and-connections.md)。旧MySQL模板/费用文档只作历史记录，不能直接执行。具体部署必须使用核对过的独立目标，禁止复用其他产品资源。Chrome扩展已退出产品范围，不再准备相关发布配置。
 
 模块手册与必要验收保留在`docs/`、`evidence/`；旧STATE流水已删除，下一步只看当前STATE。双仓分别提交，无push或部署。
 

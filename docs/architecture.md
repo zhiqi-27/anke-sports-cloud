@@ -1,10 +1,10 @@
 # Anke Sports · 当前架构决策
 
-更新于2026-09-10。用户最新决策优先于原 v1 文档中的建议技术栈。
+更新于2026-09-13。用户最新决策优先于原 v1 文档中的建议技术栈。
 
 | 边界 | 决策 | 状态 |
 | --- | --- | --- |
-| 产品 | Anke Sports；桌面 Web、Chrome 扩展、外部 MCP | 已确认 |
+| 产品 | Anke Sports；桌面 Web、外部 MCP；不做Chrome扩展 | 已确认 |
 | UI | Apple Sports 的克制色彩、紧凑卡片和文字层级；桌面月/周/日程及事件抽屉 | Web 本地实现 |
 | 身份 | Firebase Auth 客户端 ID Token，Admin 验证签名、发行方、有效期与撤销 | 独立开发项目真实Google登录、验签与偏好读写通过；云部署待验 |
 | 权威业务 | Python/FastAPI，HTTP/Queue/MCP 共用服务层 | SQL基线HTTP/任务/MCP本地实现，实际Codex调用已有证据；文档模式MCP未接入 |
@@ -15,7 +15,6 @@
 ```mermaid
 flowchart LR
   Web[桌面 Web] --> API[FastAPI / Azure Functions]
-  Extension[Chrome 扩展 · 本地实现] --> API
   MCP[HTTP MCP · 本地实现] --> API
   Auth[Firebase Auth] --> API
   API --> SQL[(Cosmos DB Serverless · 迁移目标)]
@@ -49,7 +48,7 @@ M2：YouTube 通知/续订/补查、作者范围、明确匹配/待确认/人工
 
 M3：明确审核来源的本场直播入口、地区/观看条件、链接失效维护。
 
-M4：Chrome 380×560 独立弹窗与 MCP，统一账号、配置、权限与接口。MCP 认证与敏感写操作需按目标客户端实际能力验收。
+M4：公网MCP，统一账号、配置、权限与接口。MCP 认证与敏感写操作需按目标客户端实际能力验收。既有Chrome 380×560实现只作历史证据。
 
 M5：恢复演练、完整 QA、支持范围、许可与开源发布。M6：Google OAuth 独立辅助日历增强同步。
 
