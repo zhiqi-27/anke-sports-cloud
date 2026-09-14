@@ -132,6 +132,7 @@ def build_mcp():
             to_time: str,
             dataset: Literal["real", "demo"] = "real",
             followed: bool = False,
+            source_id: Identifier | None = None,
             q: Query = "",
             limit: PageSize = 50,
             cursor: Annotated[str | None, Field(max_length=200)] = None,
@@ -140,7 +141,16 @@ def build_mcp():
             return execute(
                 "calendar:read",
                 lambda db, user: actions.get_schedule(
-                    db, from_time, to_time, dataset, followed, q, user, limit, cursor
+                    db,
+                    from_time,
+                    to_time,
+                    dataset,
+                    followed,
+                    q,
+                    user,
+                    limit,
+                    cursor,
+                    source_id or "",
                 ),
                 public_read=public_read,
             )

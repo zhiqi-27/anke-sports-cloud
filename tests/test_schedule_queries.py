@@ -80,6 +80,30 @@ def test_search_preserves_unicode_casefold_and_literal_sql_wildcards(stack, text
         assert [row["id"] for row in query(db, q=text)["items"]] == expected
 
 
+def test_public_schedule_filters_one_competition_or_team(stack):
+    _, sessions = stack
+    with sessions() as db:
+        add_event(
+            db,
+            "selected-team",
+            competition_id="query:nba",
+            participants=[
+                {"id": "query:team:1", "name": "一队", "short_name": "ONE", "color": "#111111"},
+                {"id": "query:team:2", "name": "二队", "short_name": "TWO", "color": "#222222"},
+            ],
+        )
+        add_event(db, "same-league", competition_id="query:nba")
+        add_event(db, "other-league", competition_id="query:f1", sport="racing")
+        db.commit()
+
+        assert [row["id"] for row in query(db, source_id="query:nba")["items"]] == [
+            "same-league",
+            "selected-team",
+        ]
+        assert [row["id"] for row in query(db, source_id="query:team:1")["items"]] == ["selected-team"]
+        assert query(db, source_id="query:team:missing")["items"] == []
+
+
 def test_envelope_handles_datetime_limits_and_empty_start_date_placeholder(stack):
     _, sessions = stack
     with sessions() as db:

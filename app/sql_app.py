@@ -226,6 +226,7 @@ def events(
     to: str = Query(),
     dataset: str = "real",
     followed: bool = False,
+    source_id: str = "",
     q: str = "",
     limit: int = Query(500, ge=1, le=500),
     cursor: str | None = None,
@@ -233,7 +234,18 @@ def events(
 ):
     user_id = actor(request, db, required=followed)
     user = db.get(User, user_id) if user_id else None
-    return actions.get_schedule(db, from_, to, dataset, followed, q, user, limit, cursor)
+    return actions.get_schedule(
+        db,
+        from_,
+        to,
+        dataset,
+        followed,
+        q,
+        user,
+        limit,
+        cursor,
+        source_id,
+    )
 
 
 @app.get("/api/v1/events/{event_id}", response_model=EventView)

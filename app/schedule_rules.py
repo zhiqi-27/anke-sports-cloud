@@ -27,8 +27,21 @@ def schedule_range(from_, to, dataset, q, limit):
     return lower, upper, earliest, latest
 
 
-def schedule_page(events, from_, to, dataset="real", followed=False, q="", user=None, limit=500, cursor=None):
+def schedule_page(
+    events,
+    from_,
+    to,
+    dataset="real",
+    followed=False,
+    q="",
+    user=None,
+    limit=500,
+    cursor=None,
+    source_id="",
+):
     lower, upper, _, _ = schedule_range(from_, to, dataset, q, limit)
+    if len(source_id) > 200:
+        problem("INVALID_QUERY", "查询条件无效")
     if followed and not user:
         problem("AUTH_REQUIRED", "登录后查看个人赛程", 401)
     result = []
@@ -38,6 +51,12 @@ def schedule_page(events, from_, to, dataset="real", followed=False, q="", user=
         if getattr(event, "demo", dataset == "demo") != (dataset == "demo"):
             continue
         if accepts is not None and not accepts(event):
+            continue
+        if (
+            source_id
+            and event.competition_id != source_id
+            and not any(participant["id"] == source_id for participant in event.participants)
+        ):
             continue
         if needle and needle not in event.title.casefold():
             continue
@@ -60,6 +79,7 @@ def schedule_page(events, from_, to, dataset="real", followed=False, q="", user=
                 dataset,
                 followed,
                 q,
+                source_id,
                 user.id if user else None,
                 user.revision if user else None,
                 [(e.id, e.updated_at) for _, e in result],

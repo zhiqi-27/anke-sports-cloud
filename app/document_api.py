@@ -399,12 +399,23 @@ def create_app(store=None, cfg=None):
         to: str = Query(),
         dataset: str = "real",
         followed: bool = False,
+        source_id: str = "",
         q: str = "",
         limit: int = Query(500, ge=1, le=500),
         cursor: str | None = None,
         rt=Depends(runtime),
     ):
-        return rt.schedule(from_, to, dataset, followed, q, identity(request, rt, followed), limit, cursor)
+        return rt.schedule(
+            from_,
+            to,
+            dataset,
+            followed,
+            q,
+            identity(request, rt, followed),
+            limit,
+            cursor,
+            source_id,
+        )
 
     @app.get("/api/v1/events/{event_id}", response_model=EventView)
     def event_detail(event_id: str, request: Request, rt=Depends(runtime)):

@@ -51,12 +51,23 @@ def search_sources(db, q="", dataset="real"):
     }
 
 
-def get_schedule(db, from_, to, dataset="real", followed=False, q="", user=None, limit=500, cursor=None):
+def get_schedule(
+    db,
+    from_,
+    to,
+    dataset="real",
+    followed=False,
+    q="",
+    user=None,
+    limit=500,
+    cursor=None,
+    source_id="",
+):
     lower, upper, earliest, latest = schedule_range(from_, to, dataset, q, limit)
     if followed and not user:
         problem("AUTH_REQUIRED", "登录后查看个人赛程", 401)
     columns = [Event.id, Event.starts_at, Event.local_date, Event.updated_at]
-    if followed:
+    if followed or source_id:
         columns += [Event.source_key, Event.competition_id, Event.participants]
     if q:
         columns.append(Event.title)
@@ -81,6 +92,7 @@ def get_schedule(db, from_, to, dataset="real", followed=False, q="", user=None,
         user,
         limit,
         cursor,
+        source_id,
     )
     current = (
         {

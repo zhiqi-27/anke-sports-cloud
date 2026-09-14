@@ -600,6 +600,16 @@
             }
           },
           {
+            "name": "source_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Source Id"
+            }
+          },
+          {
             "name": "q",
             "in": "query",
             "required": false,

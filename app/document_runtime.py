@@ -124,7 +124,7 @@ class Runtime:
             "description_in_feed": selected,
         }
 
-    def schedule(self, from_, to, dataset, followed, q, payload, limit, cursor):
+    def schedule(self, from_, to, dataset, followed, q, payload, limit, cursor, source_id=""):
         if payload:
             self.calendar_supported(payload)
         lower, upper, earliest, latest = schedule_range(from_, to, dataset, q, limit)
@@ -143,6 +143,7 @@ class Runtime:
             user_value(payload) if payload else None,
             limit,
             cursor,
+            source_id,
         )
         link_rows = self.content.rows(payload["user_id"]) if payload else []
         result = {

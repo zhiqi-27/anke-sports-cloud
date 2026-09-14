@@ -83,6 +83,22 @@ def test_http_provider_refresh_follow_unchanged_reschedule_and_partial_failure(d
     status = client.get("/api/v1/status").json()["providers"][0]
     assert status["enabled"] and status["last_success"] and status["activity"] == "idle"
     assert client.get("/api/v1/sources?dataset=real").json()["items"][0]["id"] == "jolpica:f1"
+    start = datetime.now(timezone.utc)
+    schedule_range = {
+        "from": (start - timedelta(days=1)).isoformat(),
+        "to": (start + timedelta(days=2)).isoformat(),
+        "dataset": "real",
+    }
+    assert (
+        len(
+            client.get("/api/v1/events", params={**schedule_range, "source_id": "jolpica:f1"}).json()["items"]
+        )
+        == 3
+    )
+    assert (
+        client.get("/api/v1/events", params={**schedule_range, "source_id": "missing:team"}).json()["items"]
+        == []
+    )
     data = {"expected_revision": 0, "follows": [{"type": "competition", "source_key": "jolpica:f1"}]}
     preview = client.post("/api/v1/me/follows/preview", json=data).json()
     client.put(
