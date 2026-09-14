@@ -8,7 +8,7 @@ from app.document_accounts import Accounts, owner_partition
 from app.document_catalog import Catalog
 from app.document_feeds import FeedPublisher
 from app.document_store import StoreError, partition_items
-from app.follow_rules import follow_impact
+from app.follow_rules import direct_follow_allowed, follow_impact
 from app.schedule_rules import schedule_page, schedule_range
 from app.schemas import Config
 from app.security import problem
@@ -172,10 +172,11 @@ class Runtime:
         by_key = {row.source_key: row for row in events.values()}
         for follow in data.follows:
             source = sources.get(follow.source_key)
-            if not (source and source.kind == follow.type) and not (
-                follow.type == "event" and follow.source_key in by_key
-            ):
+            valid_source = source and source.kind == follow.type
+            if not valid_source and not (follow.type == "event" and follow.source_key in by_key):
                 problem("SOURCE_NOT_FOUND", "该关注对象或类型尚未接入")
+            if valid_source and not direct_follow_allowed(source):
+                problem("FOLLOW_SCOPE_NOT_ALLOWED", "英超和 NBA 等联赛请按球队关注")
         unique = {row.source_key: row.model_dump() for row in data.follows}
         config = {**payload["config"], "follows": [unique[key] for key in sorted(unique)]}
         if preview or data.confirmation:

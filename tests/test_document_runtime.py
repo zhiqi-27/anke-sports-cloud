@@ -22,6 +22,14 @@ def samples():
     rows = []
     for index in range(3):
         row = vars(event(index=index))
+        row["participants"] = [
+            {
+                "id": "fixture:team",
+                "name": "演示球队",
+                "short_name": "TEAM",
+                "color": "#888888",
+            }
+        ]
         row["updated_at"] = datetime.now(timezone.utc).isoformat()
         rows.append(row)
     sources = [
@@ -33,7 +41,34 @@ def samples():
             "sport": "basketball",
             "kind": "competition",
             "demo": True,
-        }
+        },
+        {
+            "id": "fixture:nba",
+            "name": "演示篮球联赛",
+            "short_name": "NBA",
+            "color": "#f3b56a",
+            "sport": "basketball",
+            "kind": "competition",
+            "demo": True,
+        },
+        {
+            "id": "fixture:f1",
+            "name": "演示赛车系列赛",
+            "short_name": "F1",
+            "color": "#ec7972",
+            "sport": "racing",
+            "kind": "competition",
+            "demo": True,
+        },
+        {
+            "id": "fixture:team",
+            "name": "演示球队",
+            "short_name": "TEAM",
+            "color": "#888888",
+            "sport": "basketball",
+            "kind": "team",
+            "demo": True,
+        },
     ]
     return rows, sources
 
@@ -66,7 +101,7 @@ def follow(client):
     user = client.get("/api/v1/me/calendar").json()
     data = {
         "expected_revision": user["revision"],
-        "follows": [{"type": "competition", "source_key": "fixture:league"}],
+        "follows": [{"type": "team", "source_key": "fixture:team"}],
     }
     preview = client.post("/api/v1/me/follows/preview", json=data)
     assert preview.status_code == 200, preview.text
@@ -87,7 +122,9 @@ def test_http_follow_worker_feed_rotation_and_exact_idempotent_response(document
     client, runtime, rows, sources = document_stack
     assert client.get("/api/v1/me/calendar").status_code == 401
     assert client.get("/api/v1/status").status_code == 200
-    assert client.get("/api/v1/sources?dataset=demo").json()["items"] == sources
+    assert sorted(
+        client.get("/api/v1/sources?dataset=demo").json()["items"], key=lambda source: source["id"]
+    ) == sorted(sources, key=lambda source: source["id"])
     assert client.post("/api/v1/auth/local").status_code == 200
     drain(runtime)
     data, result = follow(client)
@@ -131,6 +168,28 @@ def test_http_follow_worker_feed_rotation_and_exact_idempotent_response(document
     assert client.get("/api/v1/me/calendar").status_code == 401
 
 
+def test_http_follow_rejects_whole_team_league_but_allows_racing_series(document_stack):
+    client, _, _, _ = document_stack
+    client.post("/api/v1/auth/local").raise_for_status()
+    rejected = client.post(
+        "/api/v1/me/follows/preview",
+        json={
+            "expected_revision": 0,
+            "follows": [{"type": "competition", "source_key": "fixture:nba"}],
+        },
+    )
+    assert rejected.status_code == 400
+    assert rejected.json()["error"]["code"] == "FOLLOW_SCOPE_NOT_ALLOWED"
+    allowed = client.post(
+        "/api/v1/me/follows/preview",
+        json={
+            "expected_revision": 0,
+            "follows": [{"type": "competition", "source_key": "fixture:f1"}],
+        },
+    )
+    assert allowed.status_code == 200
+
+
 def test_preview_staleness_cursors_pause_and_current_scope(document_stack):
     client, runtime, rows, sources = document_stack
     client.post("/api/v1/auth/local").raise_for_status()
@@ -145,7 +204,7 @@ def test_preview_staleness_cursors_pause_and_current_scope(document_stack):
     assert page.status_code == 200 and len(page.json()["items"]) == 1
     cursor = page.json()["next_cursor"]
     assert cursor and client.get("/api/v1/events", params={**params, "cursor": cursor}).status_code == 200
-    data = {"expected_revision": 0, "follows": [{"type": "competition", "source_key": "fixture:league"}]}
+    data = {"expected_revision": 0, "follows": [{"type": "team", "source_key": "fixture:team"}]}
     preview = client.post("/api/v1/me/follows/preview", json=data).json()
     rows[0]["starts_at"] = (datetime.fromisoformat(rows[0]["starts_at"]) + timedelta(hours=1)).isoformat()
     rows[0]["updated_at"] = datetime.now(timezone.utc).isoformat()

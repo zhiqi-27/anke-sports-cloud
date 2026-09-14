@@ -22,7 +22,7 @@ def creators(document_stack, monkeypatch):
     rows = deepcopy(rows)
     rows[0]["title"] = "Lakers vs Warriors"
     rows[0]["participants"] = [
-        {"id": "fixture:LAL", "name": "Lakers", "short_name": "LAL", "color": "#fff"},
+        {"id": "fixture:team", "name": "Lakers", "short_name": "LAL", "color": "#fff"},
         {"id": "fixture:GSW", "name": "Warriors", "short_name": "GSW", "color": "#fff"},
     ]
     rt.catalog.publish("fixture", rows, sources, expected_revision=1, complete=True)
@@ -246,7 +246,7 @@ def test_same_channel_is_shared_and_private_config_is_not(creators):
     rt.accounts.ensure("second-owner")
     rt.save_follows(
         "second-owner",
-        SaveFollows(expected_revision=0, follows=[{"type": "competition", "source_key": "fixture:league"}]),
+        SaveFollows(expected_revision=0, follows=[{"type": "team", "source_key": "fixture:team"}]),
         None,
     )
     rt.creators.save("second-owner", AddCreator(url=CHANNEL, expected_revision=1))

@@ -15,7 +15,12 @@ def follow(key, kind="team"):
 
 def setup_schedule(sessions):
     with sessions() as db:
-        for key, kind in [("a", "team"), ("b", "team"), ("league", "competition")]:
+        for key, kind in [
+            ("a", "team"),
+            ("b", "team"),
+            ("c", "team"),
+            ("league", "competition"),
+        ]:
             db.add(
                 Source(
                     id=f"test:{key}",
@@ -135,7 +140,7 @@ def test_preview_addition_counts_unknown_dates_and_limits_examples_after_hashing
                     starts_at=start.isoformat(),
                     local_date=start.date().isoformat(),
                     provider="test",
-                    participants=[],
+                    participants=[{"id": "test:c"}],
                     demo=True,
                 )
             )
@@ -147,11 +152,12 @@ def test_preview_addition_counts_unknown_dates_and_limits_examples_after_hashing
                 title="时间未知",
                 time_precision="unknown",
                 provider="test",
+                participants=[{"id": "test:c"}],
                 demo=True,
             )
         )
         db.commit()
-    body = payload(client, [follow("league", "competition")])
+    body = payload(client, [follow("a"), follow("b"), follow("c")])
     first = client.post("/api/v1/me/follows/preview", json=body).json()
     assert first["added"]["total"] == 15 and len(first["added"]["items"]) == 10
     assert first["undated_count"] == 1 and first["result_count"] == 20

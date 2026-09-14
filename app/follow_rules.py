@@ -7,6 +7,10 @@ from app.calendar_rules import event_is_past, event_keys, included
 from app.security import digest
 
 
+def direct_follow_allowed(source):
+    return source.kind == "team" or (source.kind == "competition" and source.sport == "racing")
+
+
 def follow_impact(
     user,
     config,

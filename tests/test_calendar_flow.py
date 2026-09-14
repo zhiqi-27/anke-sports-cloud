@@ -6,7 +6,7 @@ from icalendar import Calendar
 from sqlalchemy import select
 
 from app.calendar import rebuild_feed
-from app.db import Event, Job, Projection, User
+from app.db import Event, Job, Projection, Source, User
 from app.providers import sync_provider, upsert_event
 from app.schemas import Config, ImportInput
 from app.security import canonical_url
@@ -145,6 +145,61 @@ def test_revision_conflict_and_import_bound_to_preview(stack):
     assert client.post("/api/v1/me/config/import", json=payload).status_code == 400
     exported = client.get("/api/v1/me/config/export").text
     assert "token" not in exported and "feed" not in exported
+
+
+def test_follow_preview_rejects_whole_team_league_but_allows_team_and_racing(stack):
+    client, sessions = stack
+    with sessions() as db:
+        for source in [
+            Source(
+                id="test:nba",
+                name="测试篮球联赛",
+                short_name="NBA",
+                sport="basketball",
+                kind="competition",
+                color="#f3b56a",
+                provider="test",
+                demo=True,
+            ),
+            Source(
+                id="test:f1",
+                name="测试赛车系列赛",
+                short_name="F1",
+                sport="racing",
+                kind="competition",
+                color="#ec7972",
+                provider="test",
+                demo=True,
+            ),
+            Source(
+                id="test:team",
+                name="测试球队",
+                short_name="ONE",
+                sport="basketball",
+                kind="team",
+                color="#888888",
+                provider="test",
+                demo=True,
+            ),
+        ]:
+            db.add(source)
+        db.commit()
+    revision = client.get("/api/v1/me/calendar").json()["revision"]
+
+    def preview(follow_type, source_key):
+        return client.post(
+            "/api/v1/me/follows/preview",
+            json={
+                "expected_revision": revision,
+                "follows": [{"type": follow_type, "source_key": source_key}],
+            },
+        )
+
+    rejected = preview("competition", "test:nba")
+    assert rejected.status_code == 400
+    assert rejected.json()["error"]["code"] == "FOLLOW_SCOPE_NOT_ALLOWED"
+    assert preview("competition", "test:f1").status_code == 200
+    assert preview("team", "test:team").status_code == 200
 
 
 def test_merge_omitted_preferences_preserves_user_settings(stack):
