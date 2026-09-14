@@ -147,7 +147,7 @@ def test_revision_conflict_and_import_bound_to_preview(stack):
     assert "token" not in exported and "feed" not in exported
 
 
-def test_follow_preview_rejects_whole_team_league_but_allows_team_and_racing(stack):
+def test_follow_preview_only_allows_ball_teams_and_racing_competitions(stack):
     client, sessions = stack
     with sessions() as db:
         for source in [
@@ -181,6 +181,16 @@ def test_follow_preview_rejects_whole_team_league_but_allows_team_and_racing(sta
                 provider="test",
                 demo=True,
             ),
+            Source(
+                id="test:racing-team",
+                name="测试车队",
+                short_name="RACE",
+                sport="racing",
+                kind="team",
+                color="#777777",
+                provider="test",
+                demo=True,
+            ),
         ]:
             db.add(source)
         db.commit()
@@ -200,6 +210,9 @@ def test_follow_preview_rejects_whole_team_league_but_allows_team_and_racing(sta
     assert rejected.json()["error"]["code"] == "FOLLOW_SCOPE_NOT_ALLOWED"
     assert preview("competition", "test:f1").status_code == 200
     assert preview("team", "test:team").status_code == 200
+    racing_team = preview("team", "test:racing-team")
+    assert racing_team.status_code == 400
+    assert racing_team.json()["error"]["code"] == "FOLLOW_SCOPE_NOT_ALLOWED"
 
 
 def test_merge_omitted_preferences_preserves_user_settings(stack):

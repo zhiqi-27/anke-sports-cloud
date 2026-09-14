@@ -8,7 +8,9 @@ from app.security import digest
 
 
 def direct_follow_allowed(source):
-    return source.kind == "team" or (source.kind == "competition" and source.sport == "racing")
+    return (source.kind == "team" and source.sport != "racing") or (
+        source.kind == "competition" and source.sport == "racing"
+    )
 
 
 def follow_impact(
