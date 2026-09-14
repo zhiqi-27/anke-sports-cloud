@@ -15,6 +15,7 @@ from app.source_rules import source_logo_url
 PROVIDERS = frozenset({"jolpica", "balldontlie", "football-data"})
 PROVIDER_REFRESH = timedelta(hours=6)
 
+
 def get_json(client, path, **kwargs):
     result = client.get(path, **kwargs)
     result.raise_for_status()
@@ -150,9 +151,11 @@ def fetch_schedule(provider, *, request_json=None, key_reader=None, instant=None
             catalog = request(client, "https://api.balldontlie.io/v1/teams", headers={"Authorization": key})[
                 "data"
             ]
+            nba_team_ids = set()
             for team in catalog:
                 # Historical franchises have no current conference/division assignment.
                 if team.get("conference") in {"East", "West"} and team.get("division"):
+                    nba_team_ids.add(team["id"])
                     source(
                         f"balldontlie:team:{team['id']}",
                         team["full_name"],
@@ -195,17 +198,27 @@ def fetch_schedule(provider, *, request_json=None, key_reader=None, instant=None
                     raise ValueError("PAGINATION_LIMIT")
             source("balldontlie:nba", "NBA", "NBA", "basketball", "competition", provider, "#f3b56a")
             for game in games:
-                participants = [
-                    source(
-                        f"balldontlie:team:{game[k]['id']}",
-                        game[k]["full_name"],
-                        game[k]["abbreviation"],
-                        "basketball",
-                        "team",
-                        provider,
-                    )
-                    for k in ["visitor_team", "home_team"]
-                ]
+                participants = []
+                for key in ["visitor_team", "home_team"]:
+                    team = game[key]
+                    source_key = f"balldontlie:team:{team['id']}"
+                    if team["id"] in nba_team_ids:
+                        participant = source(
+                            source_key,
+                            team["full_name"],
+                            team["abbreviation"],
+                            "basketball",
+                            "team",
+                            provider,
+                        )
+                    else:
+                        participant = {
+                            "id": source_key,
+                            "name": team["full_name"],
+                            "short_name": team["abbreviation"],
+                            "color": "#8bbdaa",
+                        }
+                    participants.append(participant)
                 start = game.get("datetime")
                 if start:
                     datetime.fromisoformat(start.replace("Z", "+00:00"))

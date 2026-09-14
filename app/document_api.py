@@ -48,7 +48,7 @@ from app.schemas import (
     UpdateCreator,
 )
 from app.security import check_origin, digest, firebase_subject, local_allowed, problem
-from app.source_rules import source_logo_url
+from app.source_rules import source_is_selectable, source_logo_url
 
 
 def create_app(store=None, cfg=None):
@@ -383,12 +383,12 @@ def create_app(store=None, cfg=None):
             "items": [
                 {
                     **vars(row),
-                    "logo_url": source_logo_url(
-                        row.id, row.short_name, getattr(row, "logo_url", None)
-                    ),
+                    "logo_url": source_logo_url(row.id, row.short_name, getattr(row, "logo_url", None)),
                 }
                 for row in rows
-                if row.demo == (dataset == "demo") and q.casefold() in (row.name + row.short_name).casefold()
+                if row.demo == (dataset == "demo")
+                and source_is_selectable(row)
+                and q.casefold() in (row.name + row.short_name).casefold()
             ]
         }
 

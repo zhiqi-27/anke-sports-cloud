@@ -34,6 +34,15 @@ NBA_TEAM_IDS = {
 }
 
 
+def source_is_selectable(source) -> bool:
+    """Keep schedule-only guest opponents out of the follow/source catalogue."""
+    return not (
+        source.kind == "team"
+        and source.id.startswith("balldontlie:team:")
+        and source.short_name not in NBA_TEAM_IDS
+    )
+
+
 def source_logo_url(source_id: str, short_name: str, upstream: str | None = None) -> str | None:
     if upstream:
         return upstream

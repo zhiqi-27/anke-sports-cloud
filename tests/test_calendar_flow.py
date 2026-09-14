@@ -191,6 +191,16 @@ def test_follow_preview_only_allows_ball_teams_and_racing_competitions(stack):
                 provider="test",
                 demo=True,
             ),
+            Source(
+                id="balldontlie:team:999",
+                name="测试季前赛客队",
+                short_name="GUEST",
+                sport="basketball",
+                kind="team",
+                color="#777777",
+                provider="balldontlie",
+                demo=True,
+            ),
         ]:
             db.add(source)
         db.commit()
@@ -213,6 +223,11 @@ def test_follow_preview_only_allows_ball_teams_and_racing_competitions(stack):
     racing_team = preview("team", "test:racing-team")
     assert racing_team.status_code == 400
     assert racing_team.json()["error"]["code"] == "FOLLOW_SCOPE_NOT_ALLOWED"
+    guest_team = preview("team", "balldontlie:team:999")
+    assert guest_team.status_code == 400
+    assert guest_team.json()["error"]["code"] == "FOLLOW_SCOPE_NOT_ALLOWED"
+    visible_sources = client.get("/api/v1/sources?dataset=demo").json()["items"]
+    assert all(source["id"] != "balldontlie:team:999" for source in visible_sources)
 
 
 def test_merge_omitted_preferences_preserves_user_settings(stack):

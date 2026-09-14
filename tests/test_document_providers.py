@@ -376,7 +376,12 @@ def test_basketball_pagination_date_precision_and_metadata_failure():
 
     def request(client, url, **kwargs):
         if url.endswith("/teams"):
-            return {"data": [{**team(3), "conference": "East", "division": "Atlantic"}]}
+            return {
+                "data": [
+                    {**team(1), "conference": "East", "division": "Atlantic"},
+                    {**team(3), "conference": "East", "division": "Atlantic"},
+                ]
+            }
         calls.append(dict(kwargs["params"]))
         if kwargs["params"].get("season_type") == "preseason":
             return {"data": [], "meta": {}}
@@ -386,7 +391,13 @@ def test_basketball_pagination_date_precision_and_metadata_failure():
     events, sources = provider_adapters.fetch_schedule(
         "balldontlie", request_json=request, key_reader=lambda _: "fixture-key"
     )
-    assert len(events) == 2 and len(sources) == 4
+    assert len(events) == 2 and len(sources) == 3
+    assert {source["id"] for source in sources} == {
+        "balldontlie:nba",
+        "balldontlie:team:1",
+        "balldontlie:team:3",
+    }
+    assert events[0]["participants"][1]["id"] == "balldontlie:team:2"
     assert provider_adapters.source_logo_url("balldontlie:team:14", "LAL") == (
         "https://cdn.nba.com/logos/nba/1610612747/primary/L/logo.svg"
     )
