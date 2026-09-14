@@ -26,10 +26,10 @@ ANKE_SPORTS_ENV=local ANKE_SPORTS_LOCAL_PREVIEW=true uv run python -m app.worker
 | 路径 | 已有实现与证据 | 仍未完成 |
 | --- | --- | --- |
 | SQL基线 | 赛程/关注/创作者/个人与公共Feed、直播维护、OAuth/MCP、账号生命周期 | 真实手机、Hub长期更新、云端全链路 |
-| 文档模式 | 日历/关注/个人链接/配置/ICS、Provider、创作者/轮询/匹配/人工确认、WebSub | 公共Feed、直播、OAuth/MCP、账号删除等完整适配；核心关注与个人Feed已有真实Cosmos链路证据 |
+| 文档模式 | 日历/关注/个人链接/配置/ICS、Provider、创作者/轮询/匹配/人工确认、WebSub | 直播、OAuth和账号删除代码已部署；公共Feed保留为白名单为空的停用实现，真实业务签收及公网MCP闭环待完成 |
 | Azure | 独立开发资源、HTTPS、Firebase 登录、云任务更新及个人 Feed 至 Mac 日历 | 云故障与 Periodic 恢复演练、告警、持续更新与手机验收 |
 
-[3008合成创作者](http://localhost:3008/creators)可检查个人链接与ICS；公共订阅尚未开放。3008后端是创作者批次，最新WebSub实验已退出。这是历史本地入口，当前存活状态须重新检查；公网进展见 STATE。
+[3008合成创作者](http://localhost:3008/creators)可检查个人链接与ICS。公共订阅已移出v1，后端代码保留且部署白名单为空。3008后端是创作者批次，最新WebSub实验已退出。这是历史本地入口，当前存活状态须重新检查；公网进展见 STATE。
 
 ## 检查与证据
 
@@ -41,7 +41,7 @@ uv run python -m scripts.export_contracts
 
 仅在契约变化时导出并在客户端运行`npm run contracts`。完整OpenAPI由SQL基线导出，不能以文档模式接口子集覆盖。锁定依赖见`uv.lock`，Functions打包使用`requirements.txt`。
 
-当前本地P1工作树完整回归为374 passed / 2 skipped（2026-09-13，本地SQL/文档适配器测试）；尚未部署或push。既有[361项WebSub阶段记录](evidence/document-websub-2026-09-10.md)保留为当时证据。其他主要证据：
+最新发布前回归为383 passed / 2 skipped（2026-09-13，cfb3798）；代码已部署开发环境。本次文档刷新未重跑测试。既有[361项WebSub阶段记录](evidence/document-websub-2026-09-10.md)保留为当时证据。其他主要证据：
 
 - [真实F1样本及文档Provider](evidence/document-providers-2026-09-10.md)
 - [P1三运动与内容最小矩阵](evidence/p1-core-matrix-2026-09-13.md)、[开发环境部署](evidence/p1-deployment-2026-09-13.md)、[客户端支持矩阵](docs/support-matrix.md)
@@ -55,8 +55,8 @@ uv run python -m scripts.export_contracts
 
 [云配置现状](docs/cloud-development.md)、[Cosmos设计](docs/cosmos-storage-design.md)、[文档运行边界](docs/document-runtime.md)、[Functions运行](docs/functions-runtime.md)、[MCP](docs/mcp-and-connections.md)。旧MySQL模板/费用文档只作历史记录，不能直接执行。具体部署必须使用核对过的独立目标，禁止复用其他产品资源。Chrome扩展已退出产品范围，不再准备相关发布配置。
 
-模块手册与必要验收保留在`docs/`、`evidence/`；旧STATE流水已删除，下一步只看当前STATE。双仓分别提交，无push或部署。
+模块手册与必要验收保留在`docs/`、`evidence/`；旧STATE流水已删除，下一步只看当前STATE。提交、push与部署分别见STATE及发布证据。
 
-## P2 文档模式候选（2026-09-13）
+## P2 文档模式已部署开发环境（2026-09-13）
 
-账号删除、OAuth、公共ICS与官方转播已接入文档模式本地候选；运行方式沿用现有API与worker命令。见 [实现与部署边界](docs/p2-cloud-business.md)及[本地验收](evidence/p2-local-2026-09-13.md)。已按用户授权部署到现有开发环境；[部署记录](evidence/p2-deployment-2026-09-13.md)区分代码部署、配置开放与真实账号/播放验收。
+账号删除、OAuth、停用保留的公共Feed与官方转播已接入文档模式并部署开发环境；运行方式沿用现有API与worker命令。见 [实现与部署边界](docs/p2-cloud-business.md)及[本地验收](evidence/p2-local-2026-09-13.md)。已按用户授权部署到现有开发环境；[部署记录](evidence/p2-deployment-2026-09-13.md)区分代码部署、配置开放与真实账号/播放验收。
