@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from app.broadcast_schemas import BroadcastPublicView
 from typing import Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -16,6 +18,9 @@ class Preferences(StrictModel):
     spoiler_free: bool = True
     transparent: bool = True
     broadcast_platforms: dict[str, str] = Field(default_factory=dict, max_length=20)
+    content_search_windows: list[
+        Literal["before_24h", "before_3h", "after_3h", "after_18h"]
+    ] = Field(default_factory=lambda: ["before_24h", "after_3h"], max_length=2)
 
     @field_validator("timezone")
     @classmethod
@@ -24,6 +29,13 @@ class Preferences(StrictModel):
             ZoneInfo(value)
         except ZoneInfoNotFoundError as exc:
             raise ValueError("Unknown IANA timezone") from exc
+        return value
+
+    @field_validator("content_search_windows")
+    @classmethod
+    def unique_content_search_windows(cls, value):
+        if len(value) != len(set(value)):
+            raise ValueError("Search windows must be unique")
         return value
 
 
@@ -289,6 +301,28 @@ class ReviewDecision(StrictModel):
     expected_updated_at: str
 
 
+class ChannelOfficialInput(StrictModel):
+    official: bool
+    evidence_url: str = Field(default="", max_length=2000)
+    valid_until: str | None = None
+
+    @field_validator("evidence_url")
+    @classmethod
+    def official_evidence(cls, value):
+        if value and not value.startswith("https://"):
+            raise ValueError("Official evidence must use HTTPS")
+        return value
+
+    @field_validator("valid_until")
+    @classmethod
+    def official_expiry(cls, value):
+        if value:
+            parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+            if not parsed.tzinfo:
+                raise ValueError("Official expiry needs a timezone")
+        return value
+
+
 class FeedView(BaseModel):
     revision: int
     updated_at: str
@@ -325,6 +359,10 @@ class YouTubeBudgetView(BaseModel):
     available_units: int | None
     reset_at: str | None
     resume_at: str | None
+    search_daily_limit: int
+    search_reserved_calls: int
+    search_available_calls: int | None
+    search_resume_at: str | None
 
 
 class ServiceStatusView(BaseModel):

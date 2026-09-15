@@ -118,9 +118,35 @@ class Content:
                 link = self.owned_link(user_id, ident)["payload"]
             event = self.event(link["event_id"])
             config = link_override(previous["config"], event.source_key, link["url"], state)
+            writes = []
+            if state == "block" and link.get("origin") == "discovery" and link.get("channel_id"):
+                pk = owner_partition(user_id)
+                feedback_id = "feedback:" + digest(
+                    link["channel_id"] + ":" + link["id"] + ":" + event.id
+                )[:32]
+                old_feedback = self.store.get("state", pk, feedback_id)
+                feedback = document(
+                    pk,
+                    feedback_id,
+                    "channel_feedback",
+                    channel_id=link["channel_id"],
+                    video_id=link["url"].rsplit("=", 1)[-1],
+                    event_id=event.id,
+                    action="removed",
+                    created_at=now(),
+                )
+                writes.append(
+                    Write(
+                        "replace" if old_feedback else "create",
+                        feedback_id,
+                        feedback,
+                        old_feedback["_etag"] if old_feedback else None,
+                    )
+                )
             return Change(
                 {**previous, "config": config, "revision": previous["revision"] + 1},
                 {"blocked" if state == "block" else "pinned": True},
+                writes,
             )
 
         return self.accounts.command(

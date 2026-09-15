@@ -122,7 +122,7 @@ def reserve(endpoint):
         db.commit()
     if error:
         raise error
-    return Reservation(cfg.youtube_project_id, period, reset)
+    return Reservation(cfg.youtube_project_id, period, reset, endpoint)
 
 
 def upstream_wait(ticket, code, seconds=60):
@@ -153,6 +153,10 @@ def status(db):
         "available_units": None,
         "reset_at": None,
         "resume_at": None,
+        "search_daily_limit": cfg.youtube_search_daily_budget,
+        "search_reserved_calls": 0,
+        "search_available_calls": None,
+        "search_resume_at": None,
     }
     if not result["configured"]:
         return result
@@ -176,5 +180,6 @@ def status(db):
         available_units=max(0, limit - used),
         reset_at=reset.isoformat(),
         resume_at=resume,
+        search_available_calls=cfg.youtube_search_daily_budget,
     )
     return result

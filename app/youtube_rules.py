@@ -6,9 +6,14 @@ from zoneinfo import ZoneInfo
 
 from fastapi import HTTPException
 
-WAIT_CODES = {"YOUTUBE_BUDGET_EXHAUSTED", "YOUTUBE_QUOTA_EXHAUSTED", "YOUTUBE_RATE_LIMITED"}
+WAIT_CODES = {
+    "YOUTUBE_BUDGET_EXHAUSTED",
+    "YOUTUBE_SEARCH_BUDGET_EXHAUSTED",
+    "YOUTUBE_QUOTA_EXHAUSTED",
+    "YOUTUBE_RATE_LIMITED",
+}
 NETWORK_JOBS = {"youtube_poll", "youtube_videos", "youtube_channel_metadata"}
-COSTS = {"channels": 1, "playlistItems": 1, "videos": 1, "commentThreads": 1}
+COSTS = {"channels": 1, "playlistItems": 1, "videos": 1, "commentThreads": 1, "search": 1}
 
 
 @dataclass(frozen=True)
@@ -16,6 +21,7 @@ class Reservation:
     project: str
     period: str
     reset: datetime
+    endpoint: str
 
 
 def window(instant):

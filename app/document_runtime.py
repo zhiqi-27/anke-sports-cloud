@@ -26,6 +26,7 @@ class Runtime:
         from app.document_channels import Channels
         from app.document_creators import Creators
         from app.document_matches import Matches
+        from app.document_discovery import Discovery
         from app.document_websub import WebSub
 
         self.store, self.cfg = store, cfg
@@ -38,6 +39,7 @@ class Runtime:
         self.channels = Channels(self)
         self.creators = Creators(self)
         self.matches = Matches(self)
+        self.discovery = Discovery(self)
         self.websub = WebSub(self)
         from app.document_privacy import Privacy
 

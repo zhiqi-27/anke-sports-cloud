@@ -250,12 +250,42 @@ class Matches:
         for raw in rows:
             row = raw["payload"]
             follow = follows.get(row["channel_id"])
-            if row["decision"] != "needs_review" or not follow:
+            discovery = row.get("source") == "discovery"
+            if row["decision"] != "needs_review" or (not discovery and not follow):
+                continue
+            event = snapshot.event(row["event_id"])
+            if discovery:
+                if (
+                    not event
+                    or row["event_updated_at"] != event.updated_at
+                    or not included(event, user["config"])
+                ):
+                    continue
+                result.append(
+                    {
+                        "id": row["id"],
+                        "video_id": row["video_id"],
+                        "title": row["video_title"],
+                        "url": "https://www.youtube.com/watch?v=" + row["video_id"],
+                        "creator": row["creator"],
+                        "published_at": row["published_at"],
+                        "event_id": event.id,
+                        "event_title": event.title,
+                        "starts_at": event.starts_at,
+                        "kind": "video",
+                        "content_labels": row.get("content_labels", []),
+                        "reason_codes": row["reason_codes"],
+                        "rule_version": row["rule_version"],
+                        "updated_at": row["updated_at"],
+                    }
+                )
+                if len(result) == 200:
+                    break
                 continue
             key = (row["channel_id"], row["video_id"])
             if key not in videos:
                 videos[key] = self.rt.channels.video(*key)
-            video, event = videos[key], snapshot.event(row["event_id"])
+            video, event = videos[key], event
             if (
                 not video
                 or not video["available"]
@@ -310,20 +340,32 @@ class Matches:
                 ),
                 None,
             )
-            if not follow:
+            discovery = value.get("source") == "discovery"
+            if not discovery and not follow:
                 problem("REVIEW_CHANGED", "创作者已移除，请重新查看", 409)
-            video = self.rt.channels.video(value["channel_id"], value["video_id"])
             event = self.rt.content.event(value["event_id"])
-            if (follow["scope_keys"] and not event_keys(event).intersection(follow["scope_keys"])) or (
-                value["kind"] in {"preview", "recap"} and not follow.get(value["kind"], False)
-            ):
-                problem("REVIEW_CHANGED", "创作者关联范围已变化，请重新查看", 409)
-            if not video or not video["available"]:
-                problem("VIDEO_UNAVAILABLE", "视频已不可用", 409)
-            if (
-                video["updated_at"] != value["source_updated_at"]
-                or event.updated_at != value["event_updated_at"]
-            ):
+            if discovery:
+                if not included(event, previous["config"]):
+                    problem("REVIEW_CHANGED", "比赛已不在当前关注范围内", 409)
+                video = {
+                    "id": value["video_id"],
+                    "channel_id": value["channel_id"],
+                    "title": value["video_title"],
+                    "published_at": value["published_at"],
+                    "updated_at": value["source_updated_at"],
+                    "available": True,
+                }
+                creator = {"name": value["creator"]}
+            else:
+                video = self.rt.channels.video(value["channel_id"], value["video_id"])
+                if (follow["scope_keys"] and not event_keys(event).intersection(follow["scope_keys"])) or (
+                    value["kind"] in {"preview", "recap"} and not follow.get(value["kind"], False)
+                ):
+                    problem("REVIEW_CHANGED", "创作者关联范围已变化，请重新查看", 409)
+                if not video or not video["available"]:
+                    problem("VIDEO_UNAVAILABLE", "视频已不可用", 409)
+                creator = self.rt.channels.get(value["channel_id"])["payload"]
+            if video["updated_at"] != value["source_updated_at"] or event.updated_at != value["event_updated_at"]:
                 problem("REVIEW_CHANGED", "视频或比赛已变化，请重新查看", 409)
             url = "https://www.youtube.com/watch?v=" + video["id"]
             config = link_override(
@@ -344,7 +386,7 @@ class Matches:
                     user_id,
                     event.id,
                     video,
-                    self.rt.channels.get(value["channel_id"])["payload"],
+                    creator,
                     "video",
                     labels=value.get("content_labels", []),
                     origin="confirmed",
@@ -357,6 +399,27 @@ class Matches:
                         row_id,
                         record(pk, row_id, "link", link),
                         existing["_etag"] if existing else None,
+                    )
+                )
+            if discovery:
+                feedback_id = "feedback:" + digest(value["channel_id"] + ":" + value["video_id"] + ":" + event.id)[:32]
+                old_feedback = self.store.get("state", pk, feedback_id)
+                feedback = document(
+                    pk,
+                    feedback_id,
+                    "channel_feedback",
+                    channel_id=value["channel_id"],
+                    video_id=value["video_id"],
+                    event_id=event.id,
+                    action="confirmed" if data.decision == "confirm" else "removed",
+                    created_at=now(),
+                )
+                writes.append(
+                    Write(
+                        "replace" if old_feedback else "create",
+                        feedback_id,
+                        feedback,
+                        old_feedback["_etag"] if old_feedback else None,
                     )
                 )
             return Change(

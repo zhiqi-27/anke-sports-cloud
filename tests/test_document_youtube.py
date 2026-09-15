@@ -106,6 +106,24 @@ def test_many_connections_share_budget_and_key_rotation_does_not_reset(youtube, 
     assert rt.store.changes("state")[0] == []
 
 
+def test_search_soft_cap_does_not_block_video_hydration(youtube):
+    rt, stub = youtube
+    rt.cfg.youtube_daily_budget = 100
+    rt.cfg.youtube_search_daily_budget = 2
+    stub(lambda request: httpx.Response(200, json={"items": []}))
+    rt.youtube_request("search", {"q": "fixture one"})
+    rt.youtube_request("search", {"q": "fixture two"})
+    with pytest.raises(HTTPException) as error:
+        rt.youtube_request("search", {"q": "fixture three"})
+    assert error.value.detail["code"] == "YOUTUBE_SEARCH_BUDGET_EXHAUSTED"
+    assert rt.youtube_request("videos", {"id": VIDEO}) == {"items": []}
+    state = rt.youtube_budget.status()
+    assert state["search_reserved_calls"] == 2
+    assert state["search_available_calls"] == 0
+    assert state["search_resume_at"]
+    assert state["reserved_units"] == 3 and state["state"] == "available"
+
+
 @pytest.mark.parametrize(
     "instant,reset",
     [
@@ -391,7 +409,8 @@ def test_http_resolution_auth_origin_read_only_and_safe_transport_errors(youtube
         assert SECRET not in caplog.text and "private-provider-error" not in caplog.text + response.text
         status = client.get("/api/v1/status").json()
         assert status["youtube_budget"]["reserved_units"] == 2
-        assert status["integrations"]["youtube_discovery"] == "polling_available"
+        assert status["integrations"]["youtube_discovery"] == "event_search_only"
+        assert status["integrations"]["web_search_fallback"] == "disabled"
         assert not rt.accounts.active("local-reviewer")["payload"]["config"]["creators"]
 
 

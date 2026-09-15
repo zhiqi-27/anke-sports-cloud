@@ -391,7 +391,7 @@ def test_missing_project_and_unbudgeted_endpoint_never_call_upstream(quota_env, 
     assert error.value.detail["code"] == "YOUTUBE_PROJECT_REQUIRED"
     monkeypatch.setattr(settings(), "youtube_project_id", "anke-synthetic-quota")
     with pytest.raises(ValueError, match="YOUTUBE_ENDPOINT_NOT_BUDGETED"):
-        providers.youtube_request("search", {})
+        providers.youtube_request("activities", {})
     assert not calls
     with sessions() as db:
         assert db.scalar(select(func.count()).select_from(YouTubeBudget)) == 0

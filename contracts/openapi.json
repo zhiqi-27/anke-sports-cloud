@@ -3798,6 +3798,20 @@
             "type": "object",
             "maxProperties": 20,
             "title": "Broadcast Platforms"
+          },
+          "content_search_windows": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "before_24h",
+                "before_3h",
+                "after_3h",
+                "after_18h"
+              ]
+            },
+            "type": "array",
+            "maxItems": 2,
+            "title": "Content Search Windows"
           }
         },
         "additionalProperties": false,
@@ -3848,6 +3862,20 @@
             "type": "object",
             "maxProperties": 20,
             "title": "Broadcast Platforms"
+          },
+          "content_search_windows": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "before_24h",
+                "before_3h",
+                "after_3h",
+                "after_18h"
+              ]
+            },
+            "type": "array",
+            "maxItems": 2,
+            "title": "Content Search Windows"
           }
         },
         "additionalProperties": false,
@@ -3858,7 +3886,8 @@
           "watch_region",
           "spoiler_free",
           "transparent",
-          "broadcast_platforms"
+          "broadcast_platforms",
+          "content_search_windows"
         ],
         "title": "Preferences"
       },
@@ -4454,6 +4483,36 @@
               }
             ],
             "title": "Resume At"
+          },
+          "search_daily_limit": {
+            "type": "integer",
+            "title": "Search Daily Limit"
+          },
+          "search_reserved_calls": {
+            "type": "integer",
+            "title": "Search Reserved Calls"
+          },
+          "search_available_calls": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Search Available Calls"
+          },
+          "search_resume_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Search Resume At"
           }
         },
         "type": "object",
@@ -4464,7 +4523,11 @@
           "reserved_units",
           "available_units",
           "reset_at",
-          "resume_at"
+          "resume_at",
+          "search_daily_limit",
+          "search_reserved_calls",
+          "search_available_calls",
+          "search_resume_at"
         ],
         "title": "YouTubeBudgetView"
       }

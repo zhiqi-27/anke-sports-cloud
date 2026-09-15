@@ -27,6 +27,7 @@ from app.schemas import (
     AddLink,
     AddCreator,
     CalendarUserView,
+    ChannelOfficialInput,
     Config,
     CreatorIdentity,
     CreatorRemovalImpact,
@@ -205,7 +206,8 @@ def create_app(store=None, cfg=None):
                 "content_migration": "not_ready",
                 "ics_device_test": "not_tested",
                 "youtube_push": "not_tested",
-                "youtube_discovery": "polling_available",
+                "youtube_discovery": "event_search_only",
+                "web_search_fallback": "disabled",
                 "app_links": "not_tested",
             },
         }
@@ -334,6 +336,26 @@ def create_app(store=None, cfg=None):
             if len(rows) > limit:
                 break
         return {"items": rows[:limit], "has_more": len(rows) > limit}
+
+    @app.get("/api/v1/maintenance/channels")
+    def channel_reputations(actor=Depends(maintainer), rt=Depends(runtime)):
+        rows = partition_items(rt.store, "state", "provider:video-discovery", "channel_reputation")
+        return {"items": [row["payload"] for row in sorted(rows, key=lambda row: row["id"])]}
+
+    @app.put("/api/v1/maintenance/channels/{channel_id}/official")
+    def channel_official(
+        channel_id: str,
+        data: ChannelOfficialInput,
+        actor=Depends(maintainer),
+        rt=Depends(runtime),
+    ):
+        import re
+
+        if not re.fullmatch(r"UC[A-Za-z0-9_-]{22}", channel_id):
+            problem("INVALID_CHANNEL", "请输入有效的 YouTube 频道")
+        if data.official and not data.evidence_url:
+            problem("OFFICIAL_EVIDENCE_REQUIRED", "官方频道需要可核验的 HTTPS 证据")
+        return rt.discovery.set_official(channel_id, data, actor)
 
     @app.get("/api/v1/maintenance/broadcasts/{ident}", response_model=BroadcastView)
     def broadcast_get(ident: str, actor=Depends(maintainer), rt=Depends(runtime)):

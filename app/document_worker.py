@@ -182,6 +182,10 @@ def run_job(runtime, message):
             runtime.matches.channel(claim)
         elif operation == "match_video" and claim["pk"].startswith("user:"):
             runtime.matches.video(claim)
+        elif operation == "event_search" and claim["pk"] == "provider:video-discovery":
+            runtime.discovery.process(claim)
+        elif operation == "discovery_fanout" and claim["pk"] == "provider:video-discovery":
+            runtime.discovery.fanout(claim)
         else:
             raise StoreError("DOCUMENT_JOB_NOT_MIGRATED")
     except Exception as error:
@@ -252,7 +256,7 @@ def main(argv=None):
             try:
                 if time.monotonic() >= next_schedule:
                     runtime.providers.schedule()
-                    runtime.channels.schedule()
+                    runtime.discovery.schedule()
                     schedule_calendar_window(runtime)
                     next_schedule = time.monotonic() + 60
                 advanced = dispatch(runtime.store, queue.send)

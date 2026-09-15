@@ -86,7 +86,7 @@ def update_content(timer: func.TimerRequest):
         from app.document_worker import runtime_context
 
         with runtime_context() as runtime:
-            runtime.channels.schedule()
+            runtime.discovery.schedule()
         return
     from app.worker import run_maintenance
 

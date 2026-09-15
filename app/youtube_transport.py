@@ -18,7 +18,7 @@ def request(endpoint, params, *, key, budget):
     if endpoint not in COSTS:
         raise ValueError("YOUTUBE_ENDPOINT_NOT_BUDGETED")
     if not key:
-        problem("YOUTUBE_KEY_REQUIRED", "YouTube 频道服务尚未配置，暂时无法读取创作者", 503)
+        problem("YOUTUBE_KEY_REQUIRED", "YouTube 内容服务尚未配置，暂时无法搜索视频", 503)
     ticket = budget.reserve(endpoint)
     try:
         with httpx.Client(timeout=20, follow_redirects=False) as client:

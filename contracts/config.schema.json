@@ -166,6 +166,20 @@
           "maxProperties": 20,
           "title": "Broadcast Platforms",
           "type": "object"
+        },
+        "content_search_windows": {
+          "items": {
+            "enum": [
+              "before_24h",
+              "before_3h",
+              "after_3h",
+              "after_18h"
+            ],
+            "type": "string"
+          },
+          "maxItems": 2,
+          "title": "Content Search Windows",
+          "type": "array"
         }
       },
       "title": "Preferences",

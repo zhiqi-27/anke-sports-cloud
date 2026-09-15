@@ -20,6 +20,8 @@ def selected_links(event, config, links, published_info, owner_id=None):
         state = overrides.get(link.url)
         if state == "block":
             continue
+        if event.status in {"cancelled", "postponed"} and link.origin == "discovery" and state != "pin":
+            continue
         if link.origin == "automatic" and state != "pin":
             creator = creators.get(link.channel_id)
             if not creator or (link.kind in {"preview", "recap"} and not creator.get(link.kind, False)):
