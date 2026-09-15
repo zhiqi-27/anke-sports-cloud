@@ -4,7 +4,7 @@ from types import SimpleNamespace
 from sqlalchemy import select
 
 from app.calendar import event_is_past, rebuild_feed
-from app.db import Base, Event, Feed, Projection, Source, User
+from app.db import Base, Creator, Event, Feed, Projection, Source, User
 from app.service import ensure_user, save_config
 from tests.test_calendar_flow import drain, feed_snapshot
 
@@ -123,6 +123,44 @@ def test_preview_is_read_only_and_matches_published_removal_with_overlap_and_his
         removed = db.scalar(select(Projection).where(Projection.event_id == ids["a"]))
         assert removed.removed
         assert old_uids - current_uids == {f"{removed.id}@calendar.anke-sports"}
+
+
+def test_follow_removal_prunes_creator_scopes_and_removes_only_orphaned_creator(stack):
+    client, sessions = stack
+    setup_schedule(sessions)
+    with sessions() as db:
+        user = db.get(User, "local-reviewer")
+        db.add_all(
+            [
+                Creator(channel_id="creator-a", name="Only A"),
+                Creator(channel_id="creator-both", name="A and B"),
+                Creator(channel_id="creator-legacy", name="Legacy all"),
+            ]
+        )
+        save_config(
+            db,
+            user,
+            {
+                **user.config,
+                "creators": [
+                    {"channel_id": "creator-a", "scope_keys": ["test:a"]},
+                    {"channel_id": "creator-both", "scope_keys": ["test:a", "test:b"]},
+                    {"channel_id": "creator-legacy", "scope_keys": []},
+                ],
+            },
+            user.revision,
+        )
+        db.commit()
+    body = payload(client, [follow("b")])
+    preview = client.post("/api/v1/me/follows/preview", json=body).json()
+    assert preview["removed_creators"] == [{"channel_id": "creator-a", "name": "Only A"}]
+    saved = client.put(
+        "/api/v1/me/follows", json={**body, "confirmation": preview["confirmation"]}
+    )
+    assert saved.status_code == 200
+    assert {
+        row["channel_id"]: row["scope_keys"] for row in saved.json()["config"]["creators"]
+    } == {"creator-both": ["test:b"], "creator-legacy": ["test:b"]}
 
 
 def test_preview_addition_counts_unknown_dates_and_limits_examples_after_hashing(stack):

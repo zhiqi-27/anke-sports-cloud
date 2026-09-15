@@ -83,6 +83,12 @@ def enqueue_channel(db, channel_id, kind="youtube_poll"):
 def save_creator(db, user, details, scope_keys, preview, recap, enabled, revision, refresh_metadata=True):
     if revision != user.revision:
         problem("REVISION_CONFLICT", "配置已更新，请刷新后重试", 409)
+    scope_keys = list(dict.fromkeys(scope_keys))
+    followed_keys = {row["source_key"] for row in user.config.get("follows", [])}
+    if not scope_keys:
+        problem("CREATOR_SCOPE_REQUIRED", "请至少选择一个已关注对象")
+    if any(key not in followed_keys for key in scope_keys):
+        problem("CREATOR_SCOPE_NOT_FOLLOWED", "创作者只能关联当前已关注的对象", 409)
     for key in scope_keys:
         if not db.get(Source, key):
             problem("SOURCE_NOT_FOUND", "关联范围尚未接入")
@@ -416,10 +422,14 @@ def review_list(db, user):
         .limit(200)
     ).all()
     result = []
+    follows = {row["channel_id"]: row for row in user.config.get("creators", [])}
     for row in rows:
         video = db.get(Video, row.video_id)
         event = db.get(Event, row.event_id)
         if not video or not video.available or not event:
+            continue
+        follow = follows.get(video.channel_id)
+        if not follow or not event_keys(event).intersection(follow["scope_keys"]):
             continue
         creator = db.get(Creator, video.channel_id)
         result.append(

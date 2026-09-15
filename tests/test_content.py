@@ -13,7 +13,7 @@ import app.content as content
 import app.websub as websub
 from app.calendar import event_view, rebuild_feed
 from app.config import settings
-from app.db import ChannelSync, Creator, Event, Feed, Job, NotificationReceipt, User, Video, VideoMatch
+from app.db import ChannelSync, Creator, Event, Feed, Job, NotificationReceipt, Source, User, Video, VideoMatch
 from app.matching import evaluate
 from app.schemas import CreatorFollow
 from app.service import ensure_user, save_config
@@ -45,14 +45,27 @@ def setup_content(sessions, both=True):
                 {"id": "fixture:GSW", "name": "Warriors", "short_name": "GSW", "color": "#fff"},
             ],
         )
-        db.add_all([creator, event])
+        source = Source(
+            id="fixture:LAL",
+            name="Lakers",
+            short_name="LAL",
+            sport="basketball",
+            kind="team",
+            color="#fff",
+            provider="fixture",
+            demo=True,
+        )
+        db.add_all([creator, event, source])
         db.flush()
         save_config(
             db,
             user,
             {
                 **user.config,
-                "creators": [CreatorFollow(channel_id=CHANNEL).model_dump()],
+                "follows": [{"type": "team", "source_key": "fixture:LAL"}],
+                "creators": [
+                    CreatorFollow(channel_id=CHANNEL, scope_keys=["fixture:LAL"]).model_dump()
+                ],
                 "event_overrides": [{"event_key": event.source_key, "state": "include"}],
             },
             user.revision,

@@ -44,12 +44,18 @@ def import_configuration(user, data, cipher, *, source_exists, event_exists, cre
             merged.update({key(x): x for x in incoming[name]})
             config[name] = list(merged.values())
     unresolved = []
+    followed = {row["source_key"] for row in config["follows"]}
     for follow in config["follows"]:
         if not source_exists(follow["source_key"]) and not event_exists(follow["source_key"]):
             unresolved.append(follow["source_key"])
     for creator in config["creators"]:
         if not creator_exists(creator["channel_id"]):
             unresolved.append(creator["channel_id"])
+        if not creator["scope_keys"]:
+            creator["scope_keys"] = sorted(followed)
+            if not creator["scope_keys"]:
+                unresolved.append(creator["channel_id"])
+        unresolved.extend(key for key in creator["scope_keys"] if key not in followed)
         unresolved.extend(key for key in creator["scope_keys"] if not source_exists(key))
     for item in config["event_overrides"] + config["link_overrides"]:
         if not event_exists(item["event_key"]):

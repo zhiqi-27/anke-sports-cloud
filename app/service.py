@@ -71,7 +71,11 @@ def enqueue(db, kind: str, payload: dict):
 
 
 def save_config(db, user: User, config: dict, revision: int):
-    clean = Config.model_validate(config).model_dump()
+    from app.follow_rules import reconcile_creator_scopes
+
+    clean = Config.model_validate(
+        reconcile_creator_scopes(config, config.get("follows", []))
+    ).model_dump()
     result = db.execute(
         update(User)
         .where(User.id == user.id, User.revision == revision, User.deleted.is_(False))

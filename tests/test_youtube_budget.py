@@ -11,11 +11,13 @@ from sqlalchemy import delete, func, select
 
 from app import db as database, jobs, oauth, providers, worker, youtube_budget as budget
 from app.config import settings
-from app.db import Creator, Job, User, Video, YouTubeBudget, get_db
+from app.db import Creator, Job, Source, User, Video, YouTubeBudget, get_db
 from app.main import app
+from app.service import save_config
 
 REAL_HTTP_CLIENT = httpx.Client
 CHANNEL = "UC" + "a" * 22
+SCOPE = "fixture:team"
 
 
 @pytest.fixture
@@ -49,6 +51,27 @@ def quota_client(quota_env):
     app.dependency_overrides[get_db] = dependency
     client = TestClient(app, headers={"Origin": "http://127.0.0.1:3000"})
     assert client.post("/api/v1/auth/local").status_code == 200
+    with sessions() as db:
+        db.add(
+            Source(
+                id=SCOPE,
+                name="Fixture team",
+                short_name="TEAM",
+                sport="basketball",
+                kind="team",
+                color="#123456",
+                provider="fixture",
+                demo=True,
+            )
+        )
+        user = db.get(User, "local-reviewer")
+        save_config(
+            db,
+            user,
+            {**user.config, "follows": [{"type": "team", "source_key": SCOPE}]},
+            user.revision,
+        )
+        db.commit()
     yield client
     client.close()
     app.dependency_overrides.clear()
@@ -73,6 +96,24 @@ def channels_response(request):
             ]
         },
     )
+
+
+def test_creator_requires_a_current_follow_before_any_youtube_request(quota_env, quota_client):
+    sessions, stub = quota_env
+    calls = []
+    stub(lambda request: calls.append(request) or channels_response(request))
+    revision = quota_client.get("/api/v1/me/calendar").json()["revision"]
+    missing = quota_client.post(
+        "/api/v1/me/creators", json={"url": CHANNEL, "expected_revision": revision}
+    )
+    unrelated = quota_client.post(
+        "/api/v1/me/creators",
+        json={"url": CHANNEL, "scope_keys": ["fixture:other"], "expected_revision": revision},
+    )
+    assert missing.status_code == 422
+    assert unrelated.status_code == 409
+    assert unrelated.json()["error"]["code"] == "CREATOR_SCOPE_NOT_FOLLOWED"
+    assert calls == [] and snapshot(sessions)["reserved_units"] == 0
 
 
 def test_independent_connections_share_cap_and_key_rotation_cannot_reset_it(quota_env, monkeypatch):
@@ -119,7 +160,10 @@ def test_failed_request_and_rolled_back_creator_write_keep_charge(quota_env, quo
         providers.youtube_request("videos", {})
     assert snapshot(sessions)["reserved_units"] == 1
     stub(channels_response)
-    failed = quota_client.post("/api/v1/me/creators", json={"url": CHANNEL, "expected_revision": 99})
+    failed = quota_client.post(
+        "/api/v1/me/creators",
+        json={"url": CHANNEL, "scope_keys": [SCOPE], "expected_revision": 99},
+    )
     assert failed.status_code == 409
     with sessions() as db:
         assert db.get(Creator, CHANNEL) is None
@@ -140,7 +184,7 @@ def test_creator_http_and_mcp_replay_does_not_spend_more_quota(quota_env, quota_
     async def run():
         async with connected(token) as session:
             args = {
-                "data": {"url": CHANNEL, "expected_revision": revision},
+                "data": {"url": CHANNEL, "scope_keys": [SCOPE], "expected_revision": revision},
                 "idempotency_key": "quota-creator-replay",
             }
             first = await session.call_tool("add_creator", args)
@@ -373,7 +417,10 @@ def test_creator_preparation_rechecks_owner_after_network(quota_env, quota_clien
         return channels_response(request)
 
     stub(response)
-    result = quota_client.post("/api/v1/me/creators", json={"url": CHANNEL, "expected_revision": revision})
+    result = quota_client.post(
+        "/api/v1/me/creators",
+        json={"url": CHANNEL, "scope_keys": [SCOPE], "expected_revision": revision},
+    )
     assert result.status_code == (403 if change == "delete" else 409)
     with sessions() as db:
         assert db.get(Creator, CHANNEL) is None
@@ -417,7 +464,7 @@ def test_parallel_creator_commands_spend_for_each_request_but_commit_once(quota_
         return quota_client.post(
             "/api/v1/me/creators",
             headers={"Idempotency-Key": "parallel-quota-command"},
-            json={"url": CHANNEL, "expected_revision": revision},
+            json={"url": CHANNEL, "scope_keys": [SCOPE], "expected_revision": revision},
         )
 
     with ThreadPoolExecutor(max_workers=2) as executor:

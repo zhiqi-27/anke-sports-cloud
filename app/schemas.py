@@ -71,6 +71,11 @@ class FollowChangeSource(Follow):
     demo: bool | None
 
 
+class FollowChangeCreator(BaseModel):
+    channel_id: str
+    name: str
+
+
 class FollowImpactEvent(BaseModel):
     id: str
     title: str
@@ -93,6 +98,7 @@ class FollowPreviewView(BaseModel):
     confirmation: str
     added_sources: list[FollowChangeSource]
     removed_sources: list[FollowChangeSource]
+    removed_creators: list[FollowChangeCreator]
     added: FollowImpactGroup
     removed: FollowImpactGroup
     retained: FollowImpactGroup
@@ -118,7 +124,7 @@ class AddLink(StrictModel):
 
 class AddCreator(StrictModel):
     url: str = Field(min_length=3, max_length=2000)
-    scope_keys: list[str] = Field(default_factory=list, max_length=500)
+    scope_keys: list[str] = Field(min_length=1, max_length=500)
     preview: bool = True
     recap: bool = True
     expected_revision: int
@@ -244,7 +250,7 @@ class CreatorIdentity(BaseModel):
 
 class UpdateCreator(StrictModel):
     expected_revision: int
-    scope_keys: list[str] = Field(max_length=500)
+    scope_keys: list[str] = Field(min_length=1, max_length=500)
     preview: bool
     recap: bool
     enabled: bool

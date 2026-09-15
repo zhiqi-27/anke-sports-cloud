@@ -352,6 +352,7 @@ def creator_resolve(data: ResolveCreator, user=Depends(me)):
 def creator_add(
     data: AddCreator, idempotency_key: str | None = Header(None), user=Depends(me), db=Depends(get_db)
 ):
+    actions.validate_creator_scope_membership(user, data.scope_keys)
     result = actions.command(
         db,
         user,

@@ -205,10 +205,13 @@ class Accounts:
         response=None,
     ):
         def perform(previous):
+            from app.follow_rules import reconcile_creator_scopes
+
             if previous["revision"] != revision:
                 problem("REVISION_CONFLICT", "配置已在其他页面更新，请刷新后重试", 409)
             prepared = prepare(deepcopy(previous)) if prepare else config
             try:
+                prepared = reconcile_creator_scopes(prepared, prepared.get("follows", []))
                 prepared = Config.model_validate(prepared).model_dump()
             except ValidationError:
                 problem("CONFIG_LIMIT_EXCEEDED", "配置超过支持的数量上限，请减少内容后重试")

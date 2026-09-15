@@ -74,6 +74,13 @@ class Creators:
         return row
 
     def save(self, user_id, data, *, ident=None, key=None):
+        current = self.accounts.active(user_id)["payload"]
+        followed = {row["source_key"] for row in current["config"].get("follows", [])}
+        if not data.scope_keys:
+            problem("CREATOR_SCOPE_REQUIRED", "请至少选择一个已关注对象")
+        if any(source not in followed for source in data.scope_keys):
+            problem("CREATOR_SCOPE_NOT_FOLLOWED", "创作者只能关联当前已关注的对象", 409)
+
         def perform(previous):
             if previous["revision"] != data.expected_revision:
                 problem("REVISION_CONFLICT", "配置已更新，请刷新后重试", 409)
@@ -81,6 +88,11 @@ class Creators:
                 self.followed(previous, ident)
             snapshot = self.rt.catalog.capture()
             sources = {row.id for row in snapshot.sources()}
+            followed = {row["source_key"] for row in previous["config"].get("follows", [])}
+            if not data.scope_keys:
+                problem("CREATOR_SCOPE_REQUIRED", "请至少选择一个已关注对象")
+            if any(source not in followed for source in data.scope_keys):
+                problem("CREATOR_SCOPE_NOT_FOLLOWED", "创作者只能关联当前已关注的对象", 409)
             if any(source not in sources for source in data.scope_keys):
                 problem("SOURCE_NOT_FOUND", "关联范围尚未接入")
             channel_id = ident

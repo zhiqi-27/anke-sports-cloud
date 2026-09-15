@@ -1843,6 +1843,7 @@
             },
             "type": "array",
             "maxItems": 500,
+            "minItems": 1,
             "title": "Scope Keys"
           },
           "preview": {
@@ -1864,6 +1865,7 @@
         "type": "object",
         "required": [
           "url",
+          "scope_keys",
           "expected_revision"
         ],
         "title": "AddCreator"
@@ -3227,6 +3229,24 @@
         ],
         "title": "Follow"
       },
+      "FollowChangeCreator": {
+        "properties": {
+          "channel_id": {
+            "type": "string",
+            "title": "Channel Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "channel_id",
+          "name"
+        ],
+        "title": "FollowChangeCreator"
+      },
       "FollowChangeSource": {
         "properties": {
           "type": {
@@ -3390,6 +3410,13 @@
             "type": "array",
             "title": "Removed Sources"
           },
+          "removed_creators": {
+            "items": {
+              "$ref": "#/components/schemas/FollowChangeCreator"
+            },
+            "type": "array",
+            "title": "Removed Creators"
+          },
           "added": {
             "$ref": "#/components/schemas/FollowImpactGroup"
           },
@@ -3434,6 +3461,7 @@
           "confirmation",
           "added_sources",
           "removed_sources",
+          "removed_creators",
           "added",
           "removed",
           "retained",
@@ -4304,6 +4332,7 @@
             },
             "type": "array",
             "maxItems": 500,
+            "minItems": 1,
             "title": "Scope Keys"
           },
           "preview": {

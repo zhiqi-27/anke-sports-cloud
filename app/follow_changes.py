@@ -5,8 +5,8 @@ from datetime import datetime, timezone
 from sqlalchemy import select
 
 from app.calendar import select_feed_events
-from app.follow_rules import direct_follow_allowed, follow_impact
-from app.db import Event, Feed, Job, Projection, Source
+from app.follow_rules import direct_follow_allowed, follow_impact, reconcile_creator_scopes
+from app.db import Creator, Event, Feed, Job, Projection, Source
 from app.security import problem
 
 
@@ -26,7 +26,7 @@ def proposed_config(db, user, data):
         if valid_source and not direct_follow_allowed(source):
             problem("FOLLOW_SCOPE_NOT_ALLOWED", "英超和 NBA 等联赛请按球队关注")
     follows = {f.source_key: f.model_dump() for f in data.follows}
-    return {**user.config, "follows": [follows[key] for key in sorted(follows)]}
+    return reconcile_creator_scopes(user.config, [follows[key] for key in sorted(follows)])
 
 
 def preview_follows(db, user, data):
@@ -58,4 +58,7 @@ def preview_follows(db, user, data):
             .limit(1)
         )
         is not None,
+        creator_name_for_id=lambda ident: (
+            db.get(Creator, ident).name if db.get(Creator, ident) else ident
+        ),
     )

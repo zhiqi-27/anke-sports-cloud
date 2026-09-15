@@ -119,10 +119,24 @@ def creators(document_stack, monkeypatch):
 
 def add(client):
     revision = client.get("/api/v1/me/calendar").json()["revision"]
-    data = {"url": CHANNEL, "expected_revision": revision}
+    data = {"url": CHANNEL, "scope_keys": ["fixture:team"], "expected_revision": revision}
     response = client.post("/api/v1/me/creators", json=data, headers={"Idempotency-Key": "creator-add-key"})
     assert response.status_code == 200, response.text
     return data, response
+
+
+def test_creator_requires_a_current_follow_before_channel_resolution(creators):
+    client, _, _, state = creators
+    revision = client.get("/api/v1/me/calendar").json()["revision"]
+    missing = client.post("/api/v1/me/creators", json={"url": CHANNEL, "expected_revision": revision})
+    unrelated = client.post(
+        "/api/v1/me/creators",
+        json={"url": CHANNEL, "scope_keys": ["fixture:nba"], "expected_revision": revision},
+    )
+    assert missing.status_code == 422
+    assert unrelated.status_code == 409
+    assert unrelated.json()["error"]["code"] == "CREATOR_SCOPE_NOT_FOLLOWED"
+    assert state["calls"] == []
 
 
 def refresh(client, rt):
@@ -158,6 +172,20 @@ def test_creator_to_automatic_link_and_stable_ics_withdrawal(creators):
     third, _ = get_ics(client)
     assert third.content == second.content and third.headers["etag"] == second.headers["etag"]
     assert rt.channels.schedule() == 0
+
+
+def test_follow_removal_cancels_creator_when_its_last_scope_is_removed(creators):
+    client, rt, _, _ = creators
+    add(client)
+    drain(rt)
+    user = client.get("/api/v1/me/calendar").json()
+    body = {"expected_revision": user["revision"], "follows": []}
+    preview = client.post("/api/v1/me/follows/preview", json=body).json()
+    assert preview["removed_creators"] == [{"channel_id": CHANNEL, "name": "合成创作者"}]
+    saved = client.put(
+        "/api/v1/me/follows", json={**body, "confirmation": preview["confirmation"]}
+    )
+    assert saved.status_code == 200 and saved.json()["creators"] == []
 
 
 def test_block_is_retained_after_rediscovery_and_pin_survives_creator_removal(creators):
@@ -197,7 +225,7 @@ def test_pause_keeps_existing_links_and_resume_matches_again(creators):
         "enabled": False,
         "preview": True,
         "recap": True,
-        "scope_keys": [],
+        "scope_keys": ["fixture:team"],
     }
     assert client.patch(f"/api/v1/me/creators/{CHANNEL}", json=data).status_code == 200
     drain(rt)
@@ -264,7 +292,10 @@ def test_same_channel_is_shared_and_private_config_is_not(creators):
         SaveFollows(expected_revision=0, follows=[{"type": "team", "source_key": "fixture:team"}]),
         None,
     )
-    rt.creators.save("second-owner", AddCreator(url=CHANNEL, expected_revision=1))
+    rt.creators.save(
+        "second-owner",
+        AddCreator(url=CHANNEL, scope_keys=["fixture:team"], expected_revision=1),
+    )
     drain(rt)
     assert state["calls"].count("playlistItems") == 1
     first_links = rt.content.rows("local-reviewer")
@@ -446,7 +477,7 @@ def test_reviews_ignore_scope_change_and_import_known_creator(creators):
             "enabled": True,
             "preview": False,
             "recap": True,
-            "scope_keys": [],
+            "scope_keys": ["fixture:team"],
         },
     )
     assert changed.status_code == 200

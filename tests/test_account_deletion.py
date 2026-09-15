@@ -261,7 +261,10 @@ def test_shared_content_continues_for_other_interested_owner(stack, monkeypatch)
             other,
             {
                 **other.config,
-                "creators": [CreatorFollow(channel_id=CHANNEL).model_dump()],
+                "follows": [{"type": "team", "source_key": "fixture:LAL"}],
+                "creators": [
+                    CreatorFollow(channel_id=CHANNEL, scope_keys=["fixture:LAL"]).model_dump()
+                ],
                 "event_overrides": [{"event_key": db.get(Event, event_id).source_key, "state": "include"}],
             },
             other.revision,

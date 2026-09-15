@@ -205,9 +205,9 @@ def build_mcp():
         """确认频道身份与关联范围后关注创作者；需可用的 YouTube API 配置。"""
         from app.providers import resolve_creator
 
-        return execute(
-            "calendar:write",
-            lambda db, user: actions.command(
+        def run(db, user):
+            actions.validate_creator_scope_membership(user, data.scope_keys)
+            return actions.command(
                 db,
                 user,
                 "add_creator",
@@ -215,7 +215,11 @@ def build_mcp():
                 data.model_dump(),
                 lambda details: actions.add_creator(db, user, data, details),
                 prepare=lambda: resolve_creator(data.url.strip()),
-            ),
+            )
+
+        return execute(
+            "calendar:write",
+            run,
         )
 
     @private.tool(annotations=write)

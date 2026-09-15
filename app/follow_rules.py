@@ -14,6 +14,24 @@ def direct_follow_allowed(source):
     )
 
 
+def reconcile_creator_scopes(config, follows):
+    """Keep creator subscriptions attached only to retained follow objects.
+
+    An empty legacy scope meant "all follows". Materialize that meaning before
+    pruning so existing users are migrated without losing a creator merely for
+    saving an unrelated follow change.
+    """
+    retained_keys = {row["source_key"] for row in follows}
+    previous_keys = [row["source_key"] for row in config.get("follows", [])]
+    creators = []
+    for creator in config.get("creators", []):
+        bound = creator.get("scope_keys") or previous_keys
+        scope_keys = list(dict.fromkeys(key for key in bound if key in retained_keys))
+        if scope_keys:
+            creators.append({**creator, "scope_keys": scope_keys})
+    return {**config, "follows": follows, "creators": creators}
+
+
 def follow_impact(
     user,
     config,
@@ -29,12 +47,15 @@ def follow_impact(
     event_by_id,
     all_events,
     publication_pending,
+    creator_name_for_id,
 ):
     after = {event.id: event for event in selected}
     before = {key for key, row in existing.items() if not row.removed}
     previous_follows = {f["source_key"]: f for f in user.config["follows"]}
     new_follows = {f["source_key"]: f for f in config["follows"]}
     dropped = previous_follows.keys() - new_follows.keys()
+    previous_creators = {row["channel_id"] for row in user.config.get("creators", [])}
+    new_creators = {row["channel_id"] for row in config.get("creators", [])}
 
     def source_summary(value):
         source = source_for_key(value["source_key"])
@@ -79,6 +100,10 @@ def follow_impact(
             source_summary(new_follows[key]) for key in sorted(new_follows.keys() - previous_follows.keys())
         ],
         "removed_sources": [source_summary(previous_follows[key]) for key in sorted(dropped)],
+        "removed_creators": [
+            {"channel_id": ident, "name": creator_name_for_id(ident)}
+            for ident in sorted(previous_creators - new_creators)
+        ],
         "added": group(after.keys() - before),
         "removed": group(before - after.keys()),
         "retained": group(retained),

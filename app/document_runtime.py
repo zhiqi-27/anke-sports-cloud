@@ -8,7 +8,7 @@ from app.document_accounts import Accounts, owner_partition
 from app.document_catalog import Catalog
 from app.document_feeds import FeedPublisher
 from app.document_store import StoreError, partition_items
-from app.follow_rules import direct_follow_allowed, follow_impact
+from app.follow_rules import direct_follow_allowed, follow_impact, reconcile_creator_scopes
 from app.schedule_rules import schedule_page, schedule_range
 from app.schemas import Config
 from app.security import problem
@@ -178,7 +178,9 @@ class Runtime:
             if valid_source and not direct_follow_allowed(source):
                 problem("FOLLOW_SCOPE_NOT_ALLOWED", "英超和 NBA 等联赛请按球队关注")
         unique = {row.source_key: row.model_dump() for row in data.follows}
-        config = {**payload["config"], "follows": [unique[key] for key in sorted(unique)]}
+        config = reconcile_creator_scopes(
+            payload["config"], [unique[key] for key in sorted(unique)]
+        )
         if preview or data.confirmation:
             pk = owner_partition(payload["user_id"])
             feed = self.store.get("state", pk, "feed")["payload"]
@@ -200,6 +202,11 @@ class Runtime:
                 event_by_id=events.get,
                 all_events=events.values(),
                 publication_pending=self.activity(pk)[0],
+                creator_name_for_id=lambda ident: (
+                    self.channels.get(ident)["payload"]["name"]
+                    if self.channels.get(ident)
+                    else ident
+                ),
             )
             if not preview and impact["confirmation"] != data.confirmation:
                 problem("FOLLOWS_PREVIEW_CHANGED", "赛程或订阅内容已变化，请重新预览后保存", 409)
