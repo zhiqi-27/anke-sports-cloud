@@ -170,3 +170,32 @@ Recovery: retain the current active deployment package and deployment ID before 
 - Dev settings read back as enabled with model `gemini-3.1-flash-lite`; `GEMINI_API_KEY` is a Key Vault reference and its reference status is `Resolved` using the user-assigned runtime identity.
 - The deployed package was followed by an actual application-level synthetic metadata call through `matching-ai-v3`: it returned `automatic`, two valid labels and an AI confidence code. This proves the configured schema path, not real-video matching accuracy or calendar delivery.
 - Live roles remain unchanged: Key Vault Secrets User at the dedicated vault, Storage Queue Data Contributor and Storage Blob Data Owner at the dedicated storage account, and Cosmos DB Built-in Data Contributor at the dedicated `anke-sports` database. Temporary operator Secrets Officer access reads back empty.
+
+## 14. Event-driven YouTube discovery update · 2026-09-15
+
+The owner explicitly requested deployment to the existing Anke Sports development environment. Scope is a code-only Functions publication to `anke-sports-dev-mtcflttk`, followed by the existing `anke-sports-web` Worker publication. It adds deterministic per-event YouTube search, Gemini scoring with comments, shared discovery runs, separate search quota, channel reputation metadata, user search-window preferences, and the user-facing copy cleanup. AnySearch remains disabled. No Bicep deployment, app-setting mutation, RBAC change, database migration, user-data mutation, Git push, or production action is authorized.
+
+Validation checklist:
+
+- [x] Confirm Azure subscription, resource group, Function App and Cloudflare account.
+- [x] Run backend Ruff, tests, package manifest checks and `git diff --check`.
+- [x] Run frontend contract generation, typecheck, static export build and Wrangler dry-run.
+- [x] Review static RBAC and confirm infrastructure is unchanged.
+- [x] Record frozen candidate and recovery identifiers before publication.
+- [x] Publish both targets and verify deployment completion, registered Functions, public health/status, Worker version and public UI assets.
+
+Recovery: retain the current active OneDeploy and its package identifier before publication. If the new Functions package does not become active or fails health/status readback, republish the retained prior package. If Web readback fails, roll back to the prior active Worker version. Do not delete resources or mutate user data.
+
+### Validation proof
+
+- Azure CLI read back `Azure subscription 1` / `a1187bf2-2e2f-4e05-aaea-407163a009f5`, resource group `anke-sports-dev`, East Asia Function App `anke-sports-dev-mtcflttk`, Running and HTTPS-only. Six pre-update Functions are registered. Wrangler 4.131.0 is authenticated to account `6be1e7b072eb22de20bb3c58fbf56585`; pre-update Worker version is `77332df3-ca6c-4d37-b6ce-a97135b8819c`.
+- Backend commit `aba78a5` passed Ruff, `406 passed / 2 skipped`, three package tests and `git diff --check`. Candidate `data/anke-sports-20260915-event-discovery.zip` is 194345 bytes with SHA-256 `ee73544c34cf9ef20986d78d34bdd2a2f1f151a3f08ddb68f7faa7491460158b`; its 83-file manifest includes `app/document_discovery.py`, `app/document_worker.py` and `function_app.py`.
+- Frontend commit `5191038` passed contract generation, typecheck, a production-shaped static export and Wrangler dry-run with 99 assets.
+- Fresh Bicep compilation is byte-identical to tracked `infra/main.json`; no infrastructure file changed and Bicep will not be applied. Live roles remain vault-scoped Secrets User, storage-scoped Queue Data Contributor and Blob Data Owner, plus Cosmos Built-in Data Contributor scoped to the dedicated `anke-sports` database. No permission is expanded.
+- Azure deployment-status history is empty for this Flex app, so the documented prior active code package remains the recovery source; the Web recovery version is the directly read back version above.
+
+### Deployment proof
+
+- Azure accepted OneDeploy `ef8e70c4-b39d-4378-a357-0e1fd1106c45`; the CLI completed trigger synchronization and health validation with `Deployment was successful.` Six Functions are registered. Azure-direct and Cloudflare-routed health are HTTP 200 with `staging` / `cosmos`; public status exposes `event_search_only`, disabled Web fallback and 80 available daily search calls. Flex publishing credentials and the management deployment-status collection are unavailable, so this release does not claim a separate status-4/active readback.
+- Wrangler uploaded 39 changed assets and activated Worker version `75891ba3-a299-4007-8e8e-33f80105200a` on `https://sports.anke-ai.com`. The public route is HTTP 200 and the deployed asset contains the new concise video copy without the removed threshold explanation.
+- No real scheduled discovery, user Feed refresh or device playback was forced during deployment. See `../evidence/event-youtube-discovery-deployment-2026-09-15.md`.

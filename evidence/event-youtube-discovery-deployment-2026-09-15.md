@@ -1,0 +1,11 @@
+# Event-driven YouTube discovery deployment · 2026-09-15
+
+Target: existing development Function App `anke-sports-dev-mtcflttk` in East Asia and existing Cloudflare Worker `anke-sports-web` on `sports.anke-ai.com`. This release did not apply Bicep, change app settings or RBAC, migrate data, mutate a user account, push Git, or touch production resources.
+
+Backend commit `aba78a5` passed Ruff, `406 passed / 2 skipped`, three package tests and diff checks. Frozen package `data/anke-sports-20260915-event-discovery.zip` is 194345 bytes with SHA-256 `ee73544c34cf9ef20986d78d34bdd2a2f1f151a3f08ddb68f7faa7491460158b`; its 83-file manifest contains the discovery runtime. Fresh Bicep output was byte-identical and was not deployed. Live Vault, Storage and database-scoped Cosmos roles remained unchanged.
+
+Azure accepted OneDeploy `ef8e70c4-b39d-4378-a357-0e1fd1106c45`; the CLI completed trigger synchronization and Function health validation with `Deployment was successful.` Six Functions remain registered. Azure-direct and Cloudflare-routed health returned HTTP 200 with `staging` / `cosmos`. Public status read back `youtube_discovery=event_search_only`, `web_search_fallback=disabled`, and the separate daily search budget of 80 calls. Flex Consumption did not expose traditional publishing credentials; the current management `deploymentStatus` collection was also empty, so exact active/status-4 fields were not independently read back in this release.
+
+Frontend commit `5191038` passed contract generation, typecheck, static export and Wrangler dry-run. Wrangler uploaded 39 changed files from the 99-asset build and activated Worker version `75891ba3-a299-4007-8e8e-33f80105200a`. Public HTTP returned 200; the deployed JavaScript asset contains `视频内容`, `暂无待确认视频`, `最多选择两个时间` and `移除后不会自动加回`, and does not contain the removed threshold/creator-follow explanatory copy checked in this release. Prior Worker recovery version is `77332df3-ca6c-4d37-b6ce-a97135b8819c`.
+
+This proves development deployment and public code/config readback. It does not prove that a real scheduled search has run, that real videos were classified accurately, that a personal Feed was republished, or that iPhone calendar/YouTube App opening works.
