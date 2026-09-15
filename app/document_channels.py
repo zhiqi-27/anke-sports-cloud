@@ -9,7 +9,7 @@ from app.document_accounts import Outbox, document, now, projection_job
 from app.document_store import Conflict, StoreError, Write, clean, partition_items
 from app.document_values import Values
 from app.job_rules import error_code, retry_seconds
-from app.youtube_content_rules import uploads_page, video_batch
+from app.youtube_content_rules import comment_sample, uploads_page, video_batch
 from app.youtube_rules import WAIT_CODES
 from app.youtube_transport import CHANNEL_ID, channel_details, items
 
@@ -271,6 +271,25 @@ class Channels:
                 now(),
             )
             for video in videos:
+                old_comments = (previous.get(video["id"]) or {}).get("comments", [])
+                if video["available"]:
+                    try:
+                        video["comments"] = comment_sample(
+                            self.rt.youtube_request(
+                                "commentThreads",
+                                {
+                                    "videoId": video["id"],
+                                    "part": "snippet",
+                                    "maxResults": 12,
+                                    "order": "relevance",
+                                    "textFormat": "plainText",
+                                },
+                            )
+                        )
+                    except (HTTPException, ValueError):
+                        video["comments"] = list(old_comments)
+                else:
+                    video["comments"] = []
                 row_id = "video:" + video["id"]
                 existing = self.store.get("state", pk, row_id)
                 # Force immutable references to keep 50 long descriptions below the batch limit.

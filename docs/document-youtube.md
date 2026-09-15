@@ -6,9 +6,9 @@
 
 `POST /api/v1/me/creators/resolve` 使用既有登录与来源检查，接受频道ID、@handle、频道页或公开视频页，返回确认后的频道ID、名称和规范频道URL。频道解析不会写入个人关注、链接或发布任务；频道保存和持续发现仍需后续实现。游客请求在联网前拒绝。
 
-SQL与文档模式共用 `youtube_transport`。只允许 `channels`、`playlistItems`、`videos` 三个读取端点，HTTP前先预留请求额度。Key放入 `X-Goog-Api-Key` 请求头，重定向不跟随；原始上游错误和凭据不进入API错误正文。频道ID不一致、不完整响应和非公开视频不会被当成解析成功。
+SQL与文档模式共用 `youtube_transport`。只允许 `channels`、`playlistItems`、`videos`、`commentThreads` 四个读取端点，HTTP前先预留请求额度。Key放入 `X-Goog-Api-Key` 请求头，重定向不跟随；原始上游错误和凭据不进入API错误正文。频道ID不一致、不完整响应和非公开视频不会被当成解析成功。
 
-字段与费用依据：[频道查询](https://developers.google.com/youtube/v3/docs/channels/list)、[上传列表查询](https://developers.google.com/youtube/v3/docs/playlistItems/list)、[视频查询](https://developers.google.com/youtube/v3/docs/videos/list)。三个方法均为每次1单位，分页另计；本服务默认9,000只是内部上限。[Google建议使用请求头传递Key](https://docs.cloud.google.com/docs/authentication/api-keys-best-practices)；本批已用真实YouTube请求验证该方式。
+字段与费用依据：[频道查询](https://developers.google.com/youtube/v3/docs/channels/list)、[上传列表查询](https://developers.google.com/youtube/v3/docs/playlistItems/list)、[视频查询](https://developers.google.com/youtube/v3/docs/videos/list)、[评论查询](https://developers.google.com/youtube/v3/docs/commentThreads/list)。四个方法均为每次1单位，分页另计；本服务默认9,000只是内部上限。[Google建议使用请求头传递Key](https://docs.cloud.google.com/docs/authentication/api-keys-best-practices)；此前真实YouTube请求只验证了前三个端点，本地评论实现尚未形成真实API验收。
 
 ## 额度记录与并发
 

@@ -139,7 +139,7 @@ def test_notification_metadata_refresh_changes_same_ics_and_semantic_duplicate_d
     affected = next(uid for uid in rows if VIDEO in str(rows[uid]["DESCRIPTION"]))
     assert int(updated[affected]["SEQUENCE"]) == int(rows[affected]["SEQUENCE"]) + 1
     assert VIDEO not in after.text and before.content != after.content
-    assert upstream["calls"][calls:] == ["videos"]
+    assert upstream["calls"][calls:] == ["videos", "commentThreads"]
     assert len(notices(rt, "done")) == 1 and not notices(rt, "pending")
     assert notify(client, rt, body()).status_code == 204
     drain(rt)

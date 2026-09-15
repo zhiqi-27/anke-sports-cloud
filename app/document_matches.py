@@ -1,4 +1,4 @@
-"""Bounded personal matching and review commands using the shared deterministic rules."""
+"""Bounded personal matching and review commands using shared rules and optional AI adjudication."""
 
 from types import SimpleNamespace
 
@@ -7,7 +7,7 @@ from app.config_rules import link_override
 from app.document_accounts import Change, Outbox, document, now, owner_partition, projection_job
 from app.document_channels import channel_partition, next_job
 from app.document_store import StoreError, Write, partition_items
-from app.matching import evaluate
+from app.ai_matching import evaluate_with_ai
 from app.security import digest, problem
 
 
@@ -52,7 +52,9 @@ class Matches:
         )
         self.store.batch("state", account["pk"], [self.accounts.guard(account), completion, *writes])
 
-    def link_value(self, user_id, event_id, video, creator, kind, *, origin="automatic", old=None):
+    def link_value(
+        self, user_id, event_id, video, creator, kind, *, labels=None, origin="automatic", old=None
+    ):
         url = "https://www.youtube.com/watch?v=" + video["id"]
         value = (
             dict(old)
@@ -74,6 +76,7 @@ class Matches:
         value.update(
             origin=origin,
             kind=kind,
+            content_labels=list(labels or []),
             available=video["available"],
             channel_id=video["channel_id"],
             creator=creator["name"],
@@ -105,7 +108,15 @@ class Matches:
             and (not follow["scope_keys"] or event_keys(event).intersection(follow["scope_keys"]))
         ]
         outputs = (
-            {row["event_id"]: row for row in evaluate(SimpleNamespace(**video), candidates)}
+            {
+                row["event_id"]: row
+                for row in evaluate_with_ai(
+                    SimpleNamespace(**video),
+                    candidates,
+                    self.rt.cfg,
+                    creator_name=creator["payload"]["name"],
+                )
+            }
             if (follow and follow["enabled"] and video["available"])
             else {}
         )
@@ -153,7 +164,7 @@ class Matches:
                 }
                 if state == "block":
                     match_value["decision"] = "ignored"
-                if output["kind"] != "unknown" and not follow.get(output["kind"], False):
+                if output["kind"] in {"preview", "recap"} and not follow.get(output["kind"], False):
                     match_value["decision"] = "reject"
             elif match_value and not manual and (not follow or follow["enabled"] or not video["available"]):
                 match_value["decision"] = "retired"
@@ -173,10 +184,19 @@ class Matches:
             if output and match_value["decision"] == "automatic":
                 if link_value is None:
                     link_value = self.link_value(
-                        user["user_id"], eid, video, creator["payload"], output["kind"]
+                        user["user_id"],
+                        eid,
+                        video,
+                        creator["payload"],
+                        output["kind"],
+                        labels=output.get("content_labels", []),
                     )
                 elif link_value["origin"] == "automatic" and state != "pin":
-                    link_value.update(kind=output["kind"], available=True)
+                    link_value.update(
+                        kind=output["kind"],
+                        content_labels=output.get("content_labels", []),
+                        available=True,
+                    )
             elif (
                 link_value
                 and link_value["origin"] == "automatic"
@@ -243,7 +263,7 @@ class Matches:
                 or row["source_updated_at"] != video["updated_at"]
                 or (row["event_updated_at"] != event.updated_at)
                 or (follow["scope_keys"] and not event_keys(event).intersection(follow["scope_keys"]))
-                or (row["kind"] != "unknown" and not follow.get(row["kind"], False))
+                or (row["kind"] in {"preview", "recap"} and not follow.get(row["kind"], False))
             ):
                 continue
             if row["channel_id"] not in creators:
@@ -260,6 +280,7 @@ class Matches:
                     "event_title": event.title,
                     "starts_at": event.starts_at,
                     "kind": row["kind"],
+                    "content_labels": row.get("content_labels", []),
                     "reason_codes": row["reason_codes"],
                     "rule_version": row["rule_version"],
                     "updated_at": row["updated_at"],
@@ -294,7 +315,7 @@ class Matches:
             video = self.rt.channels.video(value["channel_id"], value["video_id"])
             event = self.rt.content.event(value["event_id"])
             if (follow["scope_keys"] and not event_keys(event).intersection(follow["scope_keys"])) or (
-                value["kind"] != "unknown" and not follow.get(value["kind"], False)
+                value["kind"] in {"preview", "recap"} and not follow.get(value["kind"], False)
             ):
                 problem("REVIEW_CHANGED", "创作者关联范围已变化，请重新查看", 409)
             if not video or not video["available"]:
@@ -324,7 +345,8 @@ class Matches:
                     event.id,
                     video,
                     self.rt.channels.get(value["channel_id"])["payload"],
-                    data.kind,
+                    "video",
+                    labels=value.get("content_labels", []),
                     origin="confirmed",
                     old=existing["payload"] if existing else None,
                 )

@@ -2,6 +2,7 @@ param location string
 param tags object
 param webUrl string
 param developerIpRules array
+param matchingAiEnabled bool
 
 var suffix = take(uniqueString(subscription().id, resourceGroup().name), 8)
 var appName = 'anke-sports-dev-${suffix}'
@@ -254,10 +255,17 @@ resource app 'Microsoft.Web/sites@2024-11-01' = {
   dependsOn: [blobRole, queueRole, vaultRole, cosmosRole, jobs, tables, state, indexes]
 }
 
+var matchingAiSettings = matchingAiEnabled ? {
+  ANKE_SPORTS_MATCHING_AI_ENABLED: 'true'
+  GEMINI_API_KEY: '@Microsoft.KeyVault(SecretUri=${vault.properties.vaultUri}secrets/gemini-api-key)'
+} : {
+  ANKE_SPORTS_MATCHING_AI_ENABLED: 'false'
+}
+
 resource appSettings 'Microsoft.Web/sites/config@2024-11-01' = {
   parent: app
   name: 'appsettings'
-  properties: {
+  properties: union({
     AzureWebJobsStorage__blobServiceUri: storage.properties.primaryEndpoints.blob
     AzureWebJobsStorage__queueServiceUri: storage.properties.primaryEndpoints.queue
     AzureWebJobsStorage__tableServiceUri: storage.properties.primaryEndpoints.table
@@ -281,15 +289,18 @@ resource appSettings 'Microsoft.Web/sites/config@2024-11-01' = {
     ANKE_SPORTS_ENCRYPTION_KEY: '@Microsoft.KeyVault(SecretUri=${vault.properties.vaultUri}secrets/feed-encryption-key)'
     ANKE_SPORTS_FIREBASE_CREDENTIALS_JSON: '@Microsoft.KeyVault(SecretUri=${vault.properties.vaultUri}secrets/firebase-credentials)'
     ANKE_SPORTS_YOUTUBE_PROJECT_ID: 'anke-sports-dev'
-    ANKE_SPORTS_ENABLED_SPORTS_PROVIDERS: '["jolpica","balldontlie","football-data"]'
+    ANKE_SPORTS_ENABLED_SPORTS_PROVIDERS: string(['jolpica', 'balldontlie', 'football-data'])
     ANKE_SPORTS_YOUTUBE_DAILY_BUDGET: '20'
     YOUTUBE_API_KEY: '@Microsoft.KeyVault(SecretUri=${vault.properties.vaultUri}secrets/youtube-api-key)'
     BALLDONTLIE_API_KEY: '@Microsoft.KeyVault(SecretUri=${vault.properties.vaultUri}secrets/balldontlie-api-key)'
     FOOTBALL_DATA_API_KEY: '@Microsoft.KeyVault(SecretUri=${vault.properties.vaultUri}secrets/football-data-api-key)'
     ANKE_SPORTS_YOUTUBE_WEBSUB_ENABLED: 'false'
     ANKE_SPORTS_BROADCAST_CHECKS_ENABLED: 'false'
-    ANKE_SPORTS_PUBLIC_FEED_SOURCE_KEYS: '[]'
-  }
+    ANKE_SPORTS_PUBLIC_FEED_SOURCE_KEYS: string([])
+    ANKE_SPORTS_MATCHING_AI_MODEL: 'gemini-3.1-flash-lite'
+    ANKE_SPORTS_MATCHING_AI_AUTO_THRESHOLD: '0.90'
+    ANKE_SPORTS_MATCHING_AI_REVIEW_THRESHOLD: '0.55'
+  }, matchingAiSettings)
 }
 
 output resources object = {

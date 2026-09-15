@@ -1886,6 +1886,7 @@
             "type": "string",
             "enum": [
               "live",
+              "video",
               "preview",
               "recap",
               "watch_along"
@@ -2152,6 +2153,22 @@
       },
       "BroadcastPublicView": {
         "properties": {
+          "platform_id": {
+            "type": "string",
+            "title": "Platform Id"
+          },
+          "platform_name": {
+            "type": "string",
+            "title": "Platform Name"
+          },
+          "mobile_opening": {
+            "type": "string",
+            "enum": [
+              "verified_https_app_link",
+              "web_handoff"
+            ],
+            "title": "Mobile Opening"
+          },
           "content_type": {
             "type": "string",
             "enum": [
@@ -2213,6 +2230,9 @@
         },
         "type": "object",
         "required": [
+          "platform_id",
+          "platform_name",
+          "mobile_opening",
           "content_type",
           "content_label",
           "access_label",
@@ -3598,6 +3618,14 @@
             "type": "string",
             "title": "Kind"
           },
+          "content_labels": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 3,
+            "title": "Content Labels"
+          },
           "platform": {
             "type": "string",
             "title": "Platform"
@@ -3734,6 +3762,14 @@
             "type": "boolean",
             "title": "Transparent",
             "default": true
+          },
+          "broadcast_platforms": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "maxProperties": 20,
+            "title": "Broadcast Platforms"
           }
         },
         "additionalProperties": false,
@@ -3776,6 +3812,14 @@
             "type": "boolean",
             "title": "Transparent",
             "default": true
+          },
+          "broadcast_platforms": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "maxProperties": 20,
+            "title": "Broadcast Platforms"
           }
         },
         "additionalProperties": false,
@@ -3785,7 +3829,8 @@
           "locale",
           "watch_region",
           "spoiler_free",
-          "transparent"
+          "transparent",
+          "broadcast_platforms"
         ],
         "title": "Preferences"
       },
@@ -3952,10 +3997,17 @@
             "title": "Decision"
           },
           "kind": {
-            "type": "string",
-            "enum": [
-              "preview",
-              "recap"
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "preview",
+                  "recap"
+                ]
+              },
+              {
+                "type": "null"
+              }
             ],
             "title": "Kind"
           },
@@ -3968,7 +4020,6 @@
         "type": "object",
         "required": [
           "decision",
-          "kind",
           "expected_updated_at"
         ],
         "title": "ReviewDecision"
@@ -4037,6 +4088,14 @@
           "kind": {
             "type": "string",
             "title": "Kind"
+          },
+          "content_labels": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 3,
+            "title": "Content Labels"
           },
           "reason_codes": {
             "items": {

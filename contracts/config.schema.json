@@ -158,6 +158,14 @@
           "default": true,
           "title": "Transparent",
           "type": "boolean"
+        },
+        "broadcast_platforms": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "maxProperties": 20,
+          "title": "Broadcast Platforms",
+          "type": "object"
         }
       },
       "title": "Preferences",

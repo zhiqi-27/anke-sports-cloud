@@ -290,7 +290,7 @@ def test_concurrent_channel_schedulers_enqueue_one_shared_poll(disk_stack):
         assert db.scalar(select(func.count()).select_from(Job).where(Job.kind == "youtube_poll")) == 1
 
 
-def test_signed_refresh_to_personal_ics_and_notification_replay(stack, monkeypatch):
+def test_title_only_refresh_preserves_label_and_url_personal_ics(stack, monkeypatch):
     from tests.test_calendar_flow import drain, feed_snapshot
 
     client, sessions = stack
@@ -317,9 +317,10 @@ def test_signed_refresh_to_personal_ics_and_notification_replay(stack, monkeypat
     drain()
     _, refreshed, refreshed_events = feed_snapshot(client)
     assert str(before_events[0]["UID"]) == str(refreshed_events[0]["UID"])
-    assert int(refreshed_events[0]["SEQUENCE"]) == int(before_events[0]["SEQUENCE"]) + 1
-    assert "updated" in str(refreshed_events[0]["DESCRIPTION"])
-    assert before.headers["etag"] != refreshed.headers["etag"]
+    assert int(refreshed_events[0]["SEQUENCE"]) == int(before_events[0]["SEQUENCE"])
+    assert "updated" not in str(refreshed_events[0]["DESCRIPTION"])
+    assert before.headers["etag"] == refreshed.headers["etag"]
+    assert before.content == refreshed.content
     assert client.post(path, content=body, headers={"X-Hub-Signature": sign(body)}).status_code == 204
     drain()
     assert feed_snapshot(client)[1].content == refreshed.content

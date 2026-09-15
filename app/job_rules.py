@@ -13,6 +13,9 @@ def error_code(exc):
     if isinstance(exc, httpx.RequestError):
         return "UPSTREAM_NETWORK_ERROR"
     candidate = (
+        exc.code
+        if isinstance(getattr(exc, "code", None), str)
+        else
         exc.detail.get("code", "")
         if isinstance(exc, HTTPException) and isinstance(exc.detail, dict)
         else str(exc)

@@ -4,7 +4,7 @@ SQL完整内容流程中的HTTP频道解析、MCP添加创作者、后台uploads
 
 文档模式已接入ETag项目账本、HTTP频道解析、创作者保存和共享轮询/匹配，SQL/文档共用传输、太平洋窗口与安全等待规则；Key改为请求头传递，已通过真实频道读取。每个轮询步骤成功后持久推进，额度等待不会重读已提交的uploads页。WebSub已接入文档路径并完成合成HTTP验收，Hub订阅请求不使用Data API额度，通知后的元数据读取使用同一项目账本；迁移时不能并行启用同项目两份独立账本，见 [文档YouTube范围](document-youtube.md) 和 [创作者流程](document-creators.md)。
 
-配置 `YOUTUBE_API_KEY`、`ANKE_SPORTS_YOUTUBE_PROJECT_ID` 与 `ANKE_SPORTS_YOUTUBE_DAILY_BUDGET`。默认 9,000 是本服务自己的每日上限，不是 Google 已批准额度、实际用量或余额。此版本只允许 `channels`、`playlistItems`、`videos`，每次请求预留 1 单位；分页逐请求计数，不使用 search。依据 [官方成本表](https://developers.google.com/youtube/v3/determine_quota_cost)（2026-09-10 核对，页面更新于 2026-09-04），日界线为太平洋时间午夜，含夏令时。
+配置 `YOUTUBE_API_KEY`、`ANKE_SPORTS_YOUTUBE_PROJECT_ID` 与 `ANKE_SPORTS_YOUTUBE_DAILY_BUDGET`。默认 9,000 是本服务自己的每日上限，不是 Google 已批准额度、实际用量或余额。此版本只允许 `channels`、`playlistItems`、`videos`、`commentThreads` 四个读取端点，每次请求预留 1 单位；分页逐请求计数，不使用 search。依据 [官方成本表](https://developers.google.com/youtube/v3/determine_quota_cost)（2026-09-15 核对），日界线为太平洋时间午夜，含夏令时。
 
 ## 事务与调度
 
@@ -16,6 +16,8 @@ SQL完整内容流程中的HTTP频道解析、MCP添加创作者、后台uploads
 - 任务领取前可直接顺延到共享恢复时间，不消耗 attempts。请求途中收到配额等待时增加 `quota_waits`；attempts 始终递增以保护旧 worker 的提交检查。五次失败上限使用 `attempts - quota_waits`，真正失败仍按原规则终止。旧日的迟到 quotaExceeded 不封锁新日；已在途请求的成功也不解除其他请求设置的等待。
 
 `GET /api/v1/status.youtube_budget` 返回是否配置、等待/可用状态、恢复时间及本服务预留计数，不返回项目 ID、Key、Google 错误正文或请求 URL。创作者页面只显示影响用户的更新暂缓、最早自动重试时间和保留已有内容；等待时 30 秒轮询，恢复后继续原流程。服务器恢复时间不是承诺手机同步时间。
+
+AI v4 额外使用 `commentThreads.list`：每个公开且已进入视频详情批次的视频读取一页、最多 12 条 relevance 顶层评论，每个视频增加 1 单位，不读取回复或继续翻页。评论关闭按空样本处理；临时失败保留旧样本且视频元数据继续处理。开发环境应用内每日 20 单位在多视频频道上会较快耗尽，这一限制必须通过实际用量调整，不能绕过共享账本。
 
 ## 迁移与恢复
 

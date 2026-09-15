@@ -21,6 +21,7 @@ RULES = [
         "hosts": ["tv.apple.com"],
         "paths": ["^/.+"],
         "evidence": "https://tv.apple.com/us/info/watch-f1",
+        "app_paths": [r"^/.+"],
     },
     {
         "id": "peacock",
@@ -28,6 +29,7 @@ RULES = [
         "hosts": ["www.peacocktv.com"],
         "paths": ["^/.+"],
         "evidence": "https://www.peacocktv.com/sports/premier-league",
+        "app_paths": [r"^/(deeplink|watch)/"],
     },
     {
         "id": "tencent-sports",
@@ -42,6 +44,7 @@ RULES = [
         "hosts": ["www.miguvideo.com", "m.miguvideo.com"],
         "paths": ["^/.+"],
         "evidence": "https://www.premierleague.com/en/media/broadcasters",
+        "app_paths": [r"^/(wap/resource/migu|mgs/common/migugotoapp)/"],
     },
     {
         "id": "premier-league",
@@ -63,6 +66,21 @@ RULES = [
         "hosts": ["nba.com", "www.nba.com", "watch.nba.com", "tv.nba.com", "support.watch.nba.com"],
         "paths": [r"^/.+"],
         "evidence": "https://www.nba.com/watch/featured",
+    },
+    {
+        "id": "prime-video",
+        "name": "Prime Video",
+        "hosts": ["www.primevideo.com"],
+        "paths": [r"^/(detail|watch|dp|gp/video/detail|region/[^/]+/(detail|watch|dp))/.+"],
+        "evidence": "https://www.nba.com/news/nba-media-agreements-2024",
+        "app_paths": [r"^/(detail|watch|dp|gp/video/detail|region/[^/]+/(detail|watch|dp))/"],
+    },
+    {
+        "id": "nbc-sports",
+        "name": "NBC Sports",
+        "hosts": ["www.nbcsports.com"],
+        "paths": [r"^/(watch|soccer)/.+"],
+        "evidence": "https://www.premierleague.com/en/media/broadcasters",
     },
     {
         "id": "f1",
@@ -91,6 +109,94 @@ RULES = [
         "hosts": ["www.espn.com"],
         "paths": [r"^/.+"],
         "evidence": "https://www.espn.com/watch/",
+        "app_paths": [r"^/[^/]+/(game|watch)/.+", r"^/watch/.+"],
+    },
+    {
+        "id": "fod",
+        "name": "FOD",
+        "hosts": ["fod.fujitv.co.jp", "news.fod.fujitv.co.jp", "www.fujitv.co.jp", "otn.fujitv.co.jp"],
+        "paths": [r"^/.+"],
+        "evidence": "https://corp.formula1.com/fuji-tv-to-exclusively-broadcast-formula-1-in-japan-in-new-long-term-deal/",
+    },
+    {
+        "id": "u-next",
+        "name": "U-NEXT",
+        "hosts": ["video.unext.jp"],
+        "paths": [r"^/(livedetail|title|series)/.+"],
+        "evidence": "https://www.premierleague.com/en/media/broadcasters",
+        "app_paths": [r"^/(livedetail|title|series)/"],
+    },
+    {
+        "id": "dazn",
+        "name": "DAZN",
+        "hosts": ["www.dazn.com"],
+        "paths": [r"^/[^/]+/(competition|sport|show|schedule)/.+", r"^/[^/]+/schedule/?$"],
+        "evidence": "https://www.formula1.com/en/information/f1-broadcast-information.45y3LNsT1D6VoK0ZmX8ciJ",
+        "app_paths": [r"^/[^/]+/(competition|sport|show|schedule)/", r"^/[^/]+/schedule/?$"],
+    },
+    {
+        "id": "viaplay",
+        "name": "Viaplay",
+        "hosts": ["viaplay.com", "www.viaplay.com"],
+        "paths": [r"^/sport/.+"],
+        "evidence": "https://www.formula1.com/en/information/f1-broadcast-information.45y3LNsT1D6VoK0ZmX8ciJ",
+        "app_paths": [r"^/sport/"],
+    },
+    {
+        "id": "canal-plus",
+        "name": "CANAL+",
+        "hosts": ["www.canalplus.com"],
+        "paths": [r"^/[^/]+/(sport|sports)/.+"],
+        "evidence": "https://www.premierleague.com/en/media/broadcasters",
+    },
+    {
+        "id": "sky-sports",
+        "name": "Sky Sports",
+        "hosts": ["www.skysports.com"],
+        "paths": [r"^/.+"],
+        "evidence": "https://www.formula1.com/en/information/f1-broadcast-information.45y3LNsT1D6VoK0ZmX8ciJ",
+    },
+    {
+        "id": "sky-de",
+        "name": "Sky Deutschland",
+        "hosts": ["sport.sky.de", "www.sky.de"],
+        "paths": [r"^/.+"],
+        "evidence": "https://www.premierleague.com/en/media/broadcasters",
+    },
+    {
+        "id": "sky-it",
+        "name": "Sky Italia",
+        "hosts": ["sport.sky.it", "www.sky.it"],
+        "paths": [r"^/.+"],
+        "evidence": "https://www.premierleague.com/en/media/broadcasters",
+    },
+    {
+        "id": "rtbf",
+        "name": "RTBF Auvio",
+        "hosts": ["www.rtbf.be", "auvio.rtbf.be"],
+        "paths": [r"^/.+"],
+        "evidence": "https://www.formula1.com/en/information/f1-broadcast-information.45y3LNsT1D6VoK0ZmX8ciJ",
+    },
+    {
+        "id": "play-sports",
+        "name": "Play Sports",
+        "hosts": ["www.playsports.be"],
+        "paths": [r"^/.+"],
+        "evidence": "https://www.formula1.com/en/information/f1-broadcast-information.45y3LNsT1D6VoK0ZmX8ciJ",
+    },
+    {
+        "id": "telenet",
+        "name": "Telenet",
+        "hosts": ["www.telenet.be"],
+        "paths": [r"^/.+"],
+        "evidence": "https://www.premierleague.com/en/media/broadcasters",
+    },
+    {
+        "id": "eleven-sports-pl",
+        "name": "Eleven Sports Poland",
+        "hosts": ["elevensports.pl", "www.elevensports.pl"],
+        "paths": [r"^/.+"],
+        "evidence": "https://www.formula1.com/en/information/f1-broadcast-information.45y3LNsT1D6VoK0ZmX8ciJ",
     },
     {
         "id": "bilibili",
@@ -101,9 +207,321 @@ RULES = [
     },
 ]
 
+# Rights-holder evidence is deliberately separate from candidate URL grammar.
+# It helps maintainers choose a platform, but never makes an arbitrary URL publishable.
+RIGHTS = [
+    {
+        "competition_id": "jolpica:f1",
+        "platform_id": "apple-tv",
+        "regions": ["US"],
+        "valid_through": "2030-12-31",
+        "evidence": "https://www.apple.com/newsroom/2025/10/apple-is-the-exclusive-new-broadcast-partner-for-formula-1-in-the-us/",
+    },
+    {
+        "competition_id": "jolpica:f1",
+        "platform_id": "tencent-sports",
+        "regions": ["CN"],
+        "valid_through": "2027-12-31",
+        "evidence": "https://corp.formula1.com/formula-1-renews-partnership-with-tencent-to-broadcast-f1-in-mainland-china/",
+    },
+    {
+        "competition_id": "jolpica:f1",
+        "platform_id": "fod",
+        "regions": ["JP"],
+        "valid_through": "2030-12-31",
+        "evidence": "https://corp.formula1.com/fuji-tv-to-exclusively-broadcast-formula-1-in-japan-in-new-long-term-deal/",
+    },
+    {
+        "competition_id": "jolpica:f1",
+        "platform_id": "sky-sports",
+        "regions": ["GB", "IE"],
+        "valid_through": None,
+        "evidence": "https://www.formula1.com/en/information/f1-broadcast-information.45y3LNsT1D6VoK0ZmX8ciJ",
+    },
+    {
+        "competition_id": "jolpica:f1",
+        "platform_id": "canal-plus",
+        "regions": ["FR"],
+        "valid_through": None,
+        "evidence": "https://www.formula1.com/en/information/f1-broadcast-information.45y3LNsT1D6VoK0ZmX8ciJ",
+    },
+    {
+        "competition_id": "jolpica:f1",
+        "platform_id": "sky-de",
+        "regions": ["DE"],
+        "valid_through": None,
+        "evidence": "https://www.formula1.com/en/information/f1-broadcast-information.45y3LNsT1D6VoK0ZmX8ciJ",
+    },
+    {
+        "competition_id": "jolpica:f1",
+        "platform_id": "sky-de",
+        "regions": ["AT", "CH"],
+        "valid_through": None,
+        "evidence": "https://www.formula1.com/en/information/f1-broadcast-information.45y3LNsT1D6VoK0ZmX8ciJ",
+    },
+    {
+        "competition_id": "jolpica:f1",
+        "platform_id": "sky-it",
+        "regions": ["IT"],
+        "valid_through": None,
+        "evidence": "https://www.formula1.com/en/information/f1-broadcast-information.45y3LNsT1D6VoK0ZmX8ciJ",
+    },
+    {
+        "competition_id": "jolpica:f1",
+        "platform_id": "sky-it",
+        "regions": ["CH"],
+        "valid_through": None,
+        "evidence": "https://www.formula1.com/en/information/f1-broadcast-information.45y3LNsT1D6VoK0ZmX8ciJ",
+    },
+    {
+        "competition_id": "jolpica:f1",
+        "platform_id": "canal-plus",
+        "regions": ["CH"],
+        "valid_through": None,
+        "evidence": "https://www.formula1.com/en/information/f1-broadcast-information.45y3LNsT1D6VoK0ZmX8ciJ",
+    },
+    {
+        "competition_id": "jolpica:f1",
+        "platform_id": "dazn",
+        "regions": ["ES", "PT"],
+        "valid_through": None,
+        "evidence": "https://www.formula1.com/en/information/f1-broadcast-information.45y3LNsT1D6VoK0ZmX8ciJ",
+    },
+    {
+        "competition_id": "jolpica:f1",
+        "platform_id": "viaplay",
+        "regions": ["NL", "DK", "FI", "NO", "SE"],
+        "valid_through": None,
+        "evidence": "https://www.formula1.com/en/information/f1-broadcast-information.45y3LNsT1D6VoK0ZmX8ciJ",
+    },
+    {
+        "competition_id": "jolpica:f1",
+        "platform_id": "rtbf",
+        "regions": ["BE"],
+        "valid_through": None,
+        "evidence": "https://www.formula1.com/en/information/f1-broadcast-information.45y3LNsT1D6VoK0ZmX8ciJ",
+    },
+    {
+        "competition_id": "jolpica:f1",
+        "platform_id": "play-sports",
+        "regions": ["BE"],
+        "valid_through": None,
+        "evidence": "https://www.formula1.com/en/information/f1-broadcast-information.45y3LNsT1D6VoK0ZmX8ciJ",
+    },
+    {
+        "competition_id": "jolpica:f1",
+        "platform_id": "eleven-sports-pl",
+        "regions": ["PL"],
+        "valid_through": None,
+        "evidence": "https://www.formula1.com/en/information/f1-broadcast-information.45y3LNsT1D6VoK0ZmX8ciJ",
+    },
+    {
+        "competition_id": "balldontlie:nba",
+        "platform_id": "nba",
+        "regions": [
+            "US",
+            "JP",
+            "GB",
+            "IE",
+            "FR",
+            "DE",
+            "AT",
+            "CH",
+            "IT",
+            "ES",
+            "PT",
+            "NL",
+            "BE",
+            "DK",
+            "FI",
+            "NO",
+            "SE",
+            "PL",
+        ],
+        "valid_through": None,
+        "evidence": "https://pr.nba.com/nba-tap-to-watch-initiative/",
+    },
+    {
+        "competition_id": "balldontlie:nba",
+        "platform_id": "espn",
+        "regions": ["US"],
+        "valid_through": "2036-06-30",
+        "evidence": "https://www.nba.com/news/nba-media-agreements-2024",
+    },
+    {
+        "competition_id": "balldontlie:nba",
+        "platform_id": "peacock",
+        "regions": ["US"],
+        "valid_through": "2036-06-30",
+        "evidence": "https://www.nba.com/news/nba-media-agreements-2024",
+    },
+    {
+        "competition_id": "balldontlie:nba",
+        "platform_id": "prime-video",
+        "regions": ["US"],
+        "valid_through": "2036-06-30",
+        "evidence": "https://www.nba.com/news/nba-media-agreements-2024",
+    },
+    {
+        "competition_id": "balldontlie:nba",
+        "platform_id": "tencent-sports",
+        "regions": ["CN"],
+        "valid_through": None,
+        "evidence": "https://support.watch.nba.com/hc/en-us/articles/115000586373-Accessing-NBA-League-Pass-in-China",
+    },
+    {
+        "competition_id": "balldontlie:nba",
+        "platform_id": "migu",
+        "regions": ["CN"],
+        "valid_through": None,
+        "evidence": "https://support.watch.nba.com/hc/en-us/articles/115000586373-Accessing-NBA-League-Pass-in-China",
+    },
+    {
+        "competition_id": "football-data:PL",
+        "platform_id": "nbc-sports",
+        "regions": ["US"],
+        "valid_through": "2028-06-30",
+        "evidence": "https://www.premierleague.com/en/media/broadcasters",
+    },
+    {
+        "competition_id": "football-data:PL",
+        "platform_id": "peacock",
+        "regions": ["US"],
+        "valid_through": "2028-06-30",
+        "evidence": "https://www.premierleague.com/en/media/broadcasters",
+    },
+    {
+        "competition_id": "football-data:PL",
+        "platform_id": "migu",
+        "regions": ["CN"],
+        "valid_through": "2028-06-30",
+        "evidence": "https://www.premierleague.com/en/media/broadcasters",
+    },
+    {
+        "competition_id": "football-data:PL",
+        "platform_id": "u-next",
+        "regions": ["JP"],
+        "valid_through": "2031-06-30",
+        "evidence": "https://www.premierleague.com/en/media/broadcasters",
+    },
+    {
+        "competition_id": "football-data:PL",
+        "platform_id": "sky-sports",
+        "regions": ["GB", "IE"],
+        "valid_through": "2029-06-30",
+        "evidence": "https://www.premierleague.com/en/media/broadcasters",
+    },
+    {
+        "competition_id": "football-data:PL",
+        "platform_id": "canal-plus",
+        "regions": ["FR", "PL"],
+        "valid_through": "2028-06-30",
+        "evidence": "https://www.premierleague.com/en/media/broadcasters",
+    },
+    {
+        "competition_id": "football-data:PL",
+        "platform_id": "canal-plus",
+        "regions": ["CH"],
+        "valid_through": "2028-06-30",
+        "evidence": "https://www.premierleague.com/en/media/broadcasters",
+    },
+    {
+        "competition_id": "football-data:PL",
+        "platform_id": "sky-de",
+        "regions": ["DE", "AT"],
+        "valid_through": "2028-06-30",
+        "evidence": "https://www.premierleague.com/en/media/broadcasters",
+    },
+    {
+        "competition_id": "football-data:PL",
+        "platform_id": "sky-de",
+        "regions": ["CH"],
+        "valid_through": "2028-06-30",
+        "evidence": "https://www.premierleague.com/en/media/broadcasters",
+    },
+    {
+        "competition_id": "football-data:PL",
+        "platform_id": "sky-it",
+        "regions": ["IT"],
+        "valid_through": "2028-06-30",
+        "evidence": "https://www.premierleague.com/en/media/broadcasters",
+    },
+    {
+        "competition_id": "football-data:PL",
+        "platform_id": "sky-it",
+        "regions": ["CH"],
+        "valid_through": "2028-06-30",
+        "evidence": "https://www.premierleague.com/en/media/broadcasters",
+    },
+    {
+        "competition_id": "football-data:PL",
+        "platform_id": "dazn",
+        "regions": ["ES", "PT"],
+        "valid_through": "2028-06-30",
+        "evidence": "https://www.premierleague.com/en/media/broadcasters",
+    },
+    {
+        "competition_id": "football-data:PL",
+        "platform_id": "viaplay",
+        "regions": ["NL", "DK", "FI", "NO", "SE"],
+        "valid_through": "2028-06-30",
+        "evidence": "https://www.premierleague.com/en/media/broadcasters",
+    },
+    {
+        "competition_id": "football-data:PL",
+        "platform_id": "telenet",
+        "regions": ["BE"],
+        "valid_through": "2028-06-30",
+        "evidence": "https://www.premierleague.com/en/media/broadcasters",
+    },
+]
+
 
 def registry():
-    return [{**rule, "verification": "candidate_only", "device_support": "not_verified"} for rule in RULES]
+    return [
+        {
+            **rule,
+            "verification": "candidate_only",
+            "mobile_opening": "verified_https_app_link" if rule.get("app_paths") else "web_handoff",
+            "rights": [right for right in RIGHTS if right["platform_id"] == rule["id"]],
+        }
+        for rule in RULES
+    ]
+
+
+def platform_rule(value: str):
+    parsed = urlsplit(value)
+    return next((rule for rule in RULES if parsed.hostname in rule["hosts"]), None)
+
+
+def mobile_opening(value: str):
+    rule = platform_rule(value)
+    if not rule:
+        return {
+            "platform_id": "unknown",
+            "platform_name": "官方平台",
+            "mobile_opening": "web_handoff",
+        }
+    supported = any(re.search(pattern, urlsplit(value).path) for pattern in rule.get("app_paths", []))
+    return {
+        "platform_id": rule["id"],
+        "platform_name": rule["name"],
+        "mobile_opening": "verified_https_app_link" if supported else "web_handoff",
+    }
+
+
+def rights_cover(value: str, competition_id: str, regions: list[str]) -> bool:
+    rule = platform_rule(value)
+    if not rule:
+        return False
+    claimed = set(regions)
+    covered = {
+        region
+        for right in RIGHTS
+        if right["competition_id"] == competition_id and right["platform_id"] == rule["id"]
+        for region in right["regions"]
+    }
+    return bool(claimed) and claimed <= covered
 
 
 def candidate_url(value: str):

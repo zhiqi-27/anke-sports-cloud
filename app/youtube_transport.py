@@ -45,6 +45,8 @@ def request(endpoint, params, *, key, budget):
                 for x in (errors if isinstance(errors, list) else [])
                 if isinstance(x, dict) and isinstance(x.get("reason"), str)
             }
+            if endpoint == "commentThreads" and response.status_code == 403 and "commentsDisabled" in reasons:
+                return {"items": [], "comments_disabled": True}
             if response.status_code == 403 and reasons.intersection({"quotaExceeded", "dailyLimitExceeded"}):
                 raise budget.upstream_wait(ticket, "YOUTUBE_QUOTA_EXHAUSTED")
             if response.status_code == 429 or reasons.intersection(

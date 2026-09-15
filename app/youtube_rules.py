@@ -8,7 +8,7 @@ from fastapi import HTTPException
 
 WAIT_CODES = {"YOUTUBE_BUDGET_EXHAUSTED", "YOUTUBE_QUOTA_EXHAUSTED", "YOUTUBE_RATE_LIMITED"}
 NETWORK_JOBS = {"youtube_poll", "youtube_videos", "youtube_channel_metadata"}
-COSTS = {"channels": 1, "playlistItems": 1, "videos": 1}
+COSTS = {"channels": 1, "playlistItems": 1, "videos": 1, "commentThreads": 1}
 
 
 @dataclass(frozen=True)

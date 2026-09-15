@@ -15,6 +15,7 @@ class Preferences(StrictModel):
     watch_region: str | None = None
     spoiler_free: bool = True
     transparent: bool = True
+    broadcast_platforms: dict[str, str] = Field(default_factory=dict, max_length=20)
 
     @field_validator("timezone")
     @classmethod
@@ -112,7 +113,7 @@ class SavePreferences(StrictModel):
 class AddLink(StrictModel):
     url: str = Field(min_length=8, max_length=2000)
     title: str = Field(default="", max_length=300)
-    kind: Literal["live", "preview", "recap", "watch_along"]
+    kind: Literal["live", "video", "preview", "recap", "watch_along"]
 
 
 class AddCreator(StrictModel):
@@ -177,6 +178,7 @@ class LinkView(BaseModel):
     url: str
     title: str
     kind: str
+    content_labels: list[str] = Field(default_factory=list, max_length=3)
     platform: str
     creator: str
     origin: str
@@ -265,6 +267,7 @@ class ReviewView(BaseModel):
     event_title: str
     starts_at: str | None
     kind: str
+    content_labels: list[str] = Field(default_factory=list, max_length=3)
     reason_codes: list[str]
     rule_version: str
     updated_at: str
@@ -276,7 +279,7 @@ class ReviewList(BaseModel):
 
 class ReviewDecision(StrictModel):
     decision: Literal["confirm", "ignore"]
-    kind: Literal["preview", "recap"]
+    kind: Literal["preview", "recap"] | None = None
     expected_updated_at: str
 
 

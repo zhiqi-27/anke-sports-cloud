@@ -90,6 +90,9 @@ class DeviceEvidence(BaseModel):
 
 
 class BroadcastPublicView(BaseModel):
+    platform_id: str
+    platform_name: str
+    mobile_opening: Literal["verified_https_app_link", "web_handoff"]
     content_type: ContentType
     content_label: str
     access_label: str

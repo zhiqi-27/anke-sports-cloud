@@ -2,6 +2,7 @@
 
 from datetime import datetime, timedelta, timezone
 
+from fastapi import HTTPException
 from sqlalchemy import and_, or_, select, update
 
 from app.calendar import chosen_links, event_keys, inclusion_filter
@@ -20,10 +21,12 @@ from app.db import (
     VideoMatch,
     now,
 )
-from app.matching import evaluate, parse_time
+from app.ai_matching import evaluate_with_ai
+from app.config import settings
+from app.matching import parse_time
 from app.providers import youtube_request
 from app.schemas import CreatorFollow
-from app.youtube_content_rules import uploads_page, video_batch
+from app.youtube_content_rules import comment_sample, uploads_page, video_batch
 from app.security import digest, problem
 from app.service import enqueue, lock_user, save_config
 
@@ -185,7 +188,11 @@ def match_video(db, video, only_user=None):
             if (accepts(e) or e.id in retained)
             and (not follow["scope_keys"] or event_keys(e).intersection(follow["scope_keys"]))
         ]
-        outputs = evaluate(video, candidates) if video.available else []
+        outputs = (
+            evaluate_with_ai(video, candidates, settings(), creator_name=creator.name)
+            if video.available
+            else []
+        )
         existing = {
             m.event_id: m
             for m in db.scalars(
@@ -219,7 +226,7 @@ def match_video(db, video, only_user=None):
                     setattr(match, k, v)
             if state == "block":
                 match.decision = "ignored"
-            if output["kind"] != "unknown" and not follow.get(output["kind"], False):
+            if output["kind"] in {"preview", "recap"} and not follow.get(output["kind"], False):
                 match.decision = "reject"
             match.updated_at = now()
             link = links.get(eid)
@@ -232,6 +239,7 @@ def match_video(db, video, only_user=None):
                         url_hash=digest(url),
                         title=video.title,
                         kind=output["kind"],
+                        content_labels=output.get("content_labels", []),
                         platform="YouTube",
                         channel_id=video.channel_id,
                         creator=creator.name,
@@ -239,7 +247,11 @@ def match_video(db, video, only_user=None):
                     )
                     db.add(link)
                 elif link.origin == "automatic" and state != "pin":
-                    link.kind, link.available = output["kind"], True
+                    link.kind, link.content_labels, link.available = (
+                        output["kind"],
+                        output.get("content_labels", []),
+                        True,
+                    )
             elif link and link.origin == "automatic" and state != "pin":
                 link.available = False
         for eid, match in existing.items():
@@ -266,12 +278,46 @@ def refresh_videos(db, channel_id, video_ids):
         return
     payload = youtube_request("videos", {"id": ",".join(ids), "part": "snippet,status"})
     existing = {ident: db.get(Video, ident) for ident in ids}
-    previous = {ident: {name: getattr(video, name) for name in (
-        "id", "channel_id", "title", "description", "published_at", "available", "updated_at"
-    )} if video else None for ident, video in existing.items()}
+    previous = {
+        ident: {
+            name: getattr(video, name)
+            for name in (
+                "id",
+                "channel_id",
+                "title",
+                "description",
+                "comments",
+                "published_at",
+                "available",
+                "updated_at",
+            )
+        }
+        if video
+        else None
+        for ident, video in existing.items()
+    }
     normalized = video_batch(channel_id, ids, payload, previous, now())
     for values in normalized:
         ident, public = values["id"], values["available"]
+        old_comments = (previous.get(ident) or {}).get("comments", [])
+        if public:
+            try:
+                values["comments"] = comment_sample(
+                    youtube_request(
+                        "commentThreads",
+                        {
+                            "videoId": ident,
+                            "part": "snippet",
+                            "maxResults": 12,
+                            "order": "relevance",
+                            "textFormat": "plainText",
+                        },
+                    )
+                )
+            except (HTTPException, ValueError):
+                values["comments"] = list(old_comments)
+        else:
+            values["comments"] = []
         video = existing.get(ident)
         if video is None:
             video = Video(**values)
@@ -388,6 +434,7 @@ def review_list(db, user):
                 "event_title": event.title,
                 "starts_at": event.starts_at,
                 "kind": row.kind,
+                "content_labels": row.content_labels,
                 "reason_codes": row.reason_codes,
                 "rule_version": row.rule_version,
                 "updated_at": row.updated_at,
@@ -436,12 +483,14 @@ def decide_review(db, user, match_id, decision, kind, version):
                 url_hash=digest(url),
                 title=video.title,
                 platform="YouTube",
-                kind=kind,
+                kind="video",
+                content_labels=row.content_labels,
             )
             db.add(link)
-        link.origin, link.kind, link.available, link.channel_id, link.creator = (
+        link.origin, link.kind, link.content_labels, link.available, link.channel_id, link.creator = (
             "confirmed",
-            kind,
+            "video",
+            row.content_labels,
             True,
             video.channel_id,
             creator.name,
@@ -493,7 +542,7 @@ def expire_metadata(db):
         changed = db.execute(
             update(Video)
             .where(Video.id == video.id, Video.updated_at == video.updated_at, Video.available.is_(True))
-            .values(title="元数据已过期", description="", available=False)
+            .values(title="元数据已过期", description="", comments=[], available=False)
             .execution_options(synchronize_session=False)
         )
         if not changed.rowcount:

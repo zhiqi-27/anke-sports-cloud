@@ -4,7 +4,7 @@ import pytest
 from fastapi import HTTPException
 from sqlalchemy import select
 
-from app import broadcasts, platforms
+from app import broadcast_rules, broadcasts, platforms
 from app.config import settings
 from app.db import BroadcastAudit, BroadcastRecord, User
 from app.security import canonical_url, digest
@@ -318,6 +318,25 @@ def test_probe_pins_public_address_preserves_tls_host_and_never_follows_redirect
     )
     with pytest.raises(ValueError):
         resolve_addresses("www.nba.com")
+
+
+def test_rights_matrix_blocks_wrong_region_and_labels_mobile_handoff():
+    apple = "https://tv.apple.com/us/info/watch-f1"
+    assert platforms.rights_cover(apple, "jolpica:f1", ["US"])
+    assert not platforms.rights_cover(apple, "jolpica:f1", ["CN"])
+    assert platforms.mobile_opening(apple)["mobile_opening"] == "verified_https_app_link"
+    assert platforms.mobile_opening("https://fod.fujitv.co.jp/title/91di/")["mobile_opening"] == "web_handoff"
+    with pytest.raises(HTTPException) as error:
+        broadcast_rules.validate_rights(
+            {
+                "content_type": "official_match",
+                "region_mode": "include",
+                "regions": ["JP"],
+                "url": apple,
+            },
+            "jolpica:f1",
+        )
+    assert error.value.detail["code"] == "RIGHTS_SCOPE_MISMATCH"
 
 
 def test_atomic_publication_and_stale_probe_cannot_change_new_url(stack, monkeypatch):

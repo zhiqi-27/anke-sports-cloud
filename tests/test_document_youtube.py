@@ -17,6 +17,7 @@ from app.document_api import create_app
 from app.document_runtime import Runtime
 from app.document_store import LocalDocumentStore, StoreError, Write, clean
 from app import document_youtube_budget as budgets
+from app.youtube_content_rules import comment_sample
 
 HTTP_CLIENT = httpx.Client
 CHANNEL = "UC" + "a" * 22
@@ -229,6 +230,43 @@ def test_missing_config_bad_endpoint_and_corrupt_budget_fail_closed(youtube, mon
     rt.store.batch("indexes", old["pk"], [Write("replace", "daily", bad, old["_etag"])])
     with pytest.raises(StoreError, match="YOUTUBE_BUDGET_INVALID"):
         rt.youtube_request("channels", {})
+
+
+def test_public_comments_are_bounded_and_comments_disabled_is_not_a_video_failure(youtube):
+    rt, stub = youtube
+    payload = {
+        "items": [
+            {
+                "snippet": {
+                    "topLevelComment": {
+                        "snippet": {"textDisplay": "  Thunder\nbeat   the Spurs  "}
+                    }
+                }
+            },
+            {
+                "snippet": {
+                    "topLevelComment": {"snippet": {"textDisplay": "thunder beat the spurs"}}
+                }
+            },
+        ]
+    }
+    assert comment_sample(payload) == ["Thunder beat the Spurs"]
+
+    def disabled(request):
+        assert request.url.path.endswith("/commentThreads")
+        assert request.url.params["videoId"] == VIDEO
+        return httpx.Response(
+            403,
+            json={"error": {"errors": [{"reason": "commentsDisabled"}]}},
+        )
+
+    stub(disabled)
+    result = rt.youtube_request(
+        "commentThreads",
+        {"videoId": VIDEO, "part": "snippet", "maxResults": 12, "order": "relevance"},
+    )
+    assert result == {"items": [], "comments_disabled": True}
+    assert rt.youtube_budget.status()["reserved_units"] == 1
 
 
 def test_channel_resolve_forms_and_public_video_identity(youtube):

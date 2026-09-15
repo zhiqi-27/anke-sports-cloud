@@ -1,7 +1,7 @@
 """Storage-independent broadcast validation and public evidence labels."""
 
 from app.broadcast_schemas import BroadcastDraft
-from app.platforms import candidate_url
+from app.platforms import RIGHTS, candidate_url, mobile_opening, rights_cover
 from app.security import digest, problem
 
 CONTENT_LABELS = {
@@ -34,6 +34,7 @@ def normalized(data):
 
 def public_metadata(record):
     value = record.published
+    opening = mobile_opening(value["url"])
     mode, regions = value["region_mode"], value["regions"]
     region_label = (
         "地区限制未验证"
@@ -43,6 +44,7 @@ def public_metadata(record):
         else ("仅限 " if mode == "include" else "不含 ") + "、".join(regions)
     )
     return {
+        **opening,
         "content_type": value["content_type"],
         "content_label": CONTENT_LABELS[value["content_type"]],
         "access_label": ACCESS_LABELS[value["access"]],
@@ -58,3 +60,15 @@ def public_metadata(record):
             if row["url_hash"] == digest(value["url"])
         ],
     }
+
+
+def validate_rights(value, competition_id):
+    if value["content_type"] != "official_match":
+        return
+    if not any(right["competition_id"] == competition_id for right in RIGHTS):
+        return
+    if value["region_mode"] != "include" or not rights_cover(value["url"], competition_id, value["regions"]):
+        problem(
+            "RIGHTS_SCOPE_MISMATCH",
+            "比赛直播必须使用已核验覆盖该赛事和地区的版权平台；播出信息请改用“官方播出信息”",
+        )

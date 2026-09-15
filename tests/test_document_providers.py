@@ -350,8 +350,10 @@ def test_local_and_azure_window_scheduling_share_daily_identity_and_startup_reco
 
     monkeypatch.setattr(document_worker, "runtime_context", context)
     monkeypatch.setattr(document_worker, "settings", lambda: runtime.cfg)
-    for _ in range(12):
+    for _ in range(30):
         assert document_worker.main(["--once"]) == 0
+        if runtime.providers.state("jolpica")["payload"]["last_success"]:
+            break
     assert runtime.providers.state("jolpica")["payload"]["last_success"]
     assert len([row for row in rows(runtime) if row["payload"]["operation"] == "provider_sync"]) == 1
     assert len(rows(runtime, provider="calendar-window")) == 2

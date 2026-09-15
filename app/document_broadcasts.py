@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 from uuid import uuid4
 
-from app.broadcast_rules import normalized, public_metadata
+from app.broadcast_rules import normalized, public_metadata, validate_rights
 from app.document_accounts import Outbox, document, now, projection_job
 from app.document_store import Write, clean, partition_items
 from app.link_rules import selected_links
@@ -103,6 +103,10 @@ class Broadcasts:
                 problem("EVIDENCE_REQUIRED", "必须核对官方来源与具体场次")
             if not instant < data.valid_until <= instant + timedelta(days=7):
                 problem("INVALID_VALIDITY", "请设置未来7天内的复查期限")
+            event = self.rt.catalog.capture().event(v["draft"]["event_id"])
+            if not event:
+                problem("EVENT_NOT_FOUND", "请选择已存在的比赛", 404)
+            validate_rights(v["draft"], event.competition_id)
             if (
                 not v["published"]
                 or v["published"]["url"] != v["draft"]["url"]

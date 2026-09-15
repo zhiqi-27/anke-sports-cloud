@@ -9,7 +9,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix="ANKE_SPORTS_", env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_prefix="ANKE_SPORTS_", env_file=".env", extra="ignore", populate_by_name=True
+    )
     env: Literal["local", "staging", "production"] = "local"
     storage_backend: Literal["sql", "cosmos", "documents-local"] = "sql"
     database_url: str = "sqlite:///./data/anke-sports.db"
@@ -44,6 +46,18 @@ class Settings(BaseSettings):
         default=SecretStr(""), validation_alias="FOOTBALL_DATA_API_KEY", repr=False
     )
     youtube_api_key: SecretStr = Field(default=SecretStr(""), validation_alias="YOUTUBE_API_KEY", repr=False)
+    matching_ai_enabled: bool = False
+    matching_ai_api_key: SecretStr = Field(default=SecretStr(""), validation_alias="GEMINI_API_KEY", repr=False)
+    matching_ai_model: str = Field(
+        default="gemini-3.1-flash-lite",
+        min_length=1,
+        max_length=120,
+        pattern=r"^gemini-[a-z0-9][a-z0-9.-]*$",
+    )
+    matching_ai_base_url: str = "https://generativelanguage.googleapis.com/v1beta"
+    matching_ai_auto_threshold: float = Field(default=0.90, ge=0.5, le=1)
+    matching_ai_review_threshold: float = Field(default=0.55, ge=0, le=0.95)
+    matching_ai_timeout_seconds: float = Field(default=8, ge=1, le=30)
 
     def cipher(self) -> Fernet:
         key = self.encryption_key
@@ -62,6 +76,16 @@ class Settings(BaseSettings):
 @lru_cache
 def settings() -> Settings:
     result = Settings()
+    if result.matching_ai_review_threshold >= result.matching_ai_auto_threshold:
+        raise RuntimeError("AI review threshold must be lower than the automatic threshold")
+    if result.matching_ai_enabled and not result.matching_ai_api_key.get_secret_value():
+        raise RuntimeError("GEMINI_API_KEY is required when AI matching is enabled")
+    if (
+        result.matching_ai_enabled
+        and result.env != "local"
+        and result.matching_ai_base_url != "https://generativelanguage.googleapis.com/v1beta"
+    ):
+        raise RuntimeError("Deployed AI matching requires the official Gemini API endpoint")
     if result.env != "local" and (result.local_preview or result.storage_backend == "documents-local"):
         raise RuntimeError("Deployed mode forbids local authentication and document adapters")
     if result.env != "local" and result.storage_backend == "sql" and result.database_url.startswith("sqlite"):

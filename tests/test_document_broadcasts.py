@@ -82,6 +82,61 @@ def test_personal_block_of_public_link_survives_republication(document_stack):
     assert len(rt.broadcasts.selected(rt.catalog.capture().event(events[0]["id"]), None)) == 1
 
 
+def test_region_and_league_preference_keeps_one_broadcast_in_personal_calendar(document_stack):
+    client, rt, events, _ = document_stack
+    client.post("/api/v1/auth/local").raise_for_status()
+    follow(client)
+    event = rt.catalog.capture().event(events[0]["id"])
+    records = []
+    for url, title in [
+        ("https://tv.apple.com/us/sporting-event/fixture", "Apple fixture"),
+        ("https://www.peacocktv.com/watch/fixture", "Peacock fixture"),
+    ]:
+        record = rt.broadcasts.create(
+            "test",
+            BroadcastDraft(
+                event_id=event.id,
+                url=url,
+                title=title,
+                content_type="programme",
+                region_mode="include",
+                regions=["US"],
+                evidence_url=url,
+                evidence_note="Synthetic preference regression only",
+            ),
+        )
+        rt.broadcasts.change(
+            "test",
+            record["id"],
+            "publish",
+            BroadcastDecision(
+                expected_revision=0,
+                source_and_event_confirmed=True,
+                valid_until=datetime.now(timezone.utc) + timedelta(days=1),
+            ),
+        )
+        records.append(record)
+    account = client.get("/api/v1/me/calendar").json()
+    preferences = {
+        **account["config"]["preferences"],
+        "watch_region": "US",
+        "broadcast_platforms": {f"US:{event.competition_id}": "peacock"},
+    }
+    response = client.patch(
+        "/api/v1/me/preferences",
+        json={"preferences": preferences, "expected_revision": account["revision"]},
+    )
+    assert response.status_code == 200, response.text
+    drain(rt)
+    detail = client.get(f"/api/v1/events/{event.id}").json()
+    assert len([link for link in detail["links"] if link["broadcast"]]) == 2
+    assert detail["links"][0]["broadcast"]["platform_id"] == "peacock"
+    address = client.get("/api/v1/me/feed/address").json()["url"]
+    calendar = client.get(address).text
+    assert "Peacock fixture" in calendar
+    assert "Apple fixture" not in calendar
+
+
 def test_expiry_is_withdrawn_even_when_network_checks_disabled(document_stack):
     from app.document_store import Write, clean
 

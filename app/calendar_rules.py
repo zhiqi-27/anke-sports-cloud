@@ -35,7 +35,7 @@ def included(event: Event, config: dict) -> bool:
 
 def delivery_links(links: list[dict]) -> list[dict]:
     output = []
-    for kinds, limit in [({"live", "watch_along"}, 2), ({"preview"}, 3), ({"recap"}, 3)]:
+    for kinds, limit in [({"live", "watch_along"}, 1), ({"video", "preview", "recap"}, None)]:
         group = [x for x in links if x["kind"] in kinds]
         selected, seen = [], set()
         for link in group:
@@ -44,7 +44,7 @@ def delivery_links(links: list[dict]) -> list[dict]:
                 selected.append(link)
                 seen.add(creator)
         selected.extend(x for x in group if x not in selected)
-        output.extend(selected[:limit])
+        output.extend(selected if limit is None else selected[:limit])
     return output
 
 
@@ -55,8 +55,7 @@ def describe(event: Event, links: list[dict], config: dict) -> str:
     labels = {
         "live": "观看直播",
         "watch_along": "同步解说（无比赛画面）",
-        "preview": "赛前前瞻",
-        "recap": "赛后复盘",
+        "video": "相关视频",
     }
     access = {
         "unknown": "观看条件未验证",
@@ -65,18 +64,28 @@ def describe(event: Event, links: list[dict], config: dict) -> str:
         "login": "需要登录",
         "pay_per_view": "单次付费",
     }
+    delivered = delivery_links(links)
     for kind, label in labels.items():
-        group = [x for x in delivery_links(links) if x["kind"] == kind]
+        group = [
+            x
+            for x in delivered
+            if x["kind"] == kind or (kind == "video" and x["kind"] in {"preview", "recap"})
+        ]
         if not group:
             continue
         lines.append(label)
         for link in group:
-            title = (
-                "赛后复盘"
-                if kind == "recap" and config["preferences"].get("spoiler_free", True)
-                else link["title"]
-            )
-            lines += [f"{link['creator'] or link['platform']} · {title}"]
+            if kind == "video":
+                content_labels = link.get("content_labels") or (
+                    ["🔎赛前内容"]
+                    if link["kind"] == "preview"
+                    else ["🎬赛后内容"]
+                    if link["kind"] == "recap"
+                    else ["🔗相关视频"]
+                )
+                lines.append(" · ".join(content_labels[:3]))
+            else:
+                lines.append(f"{link['creator'] or link['platform']} · {link['title']}")
             if kind in {"live", "watch_along"}:
                 if link.get("broadcast"):
                     info = link["broadcast"]

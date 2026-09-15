@@ -11,7 +11,7 @@ from app.platforms import candidate_url, head_probe
 from app.security import digest, problem
 from app.service import enqueue
 
-from app.broadcast_rules import normalized, public_metadata as public_metadata
+from app.broadcast_rules import normalized, public_metadata as public_metadata, validate_rights
 
 BROADCAST_BATCH = 100
 
@@ -64,7 +64,6 @@ def inspection_deadline(db, record, instant, hours):
         if start > instant:
             deadline = min(deadline, max(start - timedelta(hours=24), instant + timedelta(hours=1)))
     return deadline.isoformat()
-
 
 
 def audit(db, record, actor_id, action, detail):
@@ -164,6 +163,8 @@ def approve_record(db, actor_id, ident, data):
         problem("INVALID_VALIDITY", "请设置未来7天内的复查期限")
     value = normalized(record.draft)
     link = db.get(Link, ident)
+    event = db.get(Event, link.event_id)
+    validate_rights(value, event.competition_id)
     duplicate = db.scalar(
         select(Link.id).where(
             Link.owner_id == "public",

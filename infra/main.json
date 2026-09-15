@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.46.1.21595",
-      "templateHash": "7567021681994773901"
+      "templateHash": "12570929437161106079"
     }
   },
   "parameters": {
@@ -34,6 +34,13 @@
       "defaultValue": [],
       "metadata": {
         "description": "Optional explicit developer public IPv4 rules; empty by default. Runtime uses its own VNet service endpoint."
+      }
+    },
+    "matchingAiEnabled": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "Enable low-cost AI video matching only after the dedicated Key Vault secret exists."
       }
     }
   },
@@ -74,6 +81,9 @@
           },
           "developerIpRules": {
             "value": "[parameters('developerIpRules')]"
+          },
+          "matchingAiEnabled": {
+            "value": "[parameters('matchingAiEnabled')]"
           }
         },
         "template": {
@@ -83,7 +93,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.46.1.21595",
-              "templateHash": "14883146107376347407"
+              "templateHash": "7825076552068169682"
             }
           },
           "parameters": {
@@ -98,6 +108,9 @@
             },
             "developerIpRules": {
               "type": "array"
+            },
+            "matchingAiEnabled": {
+              "type": "bool"
             }
           },
           "variables": {
@@ -557,38 +570,7 @@
               "type": "Microsoft.Web/sites/config",
               "apiVersion": "2024-11-01",
               "name": "[format('{0}/{1}', variables('appName'), 'appsettings')]",
-              "properties": {
-                "AzureWebJobsStorage__blobServiceUri": "[reference(resourceId('Microsoft.Storage/storageAccounts', variables('storageName')), '2024-01-01').primaryEndpoints.blob]",
-                "AzureWebJobsStorage__queueServiceUri": "[reference(resourceId('Microsoft.Storage/storageAccounts', variables('storageName')), '2024-01-01').primaryEndpoints.queue]",
-                "AzureWebJobsStorage__tableServiceUri": "[reference(resourceId('Microsoft.Storage/storageAccounts', variables('storageName')), '2024-01-01').primaryEndpoints.table]",
-                "AzureWebJobsStorage__credential": "managedidentity",
-                "AzureWebJobsStorage__clientId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'anke-sports-dev-runtime'), '2023-01-31').clientId]",
-                "AzureQueueConnection__queueServiceUri": "[reference(resourceId('Microsoft.Storage/storageAccounts', variables('storageName')), '2024-01-01').primaryEndpoints.queue]",
-                "AzureQueueConnection__credential": "managedidentity",
-                "AzureQueueConnection__clientId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'anke-sports-dev-runtime'), '2023-01-31').clientId]",
-                "ANKE_SPORTS_ENV": "staging",
-                "ANKE_SPORTS_LOCAL_PREVIEW": "false",
-                "ANKE_SPORTS_FIREBASE_PROJECT_ID": "anke-sports-dev",
-                "ANKE_SPORTS_WEB_URL": "[parameters('webUrl')]",
-                "ANKE_SPORTS_PUBLIC_URL": "[format('https://{0}', reference(resourceId('Microsoft.Web/sites', variables('appName')), '2024-11-01').defaultHostName)]",
-                "ANKE_SPORTS_STORAGE_BACKEND": "cosmos",
-                "ANKE_SPORTS_COSMOS_ENDPOINT": "[reference(resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosName')), '2025-04-15').documentEndpoint]",
-                "ANKE_SPORTS_COSMOS_DATABASE": "anke-sports",
-                "ANKE_SPORTS_COSMOS_STATE_CONTAINER": "state",
-                "ANKE_SPORTS_COSMOS_INDEX_CONTAINER": "indexes",
-                "ANKE_SPORTS_COSMOS_CLIENT_ID": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'anke-sports-dev-runtime'), '2023-01-31').clientId]",
-                "ANKE_SPORTS_ENCRYPTION_KEY": "[format('@Microsoft.KeyVault(SecretUri={0}secrets/feed-encryption-key)', reference(resourceId('Microsoft.KeyVault/vaults', variables('vaultName')), '2024-11-01').vaultUri)]",
-                "ANKE_SPORTS_FIREBASE_CREDENTIALS_JSON": "[format('@Microsoft.KeyVault(SecretUri={0}secrets/firebase-credentials)', reference(resourceId('Microsoft.KeyVault/vaults', variables('vaultName')), '2024-11-01').vaultUri)]",
-                "ANKE_SPORTS_YOUTUBE_PROJECT_ID": "anke-sports-dev",
-                "ANKE_SPORTS_ENABLED_SPORTS_PROVIDERS": "[[\"jolpica\",\"balldontlie\",\"football-data\"]",
-                "ANKE_SPORTS_YOUTUBE_DAILY_BUDGET": "20",
-                "YOUTUBE_API_KEY": "[format('@Microsoft.KeyVault(SecretUri={0}secrets/youtube-api-key)', reference(resourceId('Microsoft.KeyVault/vaults', variables('vaultName')), '2024-11-01').vaultUri)]",
-                "BALLDONTLIE_API_KEY": "[format('@Microsoft.KeyVault(SecretUri={0}secrets/balldontlie-api-key)', reference(resourceId('Microsoft.KeyVault/vaults', variables('vaultName')), '2024-11-01').vaultUri)]",
-                "FOOTBALL_DATA_API_KEY": "[format('@Microsoft.KeyVault(SecretUri={0}secrets/football-data-api-key)', reference(resourceId('Microsoft.KeyVault/vaults', variables('vaultName')), '2024-11-01').vaultUri)]",
-                "ANKE_SPORTS_YOUTUBE_WEBSUB_ENABLED": "false",
-                "ANKE_SPORTS_BROADCAST_CHECKS_ENABLED": "false",
-                "ANKE_SPORTS_PUBLIC_FEED_SOURCE_KEYS": "[[]"
-              },
+              "properties": "[union(createObject('AzureWebJobsStorage__blobServiceUri', reference(resourceId('Microsoft.Storage/storageAccounts', variables('storageName')), '2024-01-01').primaryEndpoints.blob, 'AzureWebJobsStorage__queueServiceUri', reference(resourceId('Microsoft.Storage/storageAccounts', variables('storageName')), '2024-01-01').primaryEndpoints.queue, 'AzureWebJobsStorage__tableServiceUri', reference(resourceId('Microsoft.Storage/storageAccounts', variables('storageName')), '2024-01-01').primaryEndpoints.table, 'AzureWebJobsStorage__credential', 'managedidentity', 'AzureWebJobsStorage__clientId', reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'anke-sports-dev-runtime'), '2023-01-31').clientId, 'AzureQueueConnection__queueServiceUri', reference(resourceId('Microsoft.Storage/storageAccounts', variables('storageName')), '2024-01-01').primaryEndpoints.queue, 'AzureQueueConnection__credential', 'managedidentity', 'AzureQueueConnection__clientId', reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'anke-sports-dev-runtime'), '2023-01-31').clientId, 'ANKE_SPORTS_ENV', 'staging', 'ANKE_SPORTS_LOCAL_PREVIEW', 'false', 'ANKE_SPORTS_FIREBASE_PROJECT_ID', 'anke-sports-dev', 'ANKE_SPORTS_WEB_URL', parameters('webUrl'), 'ANKE_SPORTS_PUBLIC_URL', format('https://{0}', reference(resourceId('Microsoft.Web/sites', variables('appName')), '2024-11-01').defaultHostName), 'ANKE_SPORTS_STORAGE_BACKEND', 'cosmos', 'ANKE_SPORTS_COSMOS_ENDPOINT', reference(resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosName')), '2025-04-15').documentEndpoint, 'ANKE_SPORTS_COSMOS_DATABASE', 'anke-sports', 'ANKE_SPORTS_COSMOS_STATE_CONTAINER', 'state', 'ANKE_SPORTS_COSMOS_INDEX_CONTAINER', 'indexes', 'ANKE_SPORTS_COSMOS_CLIENT_ID', reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'anke-sports-dev-runtime'), '2023-01-31').clientId, 'ANKE_SPORTS_ENCRYPTION_KEY', format('@Microsoft.KeyVault(SecretUri={0}secrets/feed-encryption-key)', reference(resourceId('Microsoft.KeyVault/vaults', variables('vaultName')), '2024-11-01').vaultUri), 'ANKE_SPORTS_FIREBASE_CREDENTIALS_JSON', format('@Microsoft.KeyVault(SecretUri={0}secrets/firebase-credentials)', reference(resourceId('Microsoft.KeyVault/vaults', variables('vaultName')), '2024-11-01').vaultUri), 'ANKE_SPORTS_YOUTUBE_PROJECT_ID', 'anke-sports-dev', 'ANKE_SPORTS_ENABLED_SPORTS_PROVIDERS', string(createArray('jolpica', 'balldontlie', 'football-data')), 'ANKE_SPORTS_YOUTUBE_DAILY_BUDGET', '20', 'YOUTUBE_API_KEY', format('@Microsoft.KeyVault(SecretUri={0}secrets/youtube-api-key)', reference(resourceId('Microsoft.KeyVault/vaults', variables('vaultName')), '2024-11-01').vaultUri), 'BALLDONTLIE_API_KEY', format('@Microsoft.KeyVault(SecretUri={0}secrets/balldontlie-api-key)', reference(resourceId('Microsoft.KeyVault/vaults', variables('vaultName')), '2024-11-01').vaultUri), 'FOOTBALL_DATA_API_KEY', format('@Microsoft.KeyVault(SecretUri={0}secrets/football-data-api-key)', reference(resourceId('Microsoft.KeyVault/vaults', variables('vaultName')), '2024-11-01').vaultUri), 'ANKE_SPORTS_YOUTUBE_WEBSUB_ENABLED', 'false', 'ANKE_SPORTS_BROADCAST_CHECKS_ENABLED', 'false', 'ANKE_SPORTS_PUBLIC_FEED_SOURCE_KEYS', string(createArray()), 'ANKE_SPORTS_MATCHING_AI_MODEL', 'gemini-3.1-flash-lite', 'ANKE_SPORTS_MATCHING_AI_AUTO_THRESHOLD', '0.90', 'ANKE_SPORTS_MATCHING_AI_REVIEW_THRESHOLD', '0.55'), if(parameters('matchingAiEnabled'), createObject('ANKE_SPORTS_MATCHING_AI_ENABLED', 'true', 'GEMINI_API_KEY', format('@Microsoft.KeyVault(SecretUri={0}secrets/gemini-api-key)', reference(resourceId('Microsoft.KeyVault/vaults', variables('vaultName')), '2024-11-01').vaultUri)), createObject('ANKE_SPORTS_MATCHING_AI_ENABLED', 'false')))]",
               "dependsOn": [
                 "[resourceId('Microsoft.Web/sites', variables('appName'))]",
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosName'))]",

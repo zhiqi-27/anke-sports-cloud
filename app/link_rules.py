@@ -22,7 +22,7 @@ def selected_links(event, config, links, published_info, owner_id=None):
             continue
         if link.origin == "automatic" and state != "pin":
             creator = creators.get(link.channel_id)
-            if not creator or not creator.get(link.kind, False):
+            if not creator or (link.kind in {"preview", "recap"} and not creator.get(link.kind, False)):
                 continue
             if creator["scope_keys"] and not event_keys(event).intersection(creator["scope_keys"]):
                 continue
@@ -36,6 +36,7 @@ def selected_links(event, config, links, published_info, owner_id=None):
                 "url": link.url,
                 "title": link.title,
                 "kind": link.kind,
+                "content_labels": getattr(link, "content_labels", []),
                 "platform": link.platform,
                 "creator": link.creator,
                 "origin": link.origin,
@@ -45,8 +46,21 @@ def selected_links(event, config, links, published_info, owner_id=None):
                 "created_at": link.created_at,
             }
         )
+    preferences = config.get("preferences", {})
+    region = preferences.get("watch_region")
+    platform_preferences = preferences.get("broadcast_platforms", {})
+    preferred_platform = platform_preferences.get(
+        f"{region}:{event.competition_id}" if region else event.competition_id
+    )
     result.sort(
-        key=lambda x: (not x["pinned"], x["origin"] != "official", x["creator"], x["created_at"], x["id"])
+        key=lambda x: (
+            not x["pinned"],
+            not bool(x.get("broadcast") and x["broadcast"]["platform_id"] == preferred_platform),
+            x["origin"] != "official",
+            x["creator"],
+            x["created_at"],
+            x["id"],
+        )
     )
     unique, seen_urls = [], set()
     for item in result:

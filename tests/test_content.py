@@ -246,6 +246,57 @@ def test_api_channel_spoof_rolls_back_and_private_video_is_removed(stack, monkey
     assert client.get(f"/api/v1/events/{ident}").json()["links"] == []
 
 
+def test_comment_sample_is_stored_and_transient_comment_failure_keeps_previous_sample(
+    stack, monkeypatch
+):
+    _, sessions = stack
+    setup_content(sessions)
+    calls = []
+
+    def request(endpoint, params):
+        calls.append((endpoint, params))
+        if endpoint == "videos":
+            return {"items": [api_video("Lakers Warriors reaction")]}
+        assert endpoint == "commentThreads"
+        return {
+            "items": [
+                {
+                    "snippet": {
+                        "topLevelComment": {
+                            "snippet": {"textDisplay": "Warriors struggled against the Lakers defense"}
+                        }
+                    }
+                }
+            ]
+        }
+
+    monkeypatch.setattr(content, "youtube_request", request)
+    with sessions() as db:
+        content.refresh_videos(db, CHANNEL, [VID])
+        assert db.get(Video, VID).comments == ["Warriors struggled against the Lakers defense"]
+        db.commit()
+    assert calls[1] == (
+        "commentThreads",
+        {
+            "videoId": VID,
+            "part": "snippet",
+            "maxResults": 12,
+            "order": "relevance",
+            "textFormat": "plainText",
+        },
+    )
+
+    def comments_fail(endpoint, params):
+        if endpoint == "videos":
+            return {"items": [api_video("Lakers Warriors updated reaction")]}
+        raise HTTPException(503, {"code": "YOUTUBE_API_UNAVAILABLE"})
+
+    monkeypatch.setattr(content, "youtube_request", comments_fail)
+    with sessions() as db:
+        content.refresh_videos(db, CHANNEL, [VID])
+        assert db.get(Video, VID).comments == ["Warriors struggled against the Lakers defense"]
+
+
 def test_pagination_does_not_treat_absence_as_deletion(stack, monkeypatch):
     _, sessions = stack
     setup_content(sessions)
@@ -273,6 +324,7 @@ def test_expired_metadata_is_not_renewed_by_preference_edits(stack):
     with sessions() as db:
         db.get(Creator, CHANNEL).updated_at = past
         db.get(Video, VID).updated_at = past
+        db.get(Video, VID).comments = ["stale public comment"]
         db.commit()
     user = client.get("/api/v1/me/calendar").json()
     follow = user["creators"][0]
@@ -284,6 +336,7 @@ def test_expired_metadata_is_not_renewed_by_preference_edits(stack):
         content.expire_metadata(db)
         db.commit()
         assert db.get(Video, VID).title == "元数据已过期"
+        assert db.get(Video, VID).comments == []
         assert db.get(Creator, CHANNEL).name == CHANNEL
     assert client.get(f"/api/v1/events/{ident}").json()["links"] == []
 

@@ -69,6 +69,21 @@ def creators(document_stack, monkeypatch):
                     ]
                 },
             )
+        if endpoint == "commentThreads":
+            return httpx.Response(
+                200,
+                json={
+                    "items": [
+                        {
+                            "snippet": {
+                                "topLevelComment": {
+                                    "snippet": {"textDisplay": "球迷讨论这场 Lakers Warriors 比赛"}
+                                }
+                            }
+                        }
+                    ]
+                },
+            )
         assert endpoint == "videos"
         if state["videos_error"]:
             return state["videos_error"](req)
@@ -414,6 +429,7 @@ def test_long_fifty_video_batch_uses_bounded_atomic_references(creators):
         set(row["payload"]) == {"video_id", "value_ref", "updated_at"} for row in rows
     )
     assert len(rt.channels.video(CHANNEL, ids[0])["description"]) == 10000
+    assert rt.channels.video(CHANNEL, ids[0])["comments"] == ["球迷讨论这场 Lakers Warriors 比赛"]
 
 
 def test_reviews_ignore_scope_change_and_import_known_creator(creators):

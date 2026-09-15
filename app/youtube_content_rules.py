@@ -5,6 +5,10 @@ import re
 from app.matching import parse_time
 from app.youtube_transport import items
 
+MAX_AI_COMMENTS = 12
+MAX_AI_COMMENT_CHARS = 280
+MAX_AI_COMMENTS_CHARS = 2400
+
 
 def uploads_page(payload, cutoff, seen):
     rows = items(payload)
@@ -76,4 +80,29 @@ def video_batch(channel_id, ids, payload, existing, stamp):
                 "updated_at": stamp,
             }
         )
+    return result
+
+
+def comment_sample(payload):
+    """Return bounded public top-level comment text without author metadata."""
+    rows = items(payload)
+    if len(rows) > MAX_AI_COMMENTS:
+        raise ValueError("INVALID_COMMENTS_RESPONSE")
+    result, seen, used = [], set(), 0
+    for row in rows:
+        snippet = row.get("snippet")
+        top = snippet.get("topLevelComment") if isinstance(snippet, dict) else None
+        comment = top.get("snippet") if isinstance(top, dict) else None
+        text = comment.get("textDisplay") if isinstance(comment, dict) else None
+        if not isinstance(text, str):
+            raise ValueError("INVALID_COMMENTS_RESPONSE")
+        normalized = " ".join(text.split())[:MAX_AI_COMMENT_CHARS]
+        key = normalized.casefold()
+        if not normalized or key in seen:
+            continue
+        if used + len(normalized) > MAX_AI_COMMENTS_CHARS:
+            break
+        result.append(normalized)
+        seen.add(key)
+        used += len(normalized)
     return result

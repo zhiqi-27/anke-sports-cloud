@@ -137,3 +137,36 @@ Recovery: if Functions startup, registration, or health/API readback fails, repu
 Public readback correction: the first deployment exposed 31 basketball sources because a preseason guest opponent was retained in the historical catalog. Commit `d58c6be` keeps such opponents in event participants but removes them from the selectable source catalog and rejects direct follows. Targeted provider/follow tests are `38 passed`; full suite remains `386 passed, 2 skipped`. Corrected deterministic package `data/anke-sports-20260914-calendar-following-v2.zip` has SHA-256 `1954e4e7688e740ad76a3ad3a50a97f0bbe72070197ca80bd09d94512f0ba5e5`. Recovery remains the same pre-update logo-backfill package.
 
 Deployment proof: initial OneDeploy `973aea1d-3c3a-4170-8716-b6888552fc7d` completed but was superseded after the public catalogue check. Corrected OneDeploy `14fb2ac0-4b07-446f-854a-77e5673274fb` completed with status 4, active/complete and remote build. Six Functions are registered; Azure-direct and Cloudflare-routed health plus public status return 200 with staging/Cosmos runtime. `source_id=jolpica:f1` returned 50 matching events in the checked range. Public sources now expose 30 NBA teams and no London Lions entry. Live Vault, Storage and database-scoped Cosmos roles match the validated plan. Web Worker `a87681cd-476e-41b3-9e08-c287e8d25bc4` is active on `sports.anke-ai.com`; signed-in browser readback confirmed the two-level team picker and personal-calendar default scope without changing the account.
+
+## 13. Gemini video matching update · 2026-09-15
+
+Owner authorized the existing Anke Sports development target: subscription `a1187bf2-2e2f-4e05-aaea-407163a009f5`, East Asia, resource group `anke-sports-dev`, Function App `anke-sports-dev-mtcflttk`. Scope is the cost-first Gemini 3.1 Flash-Lite matching code, an explicit dev-only app-setting merge, and code-only OneDeploy. Do not apply the infrastructure what-if, migrate SQL, publish the frontend, push Git, mutate provider state, or touch FormaLM resources.
+
+### Validation steps
+
+- [x] Confirm Azure account, subscription, resource group, Function App state, current deployment-status availability, and recovery package.
+- [x] Run the full backend suite, Ruff, diff check, deterministic Functions packaging, and package manifest tests.
+- [x] Compile Bicep and verify the tracked JSON; run validation/what-if only as evidence and do not apply infrastructure drift.
+- [x] Statically verify least-privilege managed-identity roles and confirm no application RBAC expansion.
+- [x] Verify the dedicated `gemini-api-key` secret metadata without reading its value; merge only the Gemini Key Vault reference, model, and feature flag into dev settings.
+- [x] Publish the deterministic code package through OneDeploy and verify completion, six registered Functions, health/status routes, Key Vault reference resolution, and one bounded Gemini schema smoke test.
+
+Recovery: retain the current active deployment package and deployment ID before publication. If startup, registration, or health fails, republish that exact package and restore the three prior app-setting values. Do not delete resources or user data.
+
+### Validation proof
+
+- Azure CLI is authenticated as `zero24dev@outlook.com` to `Azure subscription 1` / `a1187bf2-2e2f-4e05-aaea-407163a009f5`. Resource group `anke-sports-dev` is East Asia; `anke-sports-dev-mtcflttk` is Running and HTTPS-only. The deployment-status endpoint currently returns no history, so recovery is anchored to the retained package `data/anke-sports-20260914-calendar-following-v2.zip`, SHA-256 `1954e4e7688e740ad76a3ad3a50a97f0bbe72070197ca80bd09d94512f0ba5e5`.
+- Google project `anke-sports-dev` has Gemini API enabled. Authorization key `Anke Sports Gemini API Key` is restricted to Gemini API and bound to the dedicated zero-role service account `anke-sports-gemini@anke-sports-dev.iam.gserviceaccount.com`. The key value was not written to source or documentation.
+- Key Vault secret `gemini-api-key` exists and is enabled. A vault-scoped Secrets Officer assignment was used only for the write, removed immediately afterward, and the local clipboard was cleared. The application identity continues to use the existing vault-scoped Secrets User role.
+- Full backend suite after the model correction: `394 passed, 2 skipped`; Ruff and `git diff --check` passed. Packaging tests: `3 passed`. Deterministic candidate `data/anke-sports-20260915-gemini-31.zip` has SHA-256 `08394b774f2691938d3dfdae024ccaf83057c664706ccf4e60b1c20c75ee0816`, 181944 bytes and 81 allowlisted runtime files; its manifest includes the Gemini matcher and additive SQL-baseline migration.
+- Fresh Bicep compilation matches tracked `infra/main.json`. ARM subscription validation succeeded after replacing two embedded JSON string literals with Bicep-native `string(array)` expressions. ResourceIdOnly what-if succeeded and reports the existing 21 resources as Deploy; it will not be applied because this release is an explicit settings merge plus code-only OneDeploy.
+- Static RBAC review found no new role assignment. Existing scopes remain: Cosmos data contributor at the dedicated database, Storage Blob/Queue data roles at the dedicated account, and Key Vault Secrets User at the dedicated vault, all assigned to the existing runtime managed identity.
+- The originally selected `gemini-2.5-flash-lite` returned HTTP 404 for this newly created project. Current Google documentation identifies stable `gemini-3.1-flash-lite` as the cost-efficient high-volume model with video input and structured output. A bounded live call using the vault-held key returned HTTP 200, `STOP`, valid schema and one label. Temporary caller Secrets Officer access was removed after the test.
+
+### Deployment proof
+
+- OneDeploy `12e39360-d581-4003-a834-86be02a4e0c1` completed 2026-09-15T04:03:11Z with status 4, active/complete and remote build. The prior deployment is inactive and the retained `data/anke-sports-20260914-calendar-following-v2.zip` remains the recovery package.
+- All six existing Functions are registered. Azure-direct and Cloudflare-routed `/api/v1/health` and `/api/v1/status` returned HTTP 200 with `Cache-Control: no-store`; health reports `staging` and `cosmos`.
+- Dev settings read back as enabled with model `gemini-3.1-flash-lite`; `GEMINI_API_KEY` is a Key Vault reference and its reference status is `Resolved` using the user-assigned runtime identity.
+- The deployed package was followed by an actual application-level synthetic metadata call through `matching-ai-v3`: it returned `automatic`, two valid labels and an AI confidence code. This proves the configured schema path, not real-video matching accuracy or calendar delivery.
+- Live roles remain unchanged: Key Vault Secrets User at the dedicated vault, Storage Queue Data Contributor and Storage Blob Data Owner at the dedicated storage account, and Cosmos DB Built-in Data Contributor at the dedicated `anke-sports` database. Temporary operator Secrets Officer access reads back empty.
