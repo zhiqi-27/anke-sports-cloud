@@ -40,6 +40,20 @@ Key Vault 中准备当前模板声明的 feed-encryption-key、firebase-credenti
 - [x] Static Role Verification
 - [x] Record Proof and resolve errors
 
+### Bicep recipe validation steps
+
+- [x] Core Validation: CLI/auth/build/target validate/what-if via `validate-deployment.sh`
+- [x] Azure Policy Validation: subscription assignment readback via Azure policy API
+- [x] Build Verification: backend test, Ruff, package and manifest checks
+
+## Role Assignment Verification
+
+- Status: Verified
+- Identity checked: `anke-sports-dev-runtime` user-assigned managed identity
+- Roles confirmed: Cosmos DB Built-in Data Contributor at the dedicated database; Storage Blob Data Owner and Storage Queue Data Contributor at the dedicated account; Key Vault Secrets User at the dedicated vault
+- Scope review: all application data-plane roles are resource-scoped; no B change adds subscription-level access or a new assignment
+- Local testing: B's local tests use the explicit local adapters; Azure managed-identity access is verified separately at deployment/runtime
+
 ### A 候选预部署验证 · 2026-09-17
 
 - [x] 读取并确认现有订阅、East Asia、资源组和 Function App 目标；未创建新资源。
@@ -50,6 +64,24 @@ Key Vault 中准备当前模板声明的 feed-encryption-key、firebase-credenti
 - [x] 活跃 OpenAPI/配置/客户端契约无旧 selection、creator、YouTube/AI 字段或路径；当前部署不需要相关密钥。
 
 ## 7. Validation Proof
+
+### B backend deployment candidate validation · 2026-09-17
+
+- `validate-deployment.sh --scope sub --location eastasia --template ./infra/main.bicep --parameters ./infra/dev.bicepparam --subscription a1187bf2-2e2f-4e05-aaea-407163a009f5`: **OVERALL PASS**; CLI/auth, Bicep compilation, subscription validation and what-if all passed. What-if reported 8 Create / 21 Modify / 14 Delete as preview only; no infrastructure deployment was run.
+- `uv run pytest -q`: **243 passed, 2 skipped**; only the existing FastAPI/Starlette deprecation warnings remain.
+- `uv run ruff check .`: **All checks passed**.
+- `uv run python -m compileall -q app function_app.py`: **PASS**.
+- `uv run pytest -q tests/test_functions_package.py`: **3 passed**.
+- Static role review: **Verified**; no B-specific RBAC or app-setting change.
+
+### B 后端开发环境代码部署 · 2026-09-17
+
+- Owner explicitly requested deployment for testing. Target stayed on subscription `a1187bf2-2e2f-4e05-aaea-407163a009f5`, resource group `anke-sports-dev`, East Asia, existing Function App `anke-sports-dev-mtcflttk`; no production target was used.
+- Candidate `49f57f2` was packaged as `data/anke-sports-b-20260917.zip`, 189729 bytes, SHA-256 `562bcd79a1074aad29df8b41c8e4ba034ad725ae26503183150b32103439f902`; recovery package remains `data/anke-sports-a-20260917.zip`, SHA-256 `64f47c69f0fab235b8193d7b887910063933bcb762364ca3e9140f3ae2ab356d`.
+- `az functionapp deployment source config-zip --build-remote true` completed with `Deployment was successful.`; deployment ID `44df243c-abf7-45a6-9a5f-4ed247dcc50a`. No Bicep deployment, app-setting mutation, RBAC change, schema/data migration or Git push occurred.
+- Post-deployment readback: Function App is Running; five current Functions are registered (`advance_calendar_window`, `dispatch_outbox`, `http_app_func`, `process_job`, `update_schedules`). Direct Azure and Cloudflare-routed health/status returned HTTP 200 with `staging` / `cosmos` and `Cache-Control: no-store`.
+- Direct `/openapi.json` returned HTTP 200 and contains `POST`/`DELETE` `/api/v1/me/calendar/events/{event_id}`. Unauthenticated POST and DELETE probes returned HTTP 401 `AUTH_REQUIRED`; no real user mutation was attempted.
+- Frontend Worker was not redeployed; public API proxy remains the existing `sports.anke-ai.com` deployment. Real authenticated add/delete, Cosmos/Queue transaction readback, device ICS and production release remain separate acceptance work.
 
 2026-09-17 A 候选复核：Azure CLI 当前订阅为 `Azure subscription 1` / `a1187bf2-2e2f-4e05-aaea-407163a009f5`，资源组 `anke-sports-dev` 位于 East Asia 且状态 `Succeeded`；目标 Function App 为 `anke-sports-dev-mtcflttk`。Bicep 编译通过，subscription what-if 仅报告现有 21 项 `Deploy`、无 `Delete`，本次只发布代码包，不应用基础设施 what-if。
 

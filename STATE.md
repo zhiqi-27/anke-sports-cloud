@@ -1,10 +1,10 @@
 # Anke Sports · 服务端状态
 
-> 2026-09-17范围覆盖：不做微信、YouTube视频/AI匹配；新增手动单场增删，关注自动比赛不可单删，MCP同等支持。无需兼容1.0前版本。A 范围清理与源模型/生成契约已部署到开发环境；B 后端已在本地候选完成并回归，尚未部署；C 的 Web/MCP 入口尚未实现或验收。见[1.0定义](<../anke-sports 文档/Anke_Sports_1.0定义.md>)。
+> 2026-09-17范围覆盖：不做微信、YouTube视频/AI匹配；新增手动单场增删，关注自动比赛不可单删，MCP同等支持。无需兼容1.0前版本。A 范围清理与源模型/生成契约已部署到开发环境；B 后端已部署并完成线上回读；C 的 Web/MCP 入口尚未实现或验收。见[1.0定义](<../anke-sports 文档/Anke_Sports_1.0定义.md>)。
 
-更新：2026-09-17。上一轮 A 从 `8a26fba` 继续修改，已提交为`5db5283`并推送、部署到现有开发 Function App；本轮 B 在该基线上完成本地候选实现与回归，当前代码尚未推送或部署。以[工作区STATE](../STATE.md)及[实施计划](<../anke-sports 文档/Anke_Sports_实施计划.md>)为当前入口。
+更新：2026-09-17。上一轮 A 从 `8a26fba` 继续修改，已提交为`5db5283`并推送、部署到现有开发 Function App；本轮 B 提交`49f57f2`在该基线上完成实现、回归并按用户请求以代码包部署到同一开发 Function App（未 push Git）。以[工作区STATE](../STATE.md)及[实施计划](<../anke-sports 文档/Anke_Sports_实施计划.md>)为当前入口。
 
-候选版本已整体停用视频产品能力并部署：删除创作者、待确认、YouTube webhook/维护等公开接口，移除内容Timer与MCP创作者工具，旧 `selection` 单场排除入口也不存在；新建链接仅接受`live`和`watch_along`。旧视频任务不再进入 active claim，不静默完成；历史视频行、表和模块保留为追溯材料，当前运行时不加载，也未做破坏性迁移。`Config.manual_events`、私有事件 `calendar.sources/can_remove` 已进入服务端 schema、OpenAPI 和客户端生成类型；B 已补齐单场增删、来源合并/去重、权限/revision/幂等、原子 outbox/投影和导入绕过保护，见[本地候选证据](evidence/manual-calendar-backend-2026-09-17.md)。
+候选版本已整体停用视频产品能力并部署：删除创作者、待确认、YouTube webhook/维护等公开接口，移除内容Timer与MCP创作者工具，旧 `selection` 单场排除入口也不存在；新建链接仅接受`live`和`watch_along`。旧视频任务不再进入 active claim，不静默完成；历史视频行、表和模块保留为追溯材料，当前运行时不加载，也未做破坏性迁移。`Config.manual_events`、私有事件 `calendar.sources/can_remove` 已进入服务端 schema、OpenAPI 和客户端生成类型；B 已补齐单场增删、来源合并/去重、权限/revision/幂等、原子 outbox/投影和导入绕过保护，见[候选与开发部署证据](evidence/manual-calendar-backend-2026-09-17.md)。
 
 F1关注代码已发布为只能选择具体车队：Jolpica当前赛季Constructors形成车队目录，全部车队同时写入每个大奖赛/session的participants，因此不同车队命中相同赛程，车队ID用于个人关注与后续官方频道内容范围。赛事/联赛均不能直接关注。适配器真实接口读回为11支车队、115个session事件且每场包含11个车队；云端快照仍是02:30:26 UTC旧数据，首次正常刷新在08:30:26 UTC后才具备资格，因此当前公网目录仍为0支F1车队。未迁移旧F1整赛关注或验证个人Feed。
 
@@ -12,10 +12,10 @@ F1关注代码已发布为只能选择具体车队：Jolpica当前赛季Construc
 
 此前的YouTube搜索、评论读取、AI评分、自动挂入和备选流程已经退出当前产品范围。相关模块、表和证据仅作历史追溯，不是当前兼容前置，也不再由HTTP、Timer、Queue或MCP入口触发。具体边界见[退出能力记录](docs/retired-capabilities.md)。
 
-线上运行包为 SHA-256 `64f47c69f0fab235b8193d7b887910063933bcb762364ca3e9140f3ae2ab356d`，注册 5 个现行 Functions。部署后 Azure 直连与 Cloudflare 代理的 health/status 均正常；7 个已退休 YouTube/AI App Settings 已删除，现行配置保留。
+线上运行包为 B 的 SHA-256 `562bcd79a1074aad29df8b41c8e4ba034ad725ae26503183150b32103439f902`，注册 5 个现行 Functions。部署后 Azure 直连与 Cloudflare 代理的 health/status 均正常；OpenAPI 已回读手动单场 POST/DELETE，未认证请求被 401 拦截。7 个已退休 YouTube/AI App Settings 已删除，现行配置保留。
 
 已部署：三Provider、季前赛显式抓取、Spurs消歧、Logo兼容、source_id过滤、直接关注规则、客队排除、个人Feed取消关注隐藏，以及P2账号/OAuth/转播文档服务。公共Feed保留停用且白名单为空，不进入v1验收；公开赛程与匿名MCP查询仍在范围。
 
-剩余：先部署并回读 B，再实现 C 的 Web/MCP 对等入口，之后做 D 全链路验收。旧视频 API/ICS 不可见、个人 Feed 语义、直播链接设备播放、独立测试账号生命周期、Queue路径、公网MCP授权/查询/写入/到期/撤销、最小恢复和正式发布仍待完成。SQL仍为本地基线，`documents-local` 不是 Cosmos/Queue 证据，真实云验收分别留证。详见[evidence/a-scope-deployment-2026-09-17.md](evidence/a-scope-deployment-2026-09-17.md)及[evidence/manual-calendar-backend-2026-09-17.md](evidence/manual-calendar-backend-2026-09-17.md)。
+剩余：实现 C 的 Web/MCP 对等入口，再做 D 全链路验收。旧视频 API/ICS 不可见、个人 Feed 语义、直播链接设备播放、独立测试账号生命周期、Cosmos/Queue真实事务路径、公网MCP授权/查询/写入/到期/撤销、最小恢复和正式发布仍待完成。SQL仍为本地基线，`documents-local` 不是 Cosmos/Queue 证据，真实云验收分别留证。详见[evidence/a-scope-deployment-2026-09-17.md](evidence/a-scope-deployment-2026-09-17.md)及[evidence/manual-calendar-backend-2026-09-17.md](evidence/manual-calendar-backend-2026-09-17.md)。
 
 本次未触发真实Provider或内容任务，也未修改任何具体场次的转播记录；未删除历史表、历史文件或已有工作，仅删除了开发 App Settings 中已确认退休的 YouTube/AI 配置名。
