@@ -7,6 +7,7 @@ import time
 from sqlalchemy import and_, or_, select
 
 from app.calendar import event_view, load_links
+from app.calendar_commands import add_manual_source, remove_manual_source, validate_manual_event
 from app.schedule_rules import schedule_page, schedule_range
 from app.config import settings
 from app.db import CommandReceipt, Event, Feed, Link, Source, User
@@ -189,6 +190,28 @@ def set_follows(db, user, data):
     if data.confirmation and preview_follows(db, user, data)["confirmation"] != data.confirmation:
         problem("FOLLOWS_PREVIEW_CHANGED", "赛程或订阅内容已变化，请重新预览后保存", 409)
     save_config(db, user, config, data.expected_revision)
+    return user_view(db, user)
+
+
+def add_calendar_event(db, user, event_id, expected_revision):
+    if user.revision != expected_revision:
+        problem("REVISION_CONFLICT", "配置已在其他页面更新，请刷新后重试", 409)
+    event = find_event(db, event_id)
+    validate_manual_event(event, environment=settings().env)
+    config, changed = add_manual_source(user.config, event.id)
+    if changed:
+        save_config(db, user, config, expected_revision)
+    return user_view(db, user)
+
+
+def remove_calendar_event(db, user, event_id, expected_revision):
+    if user.revision != expected_revision:
+        problem("REVISION_CONFLICT", "配置已在其他页面更新，请刷新后重试", 409)
+    event = find_event(db, event_id)
+    validate_manual_event(event, environment=settings().env)
+    config, changed = remove_manual_source(user.config, event)
+    if changed:
+        save_config(db, user, config, expected_revision)
     return user_view(db, user)
 
 

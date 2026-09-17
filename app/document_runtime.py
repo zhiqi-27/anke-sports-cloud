@@ -4,7 +4,8 @@ from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
 from app.calendar_rules import calendar_membership, describe, included, select_candidates
-from app.document_accounts import Accounts, owner_partition
+from app.calendar_commands import add_manual_source, remove_manual_source, validate_manual_event
+from app.document_accounts import Accounts, Change, owner_partition
 from app.document_catalog import Catalog
 from app.document_feeds import FeedPublisher
 from app.document_store import StoreError, partition_items
@@ -190,6 +191,56 @@ class Runtime:
             payload=data.model_dump(exclude_none=True),
             prepare=lambda current: self.follows(current, data),
             response=lambda updated: self.user_view(updated, pending=True),
+        )
+
+    def add_calendar_event(self, user_id, event_id, data, key):
+        def perform(previous):
+            if previous["revision"] != data.expected_revision:
+                problem("REVISION_CONFLICT", "配置已在其他页面更新，请刷新后重试", 409)
+            snapshot = self.catalog.capture()
+            event = snapshot.event(event_id)
+            validate_manual_event(event, environment=self.cfg.env)
+            config, changed = add_manual_source(previous["config"], event.id)
+            snapshot.assert_current()
+            updated = (
+                {**previous, "config": config, "revision": previous["revision"] + 1}
+                if changed
+                else previous
+            )
+            return Change(
+                updated,
+                self.user_view(
+                    updated,
+                    pending=changed or self.activity(owner_partition(previous["user_id"]))[0],
+                ),
+            )
+
+        return self.accounts.command(
+            user_id,
+            "add_calendar_event",
+            {"event_id": event_id, "expected_revision": data.expected_revision},
+            perform,
+            key=key,
+        )
+
+    def remove_calendar_event(self, user_id, event_id, data, key):
+        def perform(previous):
+            if previous["revision"] != data.expected_revision:
+                problem("REVISION_CONFLICT", "配置已在其他页面更新，请刷新后重试", 409)
+            snapshot = self.catalog.capture()
+            event = snapshot.event(event_id)
+            validate_manual_event(event, environment=self.cfg.env)
+            config, changed = remove_manual_source(previous["config"], event)
+            snapshot.assert_current()
+            updated = {**previous, "config": config, "revision": previous["revision"] + 1}
+            return Change(updated, self.user_view(updated, pending=True))
+
+        return self.accounts.command(
+            user_id,
+            "remove_calendar_event",
+            {"event_id": event_id, "expected_revision": data.expected_revision},
+            perform,
+            key=key,
         )
 
     def publish(self, claim):

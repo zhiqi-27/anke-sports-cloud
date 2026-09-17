@@ -115,7 +115,11 @@ def update_projection(db, feed, event, data, existing):
     content_hash = digest(json.dumps(data, sort_keys=True, ensure_ascii=False))
     projection = existing.get(event.id)
     if not projection:
-        projection = Projection(feed_id=feed.id, event_id=event.id, version=0)
+        # One personal Feed + one authoritative event always maps to one UID,
+        # including a manual remove/re-add after the projection is retained.
+        projection = Projection(
+            id=digest(feed.id + ":" + event.id)[:32], feed_id=feed.id, event_id=event.id, version=0
+        )
         db.add(projection)
         existing[event.id] = projection
     if projection.content_hash != content_hash or projection.removed:

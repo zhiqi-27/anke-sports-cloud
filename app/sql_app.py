@@ -35,6 +35,7 @@ from app.schemas import (
     ServiceStatusView,
     SourceList,
     AddLink,
+    CalendarEventChange,
     Config,
     FeedAction,
     ImportInput,
@@ -244,6 +245,46 @@ def event_detail(event_id: str, request: Request, db=Depends(get_db)):
 @app.get("/api/v1/me/calendar", response_model=CalendarUserView)
 def calendar(user=Depends(me), db=Depends(get_db)):
     return user_view(db, user)
+
+
+@app.post("/api/v1/me/calendar/events/{event_id}", response_model=CalendarUserView)
+def add_calendar_event(
+    event_id: str,
+    data: CalendarEventChange,
+    idempotency_key: str | None = Header(None),
+    user=Depends(me_write),
+    db=Depends(get_db),
+):
+    result = actions.command(
+        db,
+        user,
+        "add_calendar_event",
+        idempotency_key,
+        {"event_id": event_id, "expected_revision": data.expected_revision},
+        lambda: actions.add_calendar_event(db, user, event_id, data.expected_revision),
+    )
+    db.commit()
+    return result
+
+
+@app.delete("/api/v1/me/calendar/events/{event_id}", response_model=CalendarUserView)
+def remove_calendar_event(
+    event_id: str,
+    data: CalendarEventChange,
+    idempotency_key: str | None = Header(None),
+    user=Depends(me_write),
+    db=Depends(get_db),
+):
+    result = actions.command(
+        db,
+        user,
+        "remove_calendar_event",
+        idempotency_key,
+        {"event_id": event_id, "expected_revision": data.expected_revision},
+        lambda: actions.remove_calendar_event(db, user, event_id, data.expected_revision),
+    )
+    db.commit()
+    return result
 
 
 @app.post("/api/v1/me/follows/preview", response_model=FollowPreviewView)

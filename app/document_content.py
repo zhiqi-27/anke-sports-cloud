@@ -134,7 +134,7 @@ class Content:
             problem("REVISION_CONFLICT", "配置已更新，请重新预览", 409)
         snapshot = self.runtime.catalog.capture()
         sources = {row.id for row in snapshot.sources()}
-        events = {row.source_key for row in snapshot.events()}
+        events = {key for row in snapshot.events() for key in (row.id, row.source_key)}
         config, preview = import_configuration(
             SimpleNamespace(id=previous["user_id"], **previous),
             data,

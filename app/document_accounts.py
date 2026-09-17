@@ -151,13 +151,18 @@ class Accounts:
         except ValidationError:
             problem("CONFIG_LIMIT_EXCEEDED", "配置超过支持的数量上限，请减少内容后重试")
         updated.update(self.values.pack(pk, "config", config))
-        account = document(pk, "account", "account", **updated)
-        job = projection_job(pk, change.payload["revision"])
-        writes = [
-            Write("replace", "account", account, current["_etag"]),
-            Write("create", job["id"], job),
-            *change.writes,
-        ]
+        changed = change.payload["revision"] != previous["revision"]
+        writes = []
+        if changed:
+            account = document(pk, "account", "account", **updated)
+            job = projection_job(pk, change.payload["revision"])
+            writes.extend(
+                [
+                    Write("replace", "account", account, current["_etag"]),
+                    Write("create", job["id"], job),
+                ]
+            )
+        writes.extend(change.writes)
         if receipt_id:
             saved = document(
                 pk,
@@ -176,6 +181,8 @@ class Accounts:
                     receipt["_etag"] if receipt else None,
                 )
             )
+        if not writes:
+            return change.result
         try:
             self.store.batch("state", pk, writes)
         except Conflict:

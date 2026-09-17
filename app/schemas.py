@@ -109,6 +109,10 @@ class SavePreferences(StrictModel):
     preferences: Preferences
 
 
+class CalendarEventChange(StrictModel):
+    expected_revision: int = Field(ge=0)
+
+
 class AddLink(StrictModel):
     url: str = Field(min_length=8, max_length=2000)
     title: str = Field(default="", max_length=300)

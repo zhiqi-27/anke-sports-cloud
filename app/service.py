@@ -1,6 +1,6 @@
 import secrets
 
-from sqlalchemy import func, select, update
+from sqlalchemy import func, or_, select, update
 
 from app.config import settings
 from app.db import Event, Feed, Job, Link, Projection, Source, User
@@ -189,5 +189,8 @@ def import_preview(db, user: User, data: ImportInput) -> tuple[dict, dict]:
         data,
         settings().cipher(),
         source_exists=lambda key: db.get(Source, key) is not None,
-        event_exists=lambda key: db.scalar(select(Event.id).where(Event.source_key == key)) is not None,
+        event_exists=lambda key: db.scalar(
+            select(Event.id).where(or_(Event.id == key, Event.source_key == key))
+        )
+        is not None,
     )

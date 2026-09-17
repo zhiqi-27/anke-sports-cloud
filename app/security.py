@@ -230,7 +230,7 @@ def require_scope(request, principal):
     ):
         needed = "calendar:read"
     elif request.method in {"POST", "PUT", "PATCH", "DELETE"} and re.fullmatch(
-        r"/api/v1/(events/[^/]+/links|me/(follows|preferences|links/[^/]+/(block|pin)|config/import))",
+        r"/api/v1/(events/[^/]+/links|me/(calendar/events/[^/]+|follows|preferences|links/[^/]+/(block|pin)|config/import))",
         path,
     ):
         needed = "calendar:write"

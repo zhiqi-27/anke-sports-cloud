@@ -24,6 +24,7 @@ from app.schemas import (
     ConsentRedirectView,
     ConnectionList,
     AddLink,
+    CalendarEventChange,
     CalendarUserView,
     Config,
     EventList,
@@ -406,6 +407,26 @@ def create_app(store=None, cfg=None):
     @app.get("/api/v1/me/calendar", response_model=CalendarUserView)
     def calendar(user=Depends(me), rt=Depends(runtime)):
         return rt.user_view(user)
+
+    @app.post("/api/v1/me/calendar/events/{event_id}", response_model=CalendarUserView)
+    def add_calendar_event(
+        event_id: str,
+        data: CalendarEventChange,
+        idempotency_key: str | None = Header(None),
+        user=Depends(me),
+        rt=Depends(runtime),
+    ):
+        return rt.add_calendar_event(user["user_id"], event_id, data, idempotency_key)
+
+    @app.delete("/api/v1/me/calendar/events/{event_id}", response_model=CalendarUserView)
+    def remove_calendar_event(
+        event_id: str,
+        data: CalendarEventChange,
+        idempotency_key: str | None = Header(None),
+        user=Depends(me),
+        rt=Depends(runtime),
+    ):
+        return rt.remove_calendar_event(user["user_id"], event_id, data, idempotency_key)
 
     @app.post("/api/v1/me/follows/preview", response_model=FollowPreviewView)
     def preview(data: SaveFollows, user=Depends(me), rt=Depends(runtime)):

@@ -17,6 +17,11 @@ def link_override(config, event_key, url, state):
 
 def import_configuration(user, data, cipher, *, source_exists, event_exists):
     incoming = data.config.model_dump()
+    current_manual = {row["event_id"] for row in user.config.get("manual_events", [])}
+    if "manual_events" in data.config.model_fields_set:
+        requested_manual = {row["event_id"] for row in incoming["manual_events"]}
+        if requested_manual != current_manual:
+            problem("MANUAL_EVENTS_IMPORT_FORBIDDEN", "手动日历来源只能通过单场日历操作管理", 409)
     config = incoming
     if data.mode == "merge":
         config = {
@@ -28,13 +33,15 @@ def import_configuration(user, data, cipher, *, source_exists, event_exists):
         }
         keys = {
             "follows": lambda x: x["source_key"],
-            "manual_events": lambda x: x["event_id"],
             "link_overrides": lambda x: (x["event_key"], x["url"]),
         }
         for name, key in keys.items():
             merged = {key(x): deepcopy(x) for x in user.config.get(name, [])}
             merged.update({key(x): x for x in incoming[name]})
             config[name] = list(merged.values())
+    # Manual sources have their own authorization and lifecycle. They may be
+    # carried by an exact export/import round trip, but never changed here.
+    config["manual_events"] = deepcopy(user.config.get("manual_events", []))
     unresolved = []
     for follow in config["follows"]:
         if not source_exists(follow["source_key"]):
