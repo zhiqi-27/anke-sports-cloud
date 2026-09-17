@@ -54,13 +54,6 @@ RULES = [
         "evidence": "https://www.premierleague.com/en/media/broadcasters",
     },
     {
-        "id": "youtube",
-        "name": "YouTube",
-        "hosts": ["youtube.com", "www.youtube.com", "m.youtube.com", "youtu.be"],
-        "paths": [r"^/watch$", r"^/(shorts|live|embed)/[^/]+/?$", r"^/[A-Za-z0-9_-]{11}/?$"],
-        "evidence": "https://developers.google.com/youtube/v3/docs/videos",
-    },
-    {
         "id": "nba",
         "name": "NBA",
         "hosts": ["nba.com", "www.nba.com", "watch.nba.com", "tv.nba.com", "support.watch.nba.com"],
@@ -564,7 +557,6 @@ def candidate_url(value: str):
     if (
         parsed.path.rstrip("/").lower()
         in {"/login", "/signin", "/sign-in", "/subscribe", "/account", "/auth", "/watch", "/games"}
-        and rule["id"] != "youtube"
     ):
         raise ValueError("CONTENT_PAGE_REQUIRED")
     return url, platform

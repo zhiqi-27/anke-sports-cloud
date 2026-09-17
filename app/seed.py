@@ -91,6 +91,6 @@ def seed_demo(db):
                     demo=True,
                 )
             )
-    for provider in ["balldontlie", "football-data", "jolpica", "youtube"]:
+    for provider in ["balldontlie", "football-data", "jolpica"]:
         if not db.get(ProviderState, provider):
             db.add(ProviderState(id=provider))

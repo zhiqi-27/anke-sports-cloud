@@ -3,6 +3,8 @@
 Status: Validated
 Recipe: bicep
 
+> 当前 A 候选（2026-09-17）不需要微信、YouTube、AI 或创作者配置；以下历史部署段落仅保留为已发生操作的证据，不是当前发布前置。A 本轮未部署。
+
 本文件只记录当前部署执行与验证，不替代工作区实施计划或任务表。沿用用户已授权的独立资源创建配置、Azure Functions、Cosmos Serverless + Periodic 及 sports.anke-ai.com；不是生产环境授权。既有仓库使用 standalone Bicep，不初始化 azd。
 
 ## 1. Target
@@ -16,7 +18,7 @@ Web origin: https://sports.anke-ai.com
 
 ## 2. Scope
 
-独立 Functions Flex（无 always-ready）、Cosmos NoSQL Serverless/Strong/Periodic、Storage、Key Vault、网络与专用托管身份。21 项预演全部 Create，无现有产品修改。后端运行时关闭本地体验，启用 Firebase，先验证真实日历/创作者/个人 ICS。未适配模块仍按接口明确返回未开放。
+独立 Functions Flex（无 always-ready）、Cosmos NoSQL Serverless/Strong/Periodic、Storage、Key Vault、网络与专用托管身份。21 项预演全部 Create，无现有产品修改。后端运行时关闭本地体验，启用 Firebase，先验证真实日历/个人 ICS 与现行直播入口。创作者/视频能力不在当前候选；未适配模块仍按接口明确返回未开放。
 
 ## 3. Cost
 
@@ -24,7 +26,7 @@ Web origin: https://sports.anke-ai.com
 
 ## 4. Secrets and access
 
-Key Vault 中准备独立 feed-encryption-key、firebase-credentials、youtube-api-key；源码只含引用。托管身份权限仅到本资源组内所需资源。不得打印密钥。云轮询开启前停止同项目本地真实轮询，保留当天预算记录。
+Key Vault 中准备当前模板声明的 feed-encryption-key、firebase-credentials 和已选赛程 Provider 密钥；不准备 YouTube/AI 密钥。源码只含引用。托管身份权限仅到本资源组内所需资源。不得打印密钥。
 
 ## 5. Recovery
 
@@ -38,7 +40,20 @@ Key Vault 中准备独立 feed-encryption-key、firebase-credentials、youtube-a
 - [x] Static Role Verification
 - [x] Record Proof and resolve errors
 
+### A 候选预部署验证 · 2026-09-17
+
+- [x] 读取并确认现有订阅、East Asia、资源组和 Function App 目标；未创建新资源。
+- [x] 服务端全量测试 `239 passed / 2 skipped`、Ruff、compileall、diff check。
+- [x] 客户端 contracts/typecheck/build、Worker `3/3` 测试和 diff check。
+- [x] Bicep 编译及 subscription what-if；结果为现有 21 项 Deploy、无 Delete，本次不应用基础设施变更。
+- [x] 静态复核 Cosmos、Storage、Key Vault 托管身份角色范围；不新增 RBAC。
+- [x] 活跃 OpenAPI/配置/客户端契约无旧 selection、creator、YouTube/AI 字段或路径；当前部署不需要相关密钥。
+
 ## 7. Validation Proof
+
+2026-09-17 A 候选复核：Azure CLI 当前订阅为 `Azure subscription 1` / `a1187bf2-2e2f-4e05-aaea-407163a009f5`，资源组 `anke-sports-dev` 位于 East Asia 且状态 `Succeeded`；目标 Function App 为 `anke-sports-dev-mtcflttk`。Bicep 编译通过，subscription what-if 仅报告现有 21 项 `Deploy`、无 `Delete`，本次只发布代码包，不应用基础设施 what-if。
+
+服务端全量回归 `239 passed, 2 skipped`，Ruff、compileall、`git diff --check` 通过；客户端 `npm run typecheck`、`npm run build`、Worker 测试 `3/3` 和 `git diff --check` 通过。OpenAPI/config schema 已重新导出，客户端类型已重新生成。静态 RBAC 仍为数据库级 Cosmos Data Contributor、Storage 数据角色和 Key Vault Secrets User，无新增权限。活跃契约扫描未发现旧 selection、creator、YouTube/AI 配置或公开路径。
 
 2026-09-11 standalone Bicep validate-deployment.sh：CLI/auth/build/target validate/what-if 全部 PASS，OVERALL PASS。最终 helper 按格式化文本的 + 行统计为22、~ 行0、- 行0；该计数包含输出格式影响，不作为精确资源数，精确资源列表以前一次 ResourceIdOnly 的21项为准。session 98448 正常退出。
 
@@ -199,3 +214,11 @@ Recovery: retain the current active OneDeploy and its package identifier before 
 - Azure accepted OneDeploy `ef8e70c4-b39d-4378-a357-0e1fd1106c45`; the CLI completed trigger synchronization and health validation with `Deployment was successful.` Six Functions are registered. Azure-direct and Cloudflare-routed health are HTTP 200 with `staging` / `cosmos`; public status exposes `event_search_only`, disabled Web fallback and 80 available daily search calls. Flex publishing credentials and the management deployment-status collection are unavailable, so this release does not claim a separate status-4/active readback.
 - Wrangler uploaded 39 changed assets and activated Worker version `75891ba3-a299-4007-8e8e-33f80105200a` on `https://sports.anke-ai.com`. The public route is HTTP 200 and the deployed asset contains the new concise video copy without the removed threshold explanation.
 - No real scheduled discovery, user Feed refresh or device playback was forced during deployment. See `../evidence/event-youtube-discovery-deployment-2026-09-15.md`.
+
+## 15. Official-channel scope and F1 team-only update · 2026-09-16
+
+The owner explicitly requested deployment to the existing Anke Sports development environment. Scope is a code-only Functions publication to `anke-sports-dev-mtcflttk`, followed by the existing `anke-sports-web` Worker publication. It retires event-wide YouTube search scheduling, adds verified official-channel scope fields, and changes direct follows to concrete teams/constructors while keeping the shared F1 session calendar. No Bicep, app-setting, RBAC, schema migration, user-data mutation, Git push or production action is authorized.
+
+Validation and recovery: the full backend suite is `406 passed / 2 skipped`, Ruff and both repository diff checks passed, the three package tests passed, and the 83-file candidate SHA-256 is `bbe0ef48cc350a902475ab8a138b6cb48356bf17cfba476d9a61a5f5e176d73e`. Recovery retains the prior package SHA-256 `ee73544c34cf9ef20986d78d34bdd2a2f1f151a3f08ddb68f7faa7491460158b`; Web recovery is the immediately previous version `3d2f44ff-e62b-4d6c-a875-a54ead104ee7`. The clean 99-asset Web build passed Firebase configuration verification and Wrangler dry-run.
+
+Deployment proof: Azure CLI completed remote build, trigger synchronization and health validation with `Deployment was successful.` Six Functions remain registered; both origins returned HTTP 200 and public status reports `official_catalog_foundation`. Wrangler activated version `269a483f-2c19-4006-8e5b-6da40cd96e57`; no-cache live assets contain the F1 team-only copy and omit the retired search-time copy. The live Jolpica snapshot predates the deployment and still has zero constructors; it becomes normally eligible for refresh after 2026-09-16T08:30:26Z. No Provider state was forced. See `../evidence/official-channel-f1-team-deployment-2026-09-16.md`.

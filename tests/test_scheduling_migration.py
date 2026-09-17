@@ -20,7 +20,7 @@ def test_broadcast_migration_preserves_publications_and_roundtrips(tmp_path):
     alembic("upgrade", "a8c502e7d134")
     with sqlite3.connect(target) as db:
         publication = json.dumps(
-            {"url": "https://www.youtube.com/watch?v=abcdefghijk", "valid_until": "2030-01-01T05:00:00+05:00"}
+            {"url": "https://www.nba.com/game/migration-fixture", "valid_until": "2030-01-01T05:00:00+05:00"}
         )
         db.execute(
             "INSERT INTO broadcast_records (link_id,revision,status,draft,published,published_revision,device_tests,network_status,next_check_at,missing_count,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)",

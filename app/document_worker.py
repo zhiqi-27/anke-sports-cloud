@@ -26,7 +26,7 @@ def envelope(value):
     ):
         raise StoreError("QUEUE_MESSAGE_INVALID")
     if not isinstance(value["pk"], str) or not re.fullmatch(
-        r"user:[a-f0-9]{64}|provider:[a-z0-9][a-z0-9_-]{0,39}|channel:UC[A-Za-z0-9_-]{22}", value["pk"]
+        r"user:[a-f0-9]{64}|provider:[a-z0-9][a-z0-9_-]{0,39}", value["pk"]
     ):
         raise StoreError("QUEUE_MESSAGE_INVALID")
     if not isinstance(value["job_id"], str) or not re.fullmatch(r"job:[a-f0-9]{32}", value["job_id"]):
@@ -120,12 +120,6 @@ def fanout(runtime, claim):
             Write("replace", "account", clean(account), account["_etag"]),
             Write("create", pending["id"], pending),
         ]
-        active = runtime.accounts.active(account["payload"]["user_id"])
-        if active["payload"]["config"]["creators"]:
-            from app.document_creators import reconcile_job
-
-            content_job = reconcile_job(pk, active["payload"]["revision"])
-            writes.append(Write("create", content_job["id"], content_job))
         store.batch(
             "state",
             pk,
@@ -153,14 +147,8 @@ def run_job(runtime, message):
         # A persistence failure must propagate, never fall back to job-only failure.
         runtime.providers.process(claim)
         return True
-    if claim["payload"]["operation"] == "channel_sync":
-        runtime.channels.process(claim)
-        return True
-    if claim["payload"]["operation"] == "youtube_subscribe":
-        runtime.websub.process(claim)
-        return True
+    operation = claim["payload"]["operation"]
     try:
-        operation = claim["payload"]["operation"]
         if operation == "account_erasure" and claim["pk"].startswith("user:"):
             runtime.privacy.erase(claim)
         elif operation == "projection" and claim["pk"].startswith("user:"):
@@ -171,21 +159,6 @@ def run_job(runtime, message):
             runtime.public_feeds.publish(claim)
         elif operation == "catalog_changed" and claim["pk"].startswith("provider:"):
             fanout(runtime, claim)
-        elif operation == "channel_changed" and claim["pk"].startswith("channel:"):
-            runtime.creators.fanout(claim)
-        elif operation == "channel_notice" and claim["pk"].startswith("channel:"):
-            runtime.channels.enqueue(claim["payload"]["channel_id"], notifications=True)
-            runtime.store.batch("state", claim["pk"], [outbox.completion(claim)])
-        elif operation == "creator_reconcile" and claim["pk"].startswith("user:"):
-            runtime.creators.reconcile(claim)
-        elif operation == "match_channel" and claim["pk"].startswith("user:"):
-            runtime.matches.channel(claim)
-        elif operation == "match_video" and claim["pk"].startswith("user:"):
-            runtime.matches.video(claim)
-        elif operation == "event_search" and claim["pk"] == "provider:video-discovery":
-            runtime.discovery.process(claim)
-        elif operation == "discovery_fanout" and claim["pk"] == "provider:video-discovery":
-            runtime.discovery.fanout(claim)
         else:
             raise StoreError("DOCUMENT_JOB_NOT_MIGRATED")
     except Exception as error:
@@ -256,7 +229,8 @@ def main(argv=None):
             try:
                 if time.monotonic() >= next_schedule:
                     runtime.providers.schedule()
-                    runtime.discovery.schedule()
+                    # Content scheduling stays off until the verified official
+                    # channel catalog is connected to the shared channel pipeline.
                     schedule_calendar_window(runtime)
                     next_schedule = time.monotonic() + 60
                 advanced = dispatch(runtime.store, queue.send)

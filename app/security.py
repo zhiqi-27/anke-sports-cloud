@@ -120,7 +120,7 @@ def local_session(db) -> str:
 
 def canonical_url(value: str) -> tuple[str, str]:
     if any(ord(c) < 32 for c in value) or "\\" in value:
-        problem("INVALID_URL", "请输入有效 HTTPS 内容链接")
+        problem("INVALID_URL", "请输入有效的比赛直播入口链接")
     parsed = urlsplit(value.strip())
     host = (parsed.hostname or "").lower().rstrip(".")
     try:
@@ -140,7 +140,7 @@ def canonical_url(value: str) -> tuple[str, str]:
 
     allowed = {domain for rule in RULES for domain in rule["hosts"]}
     if host not in allowed:
-        problem("UNSUPPORTED_PLATFORM", "暂不支持此平台，请使用 YouTube 或已支持的官方内容链接")
+        problem("UNSUPPORTED_PLATFORM", "暂不支持此平台，请使用已支持的比赛直播入口")
     from urllib.parse import unquote
 
     decoded_path = unquote(unquote(parsed.path)).lower()
@@ -176,22 +176,8 @@ def canonical_url(value: str) -> tuple[str, str]:
         k.lower().replace("-", "_") in forbidden or k.lower().startswith(("x-amz-", "x-goog-")) for k in query
     ):
         problem("INVALID_URL", "不能保存带有访问凭据或跳转目标的链接")
-    if host in {"youtube.com", "www.youtube.com", "m.youtube.com", "youtu.be"}:
-        parts = parsed.path.strip("/").split("/")
-        video_id = (
-            parts[0]
-            if host == "youtu.be"
-            else (
-                parts[1]
-                if len(parts) > 1 and parts[0] in {"shorts", "live", "embed"}
-                else parse_qs(parsed.query).get("v", [""])[0]
-            )
-        )
-        if not re.fullmatch(r"[A-Za-z0-9_-]{11}", video_id):
-            problem("INVALID_URL", "请输入具体 YouTube 视频链接")
-        return f"https://www.youtube.com/watch?v={video_id}", "YouTube"
     if parsed.path in {"", "/"}:
-        problem("INVALID_URL", "请输入具体比赛或内容页，不能是平台首页")
+        problem("INVALID_URL", "请输入具体比赛直播入口，不能是平台首页")
     query = parse_qs(parsed.query)
     if any(k.lower() in {"token", "access_token", "auth", "signature", "key"} for k in query):
         problem("INVALID_URL", "不能保存带有访问凭据的链接")
@@ -239,12 +225,12 @@ def check_origin(request: Request):
 def require_scope(request, principal):
     path = request.url.path
     if request.method in {"GET", "HEAD"} and re.fullmatch(
-        r"/api/v1/(sources|events(/[^/]+)?|me/(calendar|config/export|reviews|creators/[^/]+/impact))",
+        r"/api/v1/(sources|events(/[^/]+)?|me/(calendar|config/export))",
         path,
     ):
         needed = "calendar:read"
     elif request.method in {"POST", "PUT", "PATCH", "DELETE"} and re.fullmatch(
-        r"/api/v1/(events/[^/]+/(links|selection)|me/(follows|preferences|links/[^/]+/(block|pin)|creators(/[^/]+(/refresh)?)?|reviews/[^/]+|config/import))",
+        r"/api/v1/(events/[^/]+/links|me/(follows|preferences|links/[^/]+/(block|pin)|config/import))",
         path,
     ):
         needed = "calendar:write"

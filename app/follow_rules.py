@@ -9,27 +9,7 @@ from app.source_rules import source_is_selectable
 
 
 def direct_follow_allowed(source):
-    return (source.kind == "team" and source.sport != "racing" and source_is_selectable(source)) or (
-        source.kind == "competition" and source.sport == "racing"
-    )
-
-
-def reconcile_creator_scopes(config, follows):
-    """Keep creator subscriptions attached only to retained follow objects.
-
-    An empty legacy scope meant "all follows". Materialize that meaning before
-    pruning so existing users are migrated without losing a creator merely for
-    saving an unrelated follow change.
-    """
-    retained_keys = {row["source_key"] for row in follows}
-    previous_keys = [row["source_key"] for row in config.get("follows", [])]
-    creators = []
-    for creator in config.get("creators", []):
-        bound = creator.get("scope_keys") or previous_keys
-        scope_keys = list(dict.fromkeys(key for key in bound if key in retained_keys))
-        if scope_keys:
-            creators.append({**creator, "scope_keys": scope_keys})
-    return {**config, "follows": follows, "creators": creators}
+    return source.kind == "team" and source_is_selectable(source)
 
 
 def follow_impact(
@@ -43,27 +23,22 @@ def follow_impact(
     instant,
     *,
     source_for_key,
-    event_for_key,
     event_by_id,
     all_events,
     publication_pending,
-    creator_name_for_id,
 ):
     after = {event.id: event for event in selected}
     before = {key for key, row in existing.items() if not row.removed}
     previous_follows = {f["source_key"]: f for f in user.config["follows"]}
     new_follows = {f["source_key"]: f for f in config["follows"]}
     dropped = previous_follows.keys() - new_follows.keys()
-    previous_creators = {row["channel_id"] for row in user.config.get("creators", [])}
-    new_creators = {row["channel_id"] for row in config.get("creators", [])}
 
     def source_summary(value):
         source = source_for_key(value["source_key"])
-        event = event_for_key(value["source_key"]) if value["type"] == "event" else None
         return {
             **value,
-            "name": source.name if source else event.title if event else value["source_key"],
-            "demo": source.demo if source else event.demo if event else None,
+            "name": source.name if source else value["source_key"],
+            "demo": source.demo if source else None,
         }
 
     def event_summary(ident):
@@ -100,10 +75,6 @@ def follow_impact(
             source_summary(new_follows[key]) for key in sorted(new_follows.keys() - previous_follows.keys())
         ],
         "removed_sources": [source_summary(previous_follows[key]) for key in sorted(dropped)],
-        "removed_creators": [
-            {"channel_id": ident, "name": creator_name_for_id(ident)}
-            for ident in sorted(previous_creators - new_creators)
-        ],
         "added": group(after.keys() - before),
         "removed": group(before - after.keys()),
         "retained": group(retained),

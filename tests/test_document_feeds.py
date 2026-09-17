@@ -41,7 +41,7 @@ def event(index=0, days=1):
         duration=120,
         venue="演示场馆",
         status="scheduled",
-        participants=[],
+        participants=[{"id": "fixture:team"}],
         provider="fixture",
         source_url="https://example.invalid/fixture",
         demo=True,
@@ -55,9 +55,9 @@ def pending(store, outbox, user="fixture-owner"):
     raise AssertionError("Expected a durable pending projection")
 
 
-def follow(accounts, keys=("fixture:league",), *, key=None):
+def follow(accounts, keys=("fixture:team",), *, key=None):
     account = accounts.active("fixture-owner")["payload"]
-    config = {**account["config"], "follows": [{"type": "competition", "source_key": k} for k in keys]}
+    config = {**account["config"], "follows": [{"type": "team", "source_key": k} for k in keys]}
     return accounts.save_config("fixture-owner", config, account["revision"], key=key)
 
 
@@ -74,7 +74,7 @@ def drain(store, publisher, outbox, events):
 def test_configuration_receipt_and_job_are_atomic_and_retry_is_scoped(documents):
     store, accounts, _, _ = documents
     old = accounts.active("fixture-owner")["payload"]
-    config = {**old["config"], "follows": [{"type": "competition", "source_key": "fixture:league"}]}
+    config = {**old["config"], "follows": [{"type": "team", "source_key": "fixture:team"}]}
     result = accounts.save_config("fixture-owner", config, 0, key="same-command-key")
     before = list(partition_items(store, "state", owner_partition("fixture-owner"), "outbox"))
     assert accounts.save_config("fixture-owner", config, 0, key="same-command-key") == result

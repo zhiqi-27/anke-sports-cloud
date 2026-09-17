@@ -861,55 +861,6 @@
         }
       }
     },
-    "/api/v1/events/{event_id}/selection": {
-      "put": {
-        "summary": "Selection",
-        "operationId": "selection_api_v1_events__event_id__selection_put",
-        "parameters": [
-          {
-            "name": "event_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Event Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/OverrideInput"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EventView"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/v1/events/{event_id}/links": {
       "post": {
         "summary": "Add Link",
@@ -1006,346 +957,6 @@
             }
           }
         ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/me/creators/resolve": {
-      "post": {
-        "summary": "Creator Resolve",
-        "operationId": "creator_resolve_api_v1_me_creators_resolve_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ResolveCreator"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CreatorIdentity"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/me/creators": {
-      "post": {
-        "summary": "Creator Add",
-        "operationId": "creator_add_api_v1_me_creators_post",
-        "parameters": [
-          {
-            "name": "idempotency-key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Idempotency-Key"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AddCreator"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CalendarUserView"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/me/creators/{channel_id}": {
-      "patch": {
-        "summary": "Creator Update",
-        "operationId": "creator_update_api_v1_me_creators__channel_id__patch",
-        "parameters": [
-          {
-            "name": "channel_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Channel Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateCreator"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CalendarUserView"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "delete": {
-        "summary": "Creator Delete",
-        "operationId": "creator_delete_api_v1_me_creators__channel_id__delete",
-        "parameters": [
-          {
-            "name": "channel_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Channel Id"
-            }
-          },
-          {
-            "name": "expected_revision",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Expected Revision"
-            }
-          },
-          {
-            "name": "confirmed",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "boolean",
-              "default": false,
-              "title": "Confirmed"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CalendarUserView"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/me/creators/{channel_id}/impact": {
-      "get": {
-        "summary": "Creator Impact",
-        "operationId": "creator_impact_api_v1_me_creators__channel_id__impact_get",
-        "parameters": [
-          {
-            "name": "channel_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Channel Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CreatorRemovalImpact"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/me/creators/{channel_id}/refresh": {
-      "post": {
-        "summary": "Creator Refresh",
-        "operationId": "creator_refresh_api_v1_me_creators__channel_id__refresh_post",
-        "parameters": [
-          {
-            "name": "channel_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Channel Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/me/reviews": {
-      "get": {
-        "summary": "Reviews",
-        "operationId": "reviews_api_v1_me_reviews_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ReviewList"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/me/reviews/{match_id}": {
-      "post": {
-        "summary": "Review Decide",
-        "operationId": "review_decide_api_v1_me_reviews__match_id__post",
-        "parameters": [
-          {
-            "name": "match_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Match Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ReviewDecision"
-              }
-            }
-          }
-        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -1829,47 +1440,6 @@
         ],
         "title": "AccountDeletionView"
       },
-      "AddCreator": {
-        "properties": {
-          "url": {
-            "type": "string",
-            "maxLength": 2000,
-            "minLength": 3,
-            "title": "Url"
-          },
-          "scope_keys": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "maxItems": 500,
-            "minItems": 1,
-            "title": "Scope Keys"
-          },
-          "preview": {
-            "type": "boolean",
-            "title": "Preview",
-            "default": true
-          },
-          "recap": {
-            "type": "boolean",
-            "title": "Recap",
-            "default": true
-          },
-          "expected_revision": {
-            "type": "integer",
-            "title": "Expected Revision"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "url",
-          "scope_keys",
-          "expected_revision"
-        ],
-        "title": "AddCreator"
-      },
       "AddLink": {
         "properties": {
           "url": {
@@ -1888,9 +1458,6 @@
             "type": "string",
             "enum": [
               "live",
-              "video",
-              "preview",
-              "recap",
               "watch_along"
             ],
             "title": "Kind"
@@ -2355,6 +1922,54 @@
         ],
         "title": "BroadcastView"
       },
+      "CalendarMembershipView": {
+        "properties": {
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/CalendarSourceView"
+            },
+            "type": "array",
+            "title": "Sources"
+          },
+          "can_remove": {
+            "type": "boolean",
+            "title": "Can Remove"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sources",
+          "can_remove"
+        ],
+        "title": "CalendarMembershipView"
+      },
+      "CalendarSourceView": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "follow",
+              "manual"
+            ],
+            "title": "Type"
+          },
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type",
+          "key",
+          "name"
+        ],
+        "title": "CalendarSourceView"
+      },
       "CalendarUserView": {
         "properties": {
           "is_maintainer": {
@@ -2377,13 +1992,6 @@
           "config": {
             "$ref": "#/components/schemas/Config-Output"
           },
-          "creators": {
-            "items": {
-              "$ref": "#/components/schemas/CreatorView"
-            },
-            "type": "array",
-            "title": "Creators"
-          },
           "feed": {
             "$ref": "#/components/schemas/FeedView"
           }
@@ -2394,7 +2002,6 @@
           "display_name",
           "revision",
           "config",
-          "creators",
           "feed"
         ],
         "title": "CalendarUserView"
@@ -2415,24 +2022,16 @@
             "maxItems": 500,
             "title": "Follows"
           },
-          "creators": {
-            "items": {
-              "$ref": "#/components/schemas/CreatorFollow-Input"
-            },
-            "type": "array",
-            "maxItems": 200,
-            "title": "Creators"
-          },
           "preferences": {
             "$ref": "#/components/schemas/Preferences-Input"
           },
-          "event_overrides": {
+          "manual_events": {
             "items": {
-              "$ref": "#/components/schemas/EventOverride"
+              "$ref": "#/components/schemas/ManualEventSource"
             },
             "type": "array",
             "maxItems": 2000,
-            "title": "Event Overrides"
+            "title": "Manual Events"
           },
           "link_overrides": {
             "items": {
@@ -2463,24 +2062,16 @@
             "maxItems": 500,
             "title": "Follows"
           },
-          "creators": {
-            "items": {
-              "$ref": "#/components/schemas/CreatorFollow-Output"
-            },
-            "type": "array",
-            "maxItems": 200,
-            "title": "Creators"
-          },
           "preferences": {
             "$ref": "#/components/schemas/Preferences-Output"
           },
-          "event_overrides": {
+          "manual_events": {
             "items": {
-              "$ref": "#/components/schemas/EventOverride"
+              "$ref": "#/components/schemas/ManualEventSource"
             },
             "type": "array",
             "maxItems": 2000,
-            "title": "Event Overrides"
+            "title": "Manual Events"
           },
           "link_overrides": {
             "items": {
@@ -2496,9 +2087,8 @@
         "required": [
           "schema_version",
           "follows",
-          "creators",
           "preferences",
-          "event_overrides",
+          "manual_events",
           "link_overrides"
         ],
         "title": "Config"
@@ -2665,209 +2255,6 @@
         ],
         "title": "CoverageView"
       },
-      "CreatorFollow-Input": {
-        "properties": {
-          "channel_id": {
-            "type": "string",
-            "maxLength": 80,
-            "minLength": 1,
-            "title": "Channel Id"
-          },
-          "scope_keys": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "maxItems": 500,
-            "title": "Scope Keys"
-          },
-          "preview": {
-            "type": "boolean",
-            "title": "Preview",
-            "default": true
-          },
-          "recap": {
-            "type": "boolean",
-            "title": "Recap",
-            "default": true
-          },
-          "enabled": {
-            "type": "boolean",
-            "title": "Enabled",
-            "default": true
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "channel_id"
-        ],
-        "title": "CreatorFollow"
-      },
-      "CreatorFollow-Output": {
-        "properties": {
-          "channel_id": {
-            "type": "string",
-            "maxLength": 80,
-            "minLength": 1,
-            "title": "Channel Id"
-          },
-          "scope_keys": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "maxItems": 500,
-            "title": "Scope Keys"
-          },
-          "preview": {
-            "type": "boolean",
-            "title": "Preview",
-            "default": true
-          },
-          "recap": {
-            "type": "boolean",
-            "title": "Recap",
-            "default": true
-          },
-          "enabled": {
-            "type": "boolean",
-            "title": "Enabled",
-            "default": true
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "channel_id",
-          "scope_keys",
-          "preview",
-          "recap",
-          "enabled"
-        ],
-        "title": "CreatorFollow"
-      },
-      "CreatorIdentity": {
-        "properties": {
-          "channel_id": {
-            "type": "string",
-            "title": "Channel Id"
-          },
-          "name": {
-            "type": "string",
-            "title": "Name"
-          },
-          "url": {
-            "type": "string",
-            "title": "Url"
-          }
-        },
-        "type": "object",
-        "required": [
-          "channel_id",
-          "name",
-          "url"
-        ],
-        "title": "CreatorIdentity"
-      },
-      "CreatorRemovalImpact": {
-        "properties": {
-          "automatic_removed": {
-            "type": "integer",
-            "title": "Automatic Removed"
-          },
-          "manual_retained": {
-            "type": "integer",
-            "title": "Manual Retained"
-          },
-          "revision": {
-            "type": "integer",
-            "title": "Revision"
-          }
-        },
-        "type": "object",
-        "required": [
-          "automatic_removed",
-          "manual_retained",
-          "revision"
-        ],
-        "title": "CreatorRemovalImpact"
-      },
-      "CreatorView": {
-        "properties": {
-          "channel_id": {
-            "type": "string",
-            "maxLength": 80,
-            "minLength": 1,
-            "title": "Channel Id"
-          },
-          "scope_keys": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "maxItems": 500,
-            "title": "Scope Keys"
-          },
-          "preview": {
-            "type": "boolean",
-            "title": "Preview",
-            "default": true
-          },
-          "recap": {
-            "type": "boolean",
-            "title": "Recap",
-            "default": true
-          },
-          "enabled": {
-            "type": "boolean",
-            "title": "Enabled",
-            "default": true
-          },
-          "name": {
-            "type": "string",
-            "title": "Name"
-          },
-          "last_error": {
-            "type": "string",
-            "title": "Last Error"
-          },
-          "sync_status": {
-            "type": "string",
-            "title": "Sync Status"
-          },
-          "last_synced_at": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Last Synced At"
-          },
-          "websub_status": {
-            "type": "string",
-            "title": "Websub Status"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "channel_id",
-          "scope_keys",
-          "preview",
-          "recap",
-          "enabled",
-          "name",
-          "last_error",
-          "sync_status",
-          "last_synced_at",
-          "websub_status"
-        ],
-        "title": "CreatorView"
-      },
       "DeviceEvidence": {
         "properties": {
           "expected_revision": {
@@ -2997,31 +2384,6 @@
         ],
         "title": "EventList"
       },
-      "EventOverride": {
-        "properties": {
-          "event_key": {
-            "type": "string",
-            "maxLength": 220,
-            "minLength": 1,
-            "title": "Event Key"
-          },
-          "state": {
-            "type": "string",
-            "enum": [
-              "include",
-              "exclude"
-            ],
-            "title": "State"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "event_key",
-          "state"
-        ],
-        "title": "EventOverride"
-      },
       "EventView": {
         "properties": {
           "id": {
@@ -3112,6 +2474,16 @@
           "included": {
             "type": "boolean",
             "title": "Included"
+          },
+          "calendar": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CalendarMembershipView"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "links": {
             "items": {
@@ -3206,12 +2578,7 @@
         "properties": {
           "type": {
             "type": "string",
-            "enum": [
-              "team",
-              "competition",
-              "event",
-              "series"
-            ],
+            "const": "team",
             "title": "Type"
           },
           "source_key": {
@@ -3229,34 +2596,11 @@
         ],
         "title": "Follow"
       },
-      "FollowChangeCreator": {
-        "properties": {
-          "channel_id": {
-            "type": "string",
-            "title": "Channel Id"
-          },
-          "name": {
-            "type": "string",
-            "title": "Name"
-          }
-        },
-        "type": "object",
-        "required": [
-          "channel_id",
-          "name"
-        ],
-        "title": "FollowChangeCreator"
-      },
       "FollowChangeSource": {
         "properties": {
           "type": {
             "type": "string",
-            "enum": [
-              "team",
-              "competition",
-              "event",
-              "series"
-            ],
+            "const": "team",
             "title": "Type"
           },
           "source_key": {
@@ -3410,13 +2754,6 @@
             "type": "array",
             "title": "Removed Sources"
           },
-          "removed_creators": {
-            "items": {
-              "$ref": "#/components/schemas/FollowChangeCreator"
-            },
-            "type": "array",
-            "title": "Removed Creators"
-          },
           "added": {
             "$ref": "#/components/schemas/FollowImpactGroup"
           },
@@ -3461,7 +2798,6 @@
           "confirmation",
           "added_sources",
           "removed_sources",
-          "removed_creators",
           "added",
           "removed",
           "retained",
@@ -3646,21 +2982,9 @@
             "type": "string",
             "title": "Kind"
           },
-          "content_labels": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "maxItems": 3,
-            "title": "Content Labels"
-          },
           "platform": {
             "type": "string",
             "title": "Platform"
-          },
-          "creator": {
-            "type": "string",
-            "title": "Creator"
           },
           "origin": {
             "type": "string",
@@ -3693,7 +3017,6 @@
           "title",
           "kind",
           "platform",
-          "creator",
           "origin",
           "access",
           "regions",
@@ -3702,29 +3025,22 @@
         ],
         "title": "LinkView"
       },
-      "OverrideInput": {
+      "ManualEventSource": {
         "properties": {
-          "expected_revision": {
-            "type": "integer",
-            "title": "Expected Revision"
-          },
-          "state": {
+          "event_id": {
             "type": "string",
-            "enum": [
-              "include",
-              "exclude",
-              "reset"
-            ],
-            "title": "State"
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Event Id"
           }
         },
         "additionalProperties": false,
         "type": "object",
         "required": [
-          "expected_revision",
-          "state"
+          "event_id"
         ],
-        "title": "OverrideInput"
+        "title": "ManualEventSource",
+        "description": "A personal calendar source independent from team follows."
       },
       "ParticipantView": {
         "properties": {
@@ -3798,20 +3114,6 @@
             "type": "object",
             "maxProperties": 20,
             "title": "Broadcast Platforms"
-          },
-          "content_search_windows": {
-            "items": {
-              "type": "string",
-              "enum": [
-                "before_24h",
-                "before_3h",
-                "after_3h",
-                "after_18h"
-              ]
-            },
-            "type": "array",
-            "maxItems": 2,
-            "title": "Content Search Windows"
           }
         },
         "additionalProperties": false,
@@ -3862,20 +3164,6 @@
             "type": "object",
             "maxProperties": 20,
             "title": "Broadcast Platforms"
-          },
-          "content_search_windows": {
-            "items": {
-              "type": "string",
-              "enum": [
-                "before_24h",
-                "before_3h",
-                "after_3h",
-                "after_18h"
-              ]
-            },
-            "type": "array",
-            "maxItems": 2,
-            "title": "Content Search Windows"
           }
         },
         "additionalProperties": false,
@@ -3886,8 +3174,7 @@
           "watch_region",
           "spoiler_free",
           "transparent",
-          "broadcast_platforms",
-          "content_search_windows"
+          "broadcast_platforms"
         ],
         "title": "Preferences"
       },
@@ -4027,167 +3314,6 @@
         ],
         "title": "PublicFeedView"
       },
-      "ResolveCreator": {
-        "properties": {
-          "url": {
-            "type": "string",
-            "maxLength": 2000,
-            "minLength": 3,
-            "title": "Url"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "url"
-        ],
-        "title": "ResolveCreator"
-      },
-      "ReviewDecision": {
-        "properties": {
-          "decision": {
-            "type": "string",
-            "enum": [
-              "confirm",
-              "ignore"
-            ],
-            "title": "Decision"
-          },
-          "kind": {
-            "anyOf": [
-              {
-                "type": "string",
-                "enum": [
-                  "preview",
-                  "recap"
-                ]
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Kind"
-          },
-          "expected_updated_at": {
-            "type": "string",
-            "title": "Expected Updated At"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "decision",
-          "expected_updated_at"
-        ],
-        "title": "ReviewDecision"
-      },
-      "ReviewList": {
-        "properties": {
-          "items": {
-            "items": {
-              "$ref": "#/components/schemas/ReviewView"
-            },
-            "type": "array",
-            "title": "Items"
-          }
-        },
-        "type": "object",
-        "required": [
-          "items"
-        ],
-        "title": "ReviewList"
-      },
-      "ReviewView": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "video_id": {
-            "type": "string",
-            "title": "Video Id"
-          },
-          "title": {
-            "type": "string",
-            "title": "Title"
-          },
-          "url": {
-            "type": "string",
-            "title": "Url"
-          },
-          "creator": {
-            "type": "string",
-            "title": "Creator"
-          },
-          "published_at": {
-            "type": "string",
-            "title": "Published At"
-          },
-          "event_id": {
-            "type": "string",
-            "title": "Event Id"
-          },
-          "event_title": {
-            "type": "string",
-            "title": "Event Title"
-          },
-          "starts_at": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Starts At"
-          },
-          "kind": {
-            "type": "string",
-            "title": "Kind"
-          },
-          "content_labels": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "maxItems": 3,
-            "title": "Content Labels"
-          },
-          "reason_codes": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Reason Codes"
-          },
-          "rule_version": {
-            "type": "string",
-            "title": "Rule Version"
-          },
-          "updated_at": {
-            "type": "string",
-            "title": "Updated At"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "video_id",
-          "title",
-          "url",
-          "creator",
-          "published_at",
-          "event_id",
-          "event_title",
-          "starts_at",
-          "kind",
-          "reason_codes",
-          "rule_version",
-          "updated_at"
-        ],
-        "title": "ReviewView"
-      },
       "SaveFollows": {
         "properties": {
           "expected_revision": {
@@ -4243,9 +3369,6 @@
       },
       "ServiceStatusView": {
         "properties": {
-          "youtube_budget": {
-            "$ref": "#/components/schemas/YouTubeBudgetView"
-          },
           "local_preview": {
             "type": "boolean",
             "title": "Local Preview"
@@ -4271,7 +3394,6 @@
         },
         "type": "object",
         "required": [
-          "youtube_budget",
           "local_preview",
           "firebase_configured",
           "providers",
@@ -4349,45 +3471,6 @@
         ],
         "title": "SourceView"
       },
-      "UpdateCreator": {
-        "properties": {
-          "expected_revision": {
-            "type": "integer",
-            "title": "Expected Revision"
-          },
-          "scope_keys": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "maxItems": 500,
-            "minItems": 1,
-            "title": "Scope Keys"
-          },
-          "preview": {
-            "type": "boolean",
-            "title": "Preview"
-          },
-          "recap": {
-            "type": "boolean",
-            "title": "Recap"
-          },
-          "enabled": {
-            "type": "boolean",
-            "title": "Enabled"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "expected_revision",
-          "scope_keys",
-          "preview",
-          "recap",
-          "enabled"
-        ],
-        "title": "UpdateCreator"
-      },
       "ValidationError": {
         "properties": {
           "loc": {
@@ -4427,109 +3510,6 @@
           "type"
         ],
         "title": "ValidationError"
-      },
-      "YouTubeBudgetView": {
-        "properties": {
-          "configured": {
-            "type": "boolean",
-            "title": "Configured"
-          },
-          "state": {
-            "type": "string",
-            "enum": [
-              "unconfigured",
-              "available",
-              "waiting"
-            ],
-            "title": "State"
-          },
-          "daily_limit": {
-            "type": "integer",
-            "title": "Daily Limit"
-          },
-          "reserved_units": {
-            "type": "integer",
-            "title": "Reserved Units"
-          },
-          "available_units": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Available Units"
-          },
-          "reset_at": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Reset At"
-          },
-          "resume_at": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Resume At"
-          },
-          "search_daily_limit": {
-            "type": "integer",
-            "title": "Search Daily Limit"
-          },
-          "search_reserved_calls": {
-            "type": "integer",
-            "title": "Search Reserved Calls"
-          },
-          "search_available_calls": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Search Available Calls"
-          },
-          "search_resume_at": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Search Resume At"
-          }
-        },
-        "type": "object",
-        "required": [
-          "configured",
-          "state",
-          "daily_limit",
-          "reserved_units",
-          "available_units",
-          "reset_at",
-          "resume_at",
-          "search_daily_limit",
-          "search_reserved_calls",
-          "search_available_calls",
-          "search_resume_at"
-        ],
-        "title": "YouTubeBudgetView"
       }
     }
   }

@@ -5,8 +5,8 @@ from datetime import datetime, timezone
 from sqlalchemy import select
 
 from app.calendar import select_feed_events
-from app.follow_rules import direct_follow_allowed, follow_impact, reconcile_creator_scopes
-from app.db import Creator, Event, Feed, Job, Projection, Source
+from app.follow_rules import direct_follow_allowed, follow_impact
+from app.db import Event, Feed, Job, Projection, Source
 from app.security import problem
 
 
@@ -15,18 +15,13 @@ def proposed_config(db, user, data):
         problem("REVISION_CONFLICT", "配置已在其他页面更新，请刷新后重试", 409)
     for follow in data.follows:
         source = db.get(Source, follow.source_key)
-        event = (
-            db.scalar(select(Event).where(Event.source_key == follow.source_key))
-            if follow.type == "event"
-            else None
-        )
         valid_source = source and source.kind == follow.type
-        if not valid_source and not event:
+        if not valid_source:
             problem("SOURCE_NOT_FOUND", "该关注对象或类型尚未接入")
         if valid_source and not direct_follow_allowed(source):
             problem("FOLLOW_SCOPE_NOT_ALLOWED", "英超和 NBA 等联赛请按球队关注")
     follows = {f.source_key: f.model_dump() for f in data.follows}
-    return reconcile_creator_scopes(user.config, [follows[key] for key in sorted(follows)])
+    return {**user.config, "follows": [follows[key] for key in sorted(follows)]}
 
 
 def preview_follows(db, user, data):
@@ -45,7 +40,6 @@ def preview_follows(db, user, data):
         upper,
         instant,
         source_for_key=lambda key: db.get(Source, key),
-        event_for_key=lambda key: db.scalar(select(Event).where(Event.source_key == key)),
         event_by_id=lambda ident: db.get(Event, ident),
         all_events=db.scalars(select(Event)),
         publication_pending=db.scalar(
@@ -58,7 +52,4 @@ def preview_follows(db, user, data):
             .limit(1)
         )
         is not None,
-        creator_name_for_id=lambda ident: (
-            db.get(Creator, ident).name if db.get(Creator, ident) else ident
-        ),
     )

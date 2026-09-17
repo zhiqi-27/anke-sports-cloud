@@ -1,5 +1,11 @@
 # MCP 与应用连接
 
+## 1.0契约调整（2026-09-17，待实现验收）
+
+新增单场添加/删除能力，与Web共用服务端规则：建议工具`add_calendar_event`/`remove_calendar_event`，使用calendar:write、revision及幂等键。私人读取返回来源与可删标志；关注自动纳入的比赛拒绝逐场删除，手动与关注重叠时仍拒绝，取消关注后保留手动来源。重复添加去重且UID稳定。导入与旧exclude接口不得绕过。此处为目标契约，不是工具已在线。
+
+不提供创作者/YouTube视频/AI工具；通用链接写入需收敛到比赛直播类型。无需兼容1.0前工具与配置格式。以下历史工具清单与实验须按新契约重新核验，不代表当前支持。
+
 当前为本地实现与验收。已用安装的 Codex CLI 0.153.4 完成真实 HTTP OAuth、工具发现和撤销后重新发现；实际工具调用另有下文临时SQL/合成身份实验，不能代替真实Firebase与Azure公网闭环。用户已于2026-09-13取消Chrome扩展，公网闭环只验MCP。
 
 ## 产品范围
@@ -11,7 +17,7 @@
 服务运行后，Streamable HTTP 地址为：
 
 - `http://localhost:8787/mcp/public`：匿名、只读、3 个公开查询工具。
-- `http://localhost:8787/mcp`：授权后的 11 个工具；最小权限 `calendar:read`。
+- `http://localhost:8787/mcp`：授权后的 10 个工具；最小权限 `calendar:read`。
 - 网页 `/connect`：从客户端发起请求后显示账号、客户端自报名称、精确回调地址和权限；直接打开没有请求参数时显示引导。
 - 网页设置中的「已连接的应用」：查看授权范围、到期时间并撤销。
 
@@ -26,7 +32,6 @@
 | `get_event` | 比赛、来源、时间和可见链接；私人连接应用个人 block/pin |
 | `get_my_calendar` | `calendar:read`；配置版本与订阅源发布状态，不返回私人地址 |
 | `update_follows` | `calendar:write`；add/remove、expected_revision、幂等键 |
-| `add_creator` | `calendar:write`；共用频道解析、范围和版本检查，需要真实 YouTube 配置 |
 | `attach_event_link` | `calendar:write`；共用 HTTPS 校验和持久隐藏规则 |
 | `remove_event_link` | `calendar:write`；只对本人隐藏，不删除其他人的链接 |
 | `export_config` | `calendar:read`；配置格式同 Web，不包含凭据和 Feed 地址 |
@@ -41,7 +46,7 @@
 
 以下是当前可调整的实现默认值，不代表已经验证了所有外部客户端：
 
-- Firebase ID token 仅在 Web 的账号身份确认中使用。MCP 获得 Anke Sports 自有 opaque token，不转发 Google 凭据。既有扩展资源分支只保留历史兼容，不属于当前交付。
+- Firebase ID token 仅在 Web 的账号身份确认中使用。MCP 获得 Anke Sports 自有 opaque token，不转发 Google 凭据。既有扩展资源分支只保留历史隔离材料，不属于当前交付。
 - PKCE S256、10分钟授权请求、2分钟单次授权码、15分钟 access token、最多7天 grant。refresh token 每次兑换即轮换，旧 refresh token 重放撤销整个连接。
 - 数据库只保存授权码、access/refresh token 的哈希；动态客户端元数据加密保存。token 绑定 owner、client、issuer、resource、scopes 和到期时间，撤销后每次请求重新检查。
 - MCP资源是 `${PUBLIC_URL}/mcp`。既有 `${PUBLIC_URL}/api/v1` 扩展audience继续保持隔离，但不进入当前发布或验收。
@@ -73,7 +78,7 @@ codex mcp add anke_sports --url http://localhost:8787/mcp
 codex mcp login anke_sports --scopes calendar:read
 ```
 
-在浏览器确认 Anke Sports 账号、回调和读取权限。需要修改关注或链接时，重新授权并显式请求 `calendar:read,calendar:write`。只有确实需要读取私人订阅地址时才额外申请 `feed:read`；该地址不能放进公开记录。发现11个工具并不表示拥有全部权限，业务调用仍逐项检查 scope。Web 设置可以撤销连接；`codex mcp logout anke_sports` 清理客户端保存的凭据。
+在浏览器确认 Anke Sports 账号、回调和读取权限。需要修改关注或链接时，重新授权并显式请求 `calendar:read,calendar:write`。只有确实需要读取私人订阅地址时才额外申请 `feed:read`；该地址不能放进公开记录。发现10个工具并不表示拥有全部权限，业务调用仍逐项检查 scope。Web 设置可以撤销连接；`codex mcp logout anke_sports` 清理客户端保存的凭据。
 
 Codex 的配置文件也可使用以下内容（选择用户配置或受信任项目的 `.codex/config.toml`；不要覆盖其他设置）：
 
@@ -103,9 +108,9 @@ codex -c 'mcp_servers.anke_sports_local_check.url="http://localhost:8787/mcp"' m
 
 脚本调用安装版本的 Codex App Server `config/read` 和 `mcpServerStatus/list`，只接受 loopback HTTP。它先读取有效配置，再通过本进程覆盖禁用其他已配置 MCP、插件和 apps，并检查全部 inventory 页；不会创建任务、调用模型、执行业务工具、读取令牌或改配置文件。无thread的条目可能返回null运行状态，须结合明确disabled配置和零工具判断。可用 `--codex` 指定可执行文件、`--output` 写入新的脱敏 JSON。CLI 登录会按 Codex 自身设置保存 OAuth 凭据，需按上述步骤清理。
 
-本机验证结果：私人11个工具、匿名3个；网页撤销后私人0个工具。撤销后 `authStatus` 仍可能是 `oAuth`，它表示客户端有已保存凭据，不能作为服务端仍接受授权的证据。退出登录后为 `notLoggedIn`。只有结合 Web 撤销、服务端健康和授权记录清理，才能把失败发现归因于本次撤销；单独的 `--expect unavailable` 也可能是网络或启动失败。
+本机验证结果：私人10个工具、匿名3个；网页撤销后私人0个工具。撤销后 `authStatus` 仍可能是 `oAuth`，它表示客户端有已保存凭据，不能作为服务端仍接受授权的证据。退出登录后为 `notLoggedIn`。只有结合 Web 撤销、服务端健康和授权记录清理，才能把失败发现归因于本次撤销；单独的 `--expect unavailable` 也可能是网络或启动失败。
 
-本次 Chrome 回调最终页显示 `ERR_BLOCKED_BY_CLIENT`，未重试被拦截页面。Codex CLI 已明确报告登录成功，随后独立 Codex 进程发现11个工具；授权传输成功与浏览器完成页显示分别记录。详见 [Codex 实测证据](../evidence/codex-client-2026-09-10.md)。
+本次 Chrome 回调最终页显示 `ERR_BLOCKED_BY_CLIENT`，未重试被拦截页面。Codex CLI 已明确报告登录成功，随后独立 Codex 进程发现10个工具；授权传输成功与浏览器完成页显示分别记录。详见 [Codex 实测证据](../evidence/codex-client-2026-09-10.md)。
 
 ### 实际 Codex 业务调用
 
@@ -117,6 +122,6 @@ uv run python -m experiments.codex_business --output data/codex-business-new.jso
 
 本机25项检查通过：查询与分页、只读权限拒绝、关注写入/重试/参数冲突、身份参数拒绝、跨HTTP/MCP同键链接、持久屏蔽、配置导出/预览/应用、真实HTTP ICS稳定UID与200/304、模拟access过期后的实际Codex刷新轮换，以及撤销后拒绝调用。完整证据和旧探测隔离范围更正见 [实际业务验收](../evidence/codex-business-2026-09-10.md)。
 
-完整客户端验收仍需自然时间过期、模型自行选择工具及真实YouTube创作者接入。云端还需独立 Firebase 身份与MCP组合、HTTPS 公网回调、Azure ASGI 启停与数据库并发、限流/滥用。Chrome安装及service worker生命周期已退出范围。当前注册数量和请求体上限不能代替生产限流。
+完整客户端验收仍需自然时间过期、模型自行选择工具、独立 Firebase 身份与 MCP 组合、HTTPS 公网回调、Azure ASGI 启停与数据库并发、限流/滥用。手动单场 MCP 增删工具属于后续 C，不把目标工具名写成已在线能力。Chrome安装及 service worker 生命周期已退出范围。当前注册数量和请求体上限不能代替生产限流。
 
 依据：[MCP 官方 Python SDK](https://github.com/modelcontextprotocol/python-sdk)、[MCP 2026-07-28 授权规范](https://modelcontextprotocol.io/specification/2026-07-28/basic/authorization)、[OAuth 令牌撤销 RFC 7009](https://www.rfc-editor.org/rfc/rfc7009)。

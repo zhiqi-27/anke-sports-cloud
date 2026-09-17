@@ -56,9 +56,9 @@ def test_http_deletion_revokes_feed_tokens_connections_and_only_the_owner(stack)
             db,
             other,
             db.get(Event, event_id),
-            "https://www.youtube.com/watch?v=otheruser01",
+            "https://www.nba.com/game/other-owner",
             "Other owner",
-            "preview",
+            "live",
         )
         db.add(
             CommandReceipt(
@@ -215,74 +215,6 @@ def test_running_personal_job_cannot_publish_after_account_erasure(disk_stack, m
         assert db.get(Job, ident) is None
         assert db.scalar(select(Feed)).body == ""
         assert db.scalar(select(Projection)) is None
-
-
-def test_queued_channel_fetches_stop_after_last_owner_deletion(stack, monkeypatch):
-    from sqlalchemy import select
-    from app import content, worker
-    from app.db import Job, Video
-    from tests.test_content import CHANNEL, VID, setup_content
-    from tests.test_jobs import job
-
-    _, sessions = stack
-    setup_content(sessions)
-    queued = [
-        job(sessions, kind, {"channel_id": CHANNEL, "video_ids": [VID]})
-        for kind in ("youtube_poll", "youtube_videos", "youtube_channel_metadata")
-    ]
-    with sessions() as db:
-        delete_account_data(db, "local-reviewer")
-        db.commit()
-    calls = []
-    monkeypatch.setattr(content, "youtube_request", lambda *args: calls.append(args))
-    for ident in queued:
-        assert worker.run_one(ident)
-    assert calls == []
-    with sessions() as db:
-        assert db.get(Video, VID) is not None  # Public metadata follows its independent retention policy.
-        assert all(db.get(Job, ident).state == "done" for ident in queued)
-        assert not db.scalars(select(Job).where(Job.payload["user_id"].as_string() == "local-reviewer")).all()
-
-
-def test_shared_content_continues_for_other_interested_owner(stack, monkeypatch):
-    from sqlalchemy import select
-    from app import content
-    from app.db import Event, Link, Video
-    from app.schemas import CreatorFollow
-    from app.service import ensure_user
-    from tests.test_content import CHANNEL, VID, api_video, setup_content
-
-    _, sessions = stack
-    event_id = setup_content(sessions)
-    with sessions() as db:
-        other = ensure_user(db, "remaining-owner")
-        save_config(
-            db,
-            other,
-            {
-                **other.config,
-                "follows": [{"type": "team", "source_key": "fixture:LAL"}],
-                "creators": [
-                    CreatorFollow(channel_id=CHANNEL, scope_keys=["fixture:LAL"]).model_dump()
-                ],
-                "event_overrides": [{"event_key": db.get(Event, event_id).source_key, "state": "include"}],
-            },
-            other.revision,
-        )
-        content.match_video(db, db.get(Video, VID))
-        db.commit()
-        title = db.get(Video, VID).title
-        delete_account_data(db, "local-reviewer")
-        db.commit()
-    calls = []
-    monkeypatch.setattr(
-        content, "youtube_request", lambda *args: calls.append(args) or {"items": [api_video(title)]}
-    )
-    with sessions() as db:
-        content.refresh_videos(db, CHANNEL, [VID])
-        db.commit()
-        assert calls and db.get(User, "remaining-owner").deleted is False
-        assert all(link.owner_id == "remaining-owner" for link in db.scalars(select(Link)))
 
 
 def test_firebase_cleanup_is_durable_target_bound_and_retryable(stack, monkeypatch):

@@ -72,7 +72,6 @@ def provider_key(name):
     field = {
         "BALLDONTLIE_API_KEY": "balldontlie_api_key",
         "FOOTBALL_DATA_API_KEY": "football_data_api_key",
-        "YOUTUBE_API_KEY": "youtube_api_key",
     }[name]
     return getattr(settings(), field).get_secret_value()
 
@@ -184,16 +183,3 @@ def sync_provider(db, provider):
     enqueue_public_feeds(
         db, list(db.scalars(select(Source.id).where(Source.provider == provider))), force=True
     )
-
-
-def youtube_request(endpoint, params):
-    from app import youtube_budget
-    from app.youtube_transport import request
-
-    return request(endpoint, params, key=provider_key("YOUTUBE_API_KEY"), budget=youtube_budget)
-
-
-def resolve_creator(value):
-    from app.youtube_transport import resolve_creator as resolve
-
-    return resolve(value, youtube_request)

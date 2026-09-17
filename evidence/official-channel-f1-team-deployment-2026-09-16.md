@@ -1,0 +1,11 @@
+# Official-channel scope and F1 team-only deployment · 2026-09-16
+
+Target: existing development Function App `anke-sports-dev-mtcflttk` in East Asia and existing Cloudflare Worker `anke-sports-web` on `sports.anke-ai.com`. No Bicep, app-setting, RBAC, schema migration, user-account mutation, Git push or production action was performed.
+
+The backend candidate `data/anke-sports-20260916-official-channels-f1-teams.zip` contains 83 allowlisted runtime files, is 194999 bytes and has SHA-256 `bbe0ef48cc350a902475ab8a138b6cb48356bf17cfba476d9a61a5f5e176d73e`. The prior event-discovery package remains available with SHA-256 `ee73544c34cf9ef20986d78d34bdd2a2f1f151a3f08ddb68f7faa7491460158b`. The current code had already passed Ruff and the full `406 passed / 2 skipped` suite; deployment preflight repeated the three package tests and both repository diff checks.
+
+Azure CLI completed remote build, trigger synchronization and health validation with `Deployment was successful.` All six Functions remain registered. Azure-direct and Cloudflare-routed health/status returned HTTP 200 with `staging` / `cosmos`; the public status now reports `youtube_discovery=official_catalog_foundation` and `web_search_fallback=disabled`.
+
+The Web deployment used a clean 99-asset static build and verified the existing public Firebase configuration before upload. Wrangler activated version `269a483f-2c19-4006-8e5b-6da40cd96e57` on the custom domain; the immediately previous version is `3d2f44ff-e62b-4d6c-a875-a54ead104ee7`. No-cache readback fetched the 11 scripts referenced by the live calendar page, found the F1 team-only copy, and confirmed the removed video-search-time and old YouTube-search descriptions were absent.
+
+The live Jolpica snapshot still reflects its 2026-09-16 02:30:26 UTC refresh and therefore contains the F1 competition but zero constructor sources. The six-hour cadence makes the first normal refresh eligible after 08:30:26 UTC (about 16:31 China Standard Time). Deployment did not bypass cadence or mutate Provider state. Until that refresh succeeds, the deployed F1 picker has no constructor entries. The official-channel catalog is only a verified maintenance foundation: no official channels have been seeded and channel ingestion is not connected, so this release does not claim automatic video delivery, personal Feed refresh or device playback.

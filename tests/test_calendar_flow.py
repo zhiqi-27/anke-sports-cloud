@@ -32,8 +32,8 @@ def insert_event(sessions, days=2, suffix="a", **extra):
         db.add(event)
         db.flush()
         user = db.get(User, "local-reviewer")
-        overrides = [*user.config["event_overrides"], {"event_key": event.source_key, "state": "include"}]
-        save_config(db, user, {**user.config, "event_overrides": overrides}, user.revision)
+        manual_events = [*user.config.get("manual_events", []), {"event_id": event.id}]
+        save_config(db, user, {**user.config, "manual_events": manual_events}, user.revision)
         db.commit()
         ident = event.id
     drain()
@@ -69,7 +69,11 @@ def test_reschedule_content_and_rotation_keep_uid(stack):
     assert str(events[0]["UID"]) == uid
     assert int(events[0]["SEQUENCE"]) == seq + 1
     assert second.headers["etag"] != first.headers["etag"]
-    payload = {"url": "https://youtu.be/abcdefghijk", "kind": "preview", "title": "手动链接测试"}
+    payload = {
+        "url": "https://www.nba.com/game/test-event",
+        "kind": "live",
+        "title": "手动直播链接测试",
+    }
     added = client.post(f"/api/v1/events/{ident}/links", json=payload)
     assert added.status_code == 200
     duplicate = client.post(f"/api/v1/events/{ident}/links", json=payload)
@@ -77,7 +81,7 @@ def test_reschedule_content_and_rotation_keep_uid(stack):
     drain()
     _, third, events = feed_snapshot(client)
     assert str(events[0]["UID"]) == uid and int(events[0]["SEQUENCE"]) == seq + 2
-    assert "abcdefghijk" in str(events[0]["DESCRIPTION"])
+    assert "www.nba.com/game/test-event" in str(events[0]["DESCRIPTION"])
     client.post("/api/v1/me/feed/rotate", json={"confirmed": True}).raise_for_status()
     assert client.get(address).status_code == 404
     _, rotated, events = feed_snapshot(client)
@@ -104,25 +108,26 @@ def test_link_block_survives_repeated_discovery_and_owner_isolation(stack):
     client, sessions = stack
     ident = insert_event(sessions)
     link = client.post(
-        f"/api/v1/events/{ident}/links", json={"url": "https://youtu.be/abcdefghijk", "kind": "preview"}
+        f"/api/v1/events/{ident}/links",
+        json={"url": "https://www.nba.com/game/test-event", "kind": "live"},
     ).json()["id"]
     assert client.post(f"/api/v1/me/links/{link}/block").status_code == 200
     with sessions() as db:
         other = ensure_user(db, "another-user")
         secret = attach_link(
-            db, other, db.get(Event, ident), "https://youtu.be/0123456789a", "private title", "recap"
+            db, other, db.get(Event, ident), "https://www.nba.com/game/other-owner", "private title", "live"
         )
         other_id = secret.id
         db.commit()
     assert client.post(f"/api/v1/me/links/{other_id}/block").status_code == 404
     client.post(
         f"/api/v1/events/{ident}/links",
-        json={"url": "https://www.youtube.com/watch?v=abcdefghijk", "kind": "preview"},
+        json={"url": "https://www.nba.com/game/test-event", "kind": "live"},
     )
     drain()
     assert client.get(f"/api/v1/events/{ident}").json()["links"] == []
     _, response, _ = feed_snapshot(client)
-    assert "abcdefghijk" not in response.text and "private title" not in response.text
+    assert "www.nba.com/game/test-event" not in response.text and "private title" not in response.text
 
 
 def test_revision_conflict_and_import_bound_to_preview(stack):
@@ -147,7 +152,7 @@ def test_revision_conflict_and_import_bound_to_preview(stack):
     assert "token" not in exported and "feed" not in exported
 
 
-def test_follow_preview_only_allows_ball_teams_and_racing_competitions(stack):
+def test_follow_preview_only_allows_specific_teams_for_every_sport(stack):
     client, sessions = stack
     with sessions() as db:
         for source in [
@@ -216,13 +221,11 @@ def test_follow_preview_only_allows_ball_teams_and_racing_competitions(stack):
         )
 
     rejected = preview("competition", "test:nba")
-    assert rejected.status_code == 400
-    assert rejected.json()["error"]["code"] == "FOLLOW_SCOPE_NOT_ALLOWED"
-    assert preview("competition", "test:f1").status_code == 200
+    assert rejected.status_code == 422
+    racing_competition = preview("competition", "test:f1")
+    assert racing_competition.status_code == 422
     assert preview("team", "test:team").status_code == 200
-    racing_team = preview("team", "test:racing-team")
-    assert racing_team.status_code == 400
-    assert racing_team.json()["error"]["code"] == "FOLLOW_SCOPE_NOT_ALLOWED"
+    assert preview("team", "test:racing-team").status_code == 200
     guest_team = preview("team", "balldontlie:team:999")
     assert guest_team.status_code == 400
     assert guest_team.json()["error"]["code"] == "FOLLOW_SCOPE_NOT_ALLOWED"
@@ -241,25 +244,20 @@ def test_merge_omitted_preferences_preserves_user_settings(stack):
         assert merged["preferences"]["timezone"] == "UTC"
 
 
-def test_unfollow_retains_past_but_explicit_exclusion_hides(stack):
+def test_unfollow_retains_past_without_single_event_exclusion(stack):
     client, sessions = stack
     past = insert_event(sessions, days=-1, suffix="past")
     future = insert_event(sessions, suffix="future")
     with sessions() as db:
         user = db.get(User, "local-reviewer")
-        save_config(db, user, {**user.config, "event_overrides": []}, user.revision)
+        save_config(db, user, {**user.config, "manual_events": []}, user.revision)
         rebuild_feed(db, user.id)
         db.commit()
         projections = {p.event_id: p for p in db.scalars(select(Projection))}
         assert not projections[past].removed and projections[future].removed
-    current = client.get("/api/v1/me/calendar").json()
-    client.put(
-        f"/api/v1/events/{past}/selection",
-        json={"expected_revision": current["revision"], "state": "exclude"},
-    ).raise_for_status()
-    drain()
+    assert client.put(f"/api/v1/events/{past}/selection", json={}).status_code == 404
     _, _, events = feed_snapshot(client)
-    assert events == []
+    assert len(events) == 1
 
 
 def test_outbox_rolls_back_with_config(stack):
@@ -326,9 +324,9 @@ def test_auth_origin_and_local_host_boundary(stack):
 @pytest.mark.parametrize(
     "url",
     [
-        "http://youtube.com/watch?v=abcdefghijk",
+        "http://www.nba.com/game/insecure",
         "https://127.0.0.1/foo",
-        "https://youtube.com.evil.example/watch?v=abcdefghijk",
+        "https://www.nba.com.evil.example/game/forged-host",
         "https://www.nba.com/",
         "https://www.nba.com/game/a?token=secret",
     ],

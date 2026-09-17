@@ -3,7 +3,7 @@ import secrets
 from sqlalchemy import func, select, update
 
 from app.config import settings
-from app.db import Creator, Event, Feed, Job, Link, Projection, Source, User
+from app.db import Event, Feed, Job, Link, Projection, Source, User
 from app.schemas import Config, ImportInput
 from app.security import canonical_url, digest, problem
 
@@ -71,11 +71,7 @@ def enqueue(db, kind: str, payload: dict):
 
 
 def save_config(db, user: User, config: dict, revision: int):
-    from app.follow_rules import reconcile_creator_scopes
-
-    clean = Config.model_validate(
-        reconcile_creator_scopes(config, config.get("follows", []))
-    ).model_dump()
+    clean = Config.model_validate(config).model_dump()
     result = db.execute(
         update(User)
         .where(User.id == user.id, User.revision == revision, User.deleted.is_(False))
@@ -86,14 +82,9 @@ def save_config(db, user: User, config: dict, revision: int):
     enqueue(db, "projection", {"user_id": user.id})
     db.flush()
     db.refresh(user)
-    for creator in user.config.get("creators", []):
-        if creator["enabled"]:
-            enqueue(db, "youtube_rematch", {"user_id": user.id, "channel_id": creator["channel_id"]})
 
 
 def user_view(db, user: User) -> dict:
-    from app.content import creator_status
-
     feed = db.scalar(select(Feed).where(Feed.owner_id == user.id))
     pending = db.scalar(
         select(Job.id)
@@ -119,22 +110,12 @@ def user_view(db, user: User) -> dict:
         and outcome.state == "failed"
         and (outcome.finished_at or outcome.created_at) > feed.updated_at
     )
-    creators = {c.channel_id: c for c in db.scalars(select(Creator))}
     return {
         "id": user.id,
         "display_name": user.display_name,
         "is_maintainer": user.id in settings().maintainer_ids,
         "revision": user.revision,
         "config": user.config,
-        "creators": [
-            {
-                **c,
-                **creator_status(db, c["channel_id"]),
-                "name": creators[c["channel_id"]].name if c["channel_id"] in creators else c["channel_id"],
-                "last_error": creators[c["channel_id"]].last_error if c["channel_id"] in creators else "",
-            }
-            for c in user.config.get("creators", [])
-        ],
         "feed": {
             "revision": feed.revision,
             "updated_at": feed.updated_at,
@@ -157,6 +138,8 @@ def user_view(db, user: User) -> dict:
 
 
 def attach_link(db, user: User, event: Event, url: str, title: str, kind: str):
+    if kind not in {"live", "watch_along"}:
+        problem("LINK_KIND_UNSUPPORTED", "只支持比赛直播或同步解说入口")
     canonical, platform = canonical_url(url)
     user = lock_user(db, user.id)
     if not user or user.deleted:
@@ -207,5 +190,4 @@ def import_preview(db, user: User, data: ImportInput) -> tuple[dict, dict]:
         settings().cipher(),
         source_exists=lambda key: db.get(Source, key) is not None,
         event_exists=lambda key: db.scalar(select(Event.id).where(Event.source_key == key)) is not None,
-        creator_exists=lambda key: db.get(Creator, key) is not None,
     )

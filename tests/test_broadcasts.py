@@ -17,7 +17,7 @@ from app.oauth import resource
 def payload(ident, **extra):
     return {
         "event_id": ident,
-        "url": "https://www.youtube.com/watch?v=abcdefghijk",
+        "url": "https://www.nba.com/game/fixture",
         "title": "合成比赛官方入口（隔离测试）",
         "content_type": "official_match",
         "access": "subscription",
@@ -85,7 +85,7 @@ def test_draft_is_private_publication_updates_original_feed_and_suspend_removes_
     withdrawn.raise_for_status()
     drain()
     _, _, entries = feed_snapshot(client)
-    assert str(entries[0]["UID"]) == uid and "abcdefghijk" not in str(entries[0]["DESCRIPTION"])
+    assert str(entries[0]["UID"]) == uid and "www.nba.com/game/fixture" not in str(entries[0]["DESCRIPTION"])
     assert str(entries[0]["STATUS"]) == "CONFIRMED"
 
 
@@ -258,7 +258,7 @@ def test_device_observation_is_specific_to_published_content_and_does_not_prove_
         f"/api/v1/maintenance/broadcasts/{record['id']}",
         json={
             **record["draft"],
-            "url": "https://www.youtube.com/watch?v=ZYXWVUTSRQP",
+            "url": "https://www.nba.com/game/changed-fixture",
             "expected_revision": result.json()["revision"],
         },
     ).json()
@@ -273,7 +273,7 @@ def test_device_observation_is_specific_to_published_content_and_does_not_prove_
         "https://www.nba.com/live%252em3u8",
         "https://www.nba.com/game?session=private",
         "https://www.nba.com/game?next=https://localhost",
-        "https://www.youtube.com/watch?v=abcdefghijk&access_token=private",
+        "https://www.nba.com/game/fixture?access_token=private",
         "https://user:private@www.nba.com/game",
         "https://127.0.0.1/game",
     ],
@@ -369,7 +369,7 @@ def test_atomic_publication_and_stale_probe_cannot_change_new_url(stack, monkeyp
         f"/api/v1/maintenance/broadcasts/{record['id']}",
         json={
             **record["draft"],
-            "url": "https://www.youtube.com/watch?v=ZYXWVUTSRQP",
+            "url": "https://www.nba.com/game/changed-fixture",
             "expected_revision": approved["revision"],
         },
     ).json()

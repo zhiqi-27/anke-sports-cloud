@@ -10,7 +10,6 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request, Res
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from starlette.concurrency import run_in_threadpool
 
 from app.config import settings
 from app.document_accounts import document
@@ -25,12 +24,8 @@ from app.schemas import (
     ConsentRedirectView,
     ConnectionList,
     AddLink,
-    AddCreator,
     CalendarUserView,
-    ChannelOfficialInput,
     Config,
-    CreatorIdentity,
-    CreatorRemovalImpact,
     EventList,
     EventView,
     FeedAction,
@@ -38,15 +33,10 @@ from app.schemas import (
     ImportInput,
     ImportPreviewView,
     LinkAddedView,
-    OverrideInput,
-    ResolveCreator,
-    ReviewDecision,
-    ReviewList,
     SaveFollows,
     SavePreferences,
     ServiceStatusView,
     SourceList,
-    UpdateCreator,
 )
 from app.security import check_origin, digest, firebase_subject, local_allowed, problem
 from app.source_rules import source_is_selectable, source_logo_url
@@ -199,80 +189,13 @@ def create_app(store=None, cfg=None):
         return {
             "local_preview": local_allowed(request),
             "firebase_configured": bool(cfg.firebase_project_id),
-            "youtube_budget": rt.youtube_budget.status(),
             "providers": rt.providers.statuses(),
             "integrations": {
                 "storage": cfg.storage_backend,
-                "content_migration": "not_ready",
                 "ics_device_test": "not_tested",
-                "youtube_push": "not_tested",
-                "youtube_discovery": "event_search_only",
-                "web_search_fallback": "disabled",
                 "app_links": "not_tested",
             },
         }
-
-    @app.post("/api/v1/me/creators/resolve", response_model=CreatorIdentity)
-    def creator_resolve(data: ResolveCreator, user=Depends(me), rt=Depends(runtime)):
-        details = rt.resolve_creator(data.url)
-        return {
-            "channel_id": details["channel_id"],
-            "name": details["name"],
-            "url": "https://www.youtube.com/channel/" + details["channel_id"],
-        }
-
-    @app.post("/api/v1/me/creators", response_model=CalendarUserView)
-    def creator_add(
-        data: AddCreator, idempotency_key: str | None = Header(None), user=Depends(me), rt=Depends(runtime)
-    ):
-        return rt.creators.save(user["user_id"], data, key=idempotency_key)
-
-    @app.patch("/api/v1/me/creators/{channel_id}", response_model=CalendarUserView)
-    def creator_update(channel_id: str, data: UpdateCreator, user=Depends(me), rt=Depends(runtime)):
-        return rt.creators.save(user["user_id"], data, ident=channel_id)
-
-    @app.get("/api/v1/me/creators/{channel_id}/impact", response_model=CreatorRemovalImpact)
-    def creator_impact(channel_id: str, user=Depends(me), rt=Depends(runtime)):
-        return rt.creators.impact(user, channel_id)
-
-    @app.delete("/api/v1/me/creators/{channel_id}", response_model=CalendarUserView)
-    def creator_delete(
-        channel_id: str,
-        expected_revision: int,
-        confirmed: bool = False,
-        user=Depends(me),
-        rt=Depends(runtime),
-    ):
-        return rt.creators.remove(user["user_id"], channel_id, expected_revision, confirmed)
-
-    @app.post("/api/v1/me/creators/{channel_id}/refresh")
-    def creator_refresh(channel_id: str, user=Depends(me), rt=Depends(runtime)):
-        return rt.creators.refresh(user["user_id"], channel_id)
-
-    @app.get("/api/v1/me/reviews", response_model=ReviewList)
-    def reviews(user=Depends(me), rt=Depends(runtime)):
-        return rt.matches.reviews(user)
-
-    @app.post("/api/v1/me/reviews/{match_id}")
-    def review_decide(match_id: str, data: ReviewDecision, user=Depends(me), rt=Depends(runtime)):
-        return rt.matches.decide(user["user_id"], match_id, data)
-
-    @app.get("/webhooks/youtube/{callback_id}", include_in_schema=False)
-    def youtube_verify(callback_id: str, request: Request, rt=Depends(runtime)):
-        challenge = rt.websub.verify(callback_id, request.query_params)
-        return Response(challenge, media_type="text/plain", headers={"Cache-Control": "no-store"})
-
-    @app.post("/webhooks/youtube/{callback_id}", include_in_schema=False)
-    async def youtube_notification(callback_id: str, request: Request, rt=Depends(runtime)):
-        body = bytearray()
-        async for part in request.stream():
-            if len(body) + len(part) > 65536:
-                return Response(status_code=413)
-            body.extend(part)
-        await run_in_threadpool(
-            rt.websub.notification, callback_id, bytes(body), request.headers.get("x-hub-signature")
-        )
-        return Response(status_code=204)
 
     @app.post("/api/v1/auth/local", response_model=CalendarUserView)
     def local_login(request: Request, response: Response, rt=Depends(runtime)):
@@ -337,25 +260,6 @@ def create_app(store=None, cfg=None):
                 break
         return {"items": rows[:limit], "has_more": len(rows) > limit}
 
-    @app.get("/api/v1/maintenance/channels")
-    def channel_reputations(actor=Depends(maintainer), rt=Depends(runtime)):
-        rows = partition_items(rt.store, "state", "provider:video-discovery", "channel_reputation")
-        return {"items": [row["payload"] for row in sorted(rows, key=lambda row: row["id"])]}
-
-    @app.put("/api/v1/maintenance/channels/{channel_id}/official")
-    def channel_official(
-        channel_id: str,
-        data: ChannelOfficialInput,
-        actor=Depends(maintainer),
-        rt=Depends(runtime),
-    ):
-        import re
-
-        if not re.fullmatch(r"UC[A-Za-z0-9_-]{22}", channel_id):
-            problem("INVALID_CHANNEL", "请输入有效的 YouTube 频道")
-        if data.official and not data.evidence_url:
-            problem("OFFICIAL_EVIDENCE_REQUIRED", "官方频道需要可核验的 HTTPS 证据")
-        return rt.discovery.set_official(channel_id, data, actor)
 
     @app.get("/api/v1/maintenance/broadcasts/{ident}", response_model=BroadcastView)
     def broadcast_get(ident: str, actor=Depends(maintainer), rt=Depends(runtime)):
@@ -466,10 +370,6 @@ def create_app(store=None, cfg=None):
     @app.post("/api/v1/me/links/{link_id}/pin")
     def pin_link(link_id: str, user=Depends(me), rt=Depends(runtime)):
         return rt.content.override_link(user["user_id"], link_id, "pin")
-
-    @app.put("/api/v1/events/{event_id}/selection", response_model=EventView)
-    def selection(event_id: str, data: OverrideInput, user=Depends(me), rt=Depends(runtime)):
-        return rt.content.selection(user["user_id"], event_id, data)
 
     @app.get("/api/v1/me/connections/requests/{pending}", response_model=ConsentRequestView)
     async def consent_preview(pending: str, user=Depends(me), rt=Depends(runtime)):

@@ -1,79 +1,10 @@
 {
   "$defs": {
-    "CreatorFollow": {
-      "additionalProperties": false,
-      "properties": {
-        "channel_id": {
-          "maxLength": 80,
-          "minLength": 1,
-          "title": "Channel Id",
-          "type": "string"
-        },
-        "scope_keys": {
-          "items": {
-            "type": "string"
-          },
-          "maxItems": 500,
-          "title": "Scope Keys",
-          "type": "array"
-        },
-        "preview": {
-          "default": true,
-          "title": "Preview",
-          "type": "boolean"
-        },
-        "recap": {
-          "default": true,
-          "title": "Recap",
-          "type": "boolean"
-        },
-        "enabled": {
-          "default": true,
-          "title": "Enabled",
-          "type": "boolean"
-        }
-      },
-      "required": [
-        "channel_id"
-      ],
-      "title": "CreatorFollow",
-      "type": "object"
-    },
-    "EventOverride": {
-      "additionalProperties": false,
-      "properties": {
-        "event_key": {
-          "maxLength": 220,
-          "minLength": 1,
-          "title": "Event Key",
-          "type": "string"
-        },
-        "state": {
-          "enum": [
-            "include",
-            "exclude"
-          ],
-          "title": "State",
-          "type": "string"
-        }
-      },
-      "required": [
-        "event_key",
-        "state"
-      ],
-      "title": "EventOverride",
-      "type": "object"
-    },
     "Follow": {
       "additionalProperties": false,
       "properties": {
         "type": {
-          "enum": [
-            "team",
-            "competition",
-            "event",
-            "series"
-          ],
+          "const": "team",
           "title": "Type",
           "type": "string"
         },
@@ -118,6 +49,23 @@
         "state"
       ],
       "title": "LinkOverride",
+      "type": "object"
+    },
+    "ManualEventSource": {
+      "additionalProperties": false,
+      "description": "A personal calendar source independent from team follows.",
+      "properties": {
+        "event_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "title": "Event Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_id"
+      ],
+      "title": "ManualEventSource",
       "type": "object"
     },
     "Preferences": {
@@ -166,20 +114,6 @@
           "maxProperties": 20,
           "title": "Broadcast Platforms",
           "type": "object"
-        },
-        "content_search_windows": {
-          "items": {
-            "enum": [
-              "before_24h",
-              "before_3h",
-              "after_3h",
-              "after_18h"
-            ],
-            "type": "string"
-          },
-          "maxItems": 2,
-          "title": "Content Search Windows",
-          "type": "array"
         }
       },
       "title": "Preferences",
@@ -202,23 +136,15 @@
       "title": "Follows",
       "type": "array"
     },
-    "creators": {
-      "items": {
-        "$ref": "#/$defs/CreatorFollow"
-      },
-      "maxItems": 200,
-      "title": "Creators",
-      "type": "array"
-    },
     "preferences": {
       "$ref": "#/$defs/Preferences"
     },
-    "event_overrides": {
+    "manual_events": {
       "items": {
-        "$ref": "#/$defs/EventOverride"
+        "$ref": "#/$defs/ManualEventSource"
       },
       "maxItems": 2000,
-      "title": "Event Overrides",
+      "title": "Manual Events",
       "type": "array"
     },
     "link_overrides": {

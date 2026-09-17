@@ -248,7 +248,7 @@ def test_new_publication_is_not_blocked_by_a_pending_check_for_the_old_url(stack
         f"/api/v1/maintenance/broadcasts/{record['id']}",
         json={
             **record["draft"],
-            "url": "https://www.youtube.com/watch?v=ZYXWVUTSRQP",
+            "url": "https://www.nba.com/game/changed-fixture",
             "expected_revision": published["revision"],
         },
     ).json()
@@ -260,7 +260,7 @@ def test_new_publication_is_not_blocked_by_a_pending_check_for_the_old_url(stack
         checks = db.scalars(select(Job.id).where(Job.kind == "broadcast_check")).all()
     for ident in checks:
         assert worker.run_one(ident)
-    assert calls == ["https://www.youtube.com/watch?v=ZYXWVUTSRQP"]
+    assert calls == ["https://www.nba.com/game/changed-fixture"]
 
 
 def test_expiry_candidate_rechecks_publication_after_concurrent_reapproval(disk_stack, monkeypatch):

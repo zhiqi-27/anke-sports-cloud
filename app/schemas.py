@@ -1,5 +1,3 @@
-from datetime import datetime
-
 from app.broadcast_schemas import BroadcastPublicView
 from typing import Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -18,9 +16,6 @@ class Preferences(StrictModel):
     spoiler_free: bool = True
     transparent: bool = True
     broadcast_platforms: dict[str, str] = Field(default_factory=dict, max_length=20)
-    content_search_windows: list[
-        Literal["before_24h", "before_3h", "after_3h", "after_18h"]
-    ] = Field(default_factory=lambda: ["before_24h", "after_3h"], max_length=2)
 
     @field_validator("timezone")
     @classmethod
@@ -31,30 +26,15 @@ class Preferences(StrictModel):
             raise ValueError("Unknown IANA timezone") from exc
         return value
 
-    @field_validator("content_search_windows")
-    @classmethod
-    def unique_content_search_windows(cls, value):
-        if len(value) != len(set(value)):
-            raise ValueError("Search windows must be unique")
-        return value
-
-
 class Follow(StrictModel):
-    type: Literal["team", "competition", "event", "series"]
+    type: Literal["team"]
     source_key: str = Field(min_length=1, max_length=160)
 
 
-class CreatorFollow(StrictModel):
-    channel_id: str = Field(min_length=1, max_length=80)
-    scope_keys: list[str] = Field(default_factory=list, max_length=500)
-    preview: bool = True
-    recap: bool = True
-    enabled: bool = True
+class ManualEventSource(StrictModel):
+    """A personal calendar source independent from team follows."""
 
-
-class EventOverride(StrictModel):
-    event_key: str = Field(min_length=1, max_length=220)
-    state: Literal["include", "exclude"]
+    event_id: str = Field(min_length=1, max_length=64)
 
 
 class LinkOverride(StrictModel):
@@ -66,10 +46,17 @@ class LinkOverride(StrictModel):
 class Config(StrictModel):
     schema_version: Literal[1] = 1
     follows: list[Follow] = Field(default_factory=list, max_length=500)
-    creators: list[CreatorFollow] = Field(default_factory=list, max_length=200)
     preferences: Preferences = Field(default_factory=Preferences)
-    event_overrides: list[EventOverride] = Field(default_factory=list, max_length=2000)
+    manual_events: list[ManualEventSource] = Field(default_factory=list, max_length=2000)
     link_overrides: list[LinkOverride] = Field(default_factory=list, max_length=2000)
+
+    @field_validator("manual_events")
+    @classmethod
+    def unique_manual_events(cls, value):
+        event_ids = [item.event_id for item in value]
+        if len(event_ids) != len(set(event_ids)):
+            raise ValueError("Manual event sources must be unique")
+        return value
 
 
 class SaveFollows(StrictModel):
@@ -81,11 +68,6 @@ class SaveFollows(StrictModel):
 class FollowChangeSource(Follow):
     name: str
     demo: bool | None
-
-
-class FollowChangeCreator(BaseModel):
-    channel_id: str
-    name: str
 
 
 class FollowImpactEvent(BaseModel):
@@ -110,7 +92,6 @@ class FollowPreviewView(BaseModel):
     confirmation: str
     added_sources: list[FollowChangeSource]
     removed_sources: list[FollowChangeSource]
-    removed_creators: list[FollowChangeCreator]
     added: FollowImpactGroup
     removed: FollowImpactGroup
     retained: FollowImpactGroup
@@ -131,20 +112,7 @@ class SavePreferences(StrictModel):
 class AddLink(StrictModel):
     url: str = Field(min_length=8, max_length=2000)
     title: str = Field(default="", max_length=300)
-    kind: Literal["live", "video", "preview", "recap", "watch_along"]
-
-
-class AddCreator(StrictModel):
-    url: str = Field(min_length=3, max_length=2000)
-    scope_keys: list[str] = Field(min_length=1, max_length=500)
-    preview: bool = True
-    recap: bool = True
-    expected_revision: int
-
-
-class OverrideInput(StrictModel):
-    expected_revision: int
-    state: Literal["include", "exclude", "reset"]
+    kind: Literal["live", "watch_along"]
 
 
 class ImportInput(StrictModel):
@@ -190,15 +158,24 @@ class SourceList(BaseModel):
     items: list[SourceView]
 
 
+class CalendarSourceView(BaseModel):
+    type: Literal["follow", "manual"]
+    key: str
+    name: str
+
+
+class CalendarMembershipView(BaseModel):
+    sources: list[CalendarSourceView]
+    can_remove: bool
+
+
 class LinkView(BaseModel):
     broadcast: BroadcastPublicView | None = None
     id: str
     url: str
     title: str
     kind: str
-    content_labels: list[str] = Field(default_factory=list, max_length=3)
     platform: str
-    creator: str
     origin: str
     access: str
     regions: list[str]
@@ -225,6 +202,7 @@ class EventView(BaseModel):
     updated_at: str
     demo: bool
     included: bool
+    calendar: CalendarMembershipView | None = None
     links: list[LinkView]
     description: str
     description_in_feed: bool
@@ -242,87 +220,6 @@ class EventList(BaseModel):
     next_cursor: str | None
 
 
-class CreatorView(CreatorFollow):
-    name: str
-    last_error: str
-    sync_status: str
-    last_synced_at: str | None
-    websub_status: str
-
-
-class ResolveCreator(StrictModel):
-    url: str = Field(min_length=3, max_length=2000)
-
-
-class CreatorIdentity(BaseModel):
-    channel_id: str
-    name: str
-    url: str
-
-
-class UpdateCreator(StrictModel):
-    expected_revision: int
-    scope_keys: list[str] = Field(min_length=1, max_length=500)
-    preview: bool
-    recap: bool
-    enabled: bool
-
-
-class CreatorRemovalImpact(BaseModel):
-    automatic_removed: int
-    manual_retained: int
-    revision: int
-
-
-class ReviewView(BaseModel):
-    id: str
-    video_id: str
-    title: str
-    url: str
-    creator: str
-    published_at: str
-    event_id: str
-    event_title: str
-    starts_at: str | None
-    kind: str
-    content_labels: list[str] = Field(default_factory=list, max_length=3)
-    reason_codes: list[str]
-    rule_version: str
-    updated_at: str
-
-
-class ReviewList(BaseModel):
-    items: list[ReviewView]
-
-
-class ReviewDecision(StrictModel):
-    decision: Literal["confirm", "ignore"]
-    kind: Literal["preview", "recap"] | None = None
-    expected_updated_at: str
-
-
-class ChannelOfficialInput(StrictModel):
-    official: bool
-    evidence_url: str = Field(default="", max_length=2000)
-    valid_until: str | None = None
-
-    @field_validator("evidence_url")
-    @classmethod
-    def official_evidence(cls, value):
-        if value and not value.startswith("https://"):
-            raise ValueError("Official evidence must use HTTPS")
-        return value
-
-    @field_validator("valid_until")
-    @classmethod
-    def official_expiry(cls, value):
-        if value:
-            parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
-            if not parsed.tzinfo:
-                raise ValueError("Official expiry needs a timezone")
-        return value
-
-
 class FeedView(BaseModel):
     revision: int
     updated_at: str
@@ -337,7 +234,6 @@ class CalendarUserView(BaseModel):
     display_name: str
     revision: int
     config: Config
-    creators: list[CreatorView]
     feed: FeedView
 
 
@@ -351,22 +247,7 @@ class ProviderView(BaseModel):
     activity: Literal["idle", "queued", "running", "waiting"] = "idle"
 
 
-class YouTubeBudgetView(BaseModel):
-    configured: bool
-    state: Literal["unconfigured", "available", "waiting"]
-    daily_limit: int
-    reserved_units: int
-    available_units: int | None
-    reset_at: str | None
-    resume_at: str | None
-    search_daily_limit: int
-    search_reserved_calls: int
-    search_available_calls: int | None
-    search_resume_at: str | None
-
-
 class ServiceStatusView(BaseModel):
-    youtube_budget: YouTubeBudgetView
     local_preview: bool
     firebase_configured: bool
     providers: list[ProviderView]

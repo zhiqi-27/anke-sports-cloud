@@ -84,6 +84,13 @@ class Discovery:
         return self.store.get("state", DISCOVERY_PK, "reputation:" + channel_id)
 
     def set_official(self, channel_id, value, actor):
+        scope_keys = list(dict.fromkeys(getattr(value, "scope_keys", [])))
+        if value.official:
+            known = {source.id for source in self.rt.catalog.capture().sources()}
+            if not scope_keys:
+                raise StoreError("OFFICIAL_CHANNEL_SCOPE_REQUIRED")
+            if any(key not in known for key in scope_keys):
+                raise StoreError("OFFICIAL_CHANNEL_SCOPE_NOT_FOUND")
         ident = "reputation:" + channel_id
         old = self.store.get("state", DISCOVERY_PK, ident)
         payload = dict(old["payload"]) if old else {
@@ -101,6 +108,8 @@ class Discovery:
             official_reviewed_by=actor,
             official_reviewed_at=now(),
             official_valid_until=value.valid_until if value.official else None,
+            official_scope_keys=scope_keys if value.official else [],
+            official_enabled=bool(getattr(value, "enabled", True)) if value.official else False,
         )
         row = document(DISCOVERY_PK, ident, "channel_reputation", **payload)
         self.store.batch(

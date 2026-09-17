@@ -11,6 +11,7 @@ from app.security import digest
 from app.calendar_rules import (
     select_candidates,
     projection_from_links,
+    calendar_membership,
     event_keys as event_keys,
     inclusion_filter as inclusion_filter,
     included as included,
@@ -98,6 +99,7 @@ def event_view(db, event: Event, user: User | None = None, *, link_rows=None, br
         "updated_at": event.updated_at,
         "demo": event.demo,
         "included": included(event, config) if user else False,
+        "calendar": calendar_membership(event, config) if user else None,
         "links": links,
         "description": describe(event, links, config),
         "description_in_feed": included(event, config) if user else False,
@@ -144,8 +146,8 @@ def source_candidates(db, config, existing):
     No personal query results are shared between users.
     """
     keys = list({x["source_key"] for x in config.get("follows", [])})
-    explicit = [x["event_key"] for x in config.get("event_overrides", []) if x["state"] == "include"]
-    predicates = [Event.source_key.in_(explicit)] if explicit else []
+    explicit = [x["event_id"] for x in config.get("manual_events", [])]
+    predicates = [Event.id.in_(explicit)] if explicit else []
     if keys:
         predicates.extend([Event.source_key.in_(keys), Event.competition_id.in_(keys)])
         dialect = db.get_bind().dialect.name

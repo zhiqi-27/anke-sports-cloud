@@ -16,15 +16,17 @@ def event_keys(event: Event) -> set[str]:
     return {event.competition_id, event.source_key, *(x["id"] for x in event.participants)}
 
 
+def manual_event_ids(config: dict) -> set[str]:
+    return {row["event_id"] for row in config.get("manual_events", [])}
+
+
 def inclusion_filter(config: dict):
     """Compile personal choices once for a candidate set, not once per event."""
-    overrides = {x["event_key"]: x["state"] for x in config.get("event_overrides", [])}
     follows = {x["source_key"] for x in config.get("follows", [])}
+    manual = manual_event_ids(config)
 
     def accepts(event):
-        if event.source_key in overrides:
-            return overrides[event.source_key] == "include"
-        return bool(event_keys(event) & follows)
+        return event.id in manual or bool(event_keys(event) & follows)
 
     return accepts
 
@@ -33,16 +35,26 @@ def included(event: Event, config: dict) -> bool:
     return inclusion_filter(config)(event)
 
 
+def calendar_membership(event: Event, config: dict) -> dict:
+    """Describe private membership without exposing it on public event reads."""
+    follows = sorted(event_keys(event) & {x["source_key"] for x in config.get("follows", [])})
+    manual = event.id in manual_event_ids(config)
+    sources = [{"type": "follow", "key": key, "name": key} for key in follows]
+    if manual:
+        sources.append({"type": "manual", "key": event.id, "name": "手动添加"})
+    return {"sources": sources, "can_remove": manual and not follows}
+
+
 def delivery_links(links: list[dict]) -> list[dict]:
     output = []
-    for kinds, limit in [({"live", "watch_along"}, 1), ({"video", "preview", "recap"}, None)]:
+    for kinds, limit in [({"live", "watch_along"}, 1)]:
         group = [x for x in links if x["kind"] in kinds]
         selected, seen = [], set()
         for link in group:
-            creator = link["creator"] or link["id"]
-            if link["pinned"] or creator not in seen:
+            platform = link["platform"] or link["id"]
+            if link["pinned"] or platform not in seen:
                 selected.append(link)
-                seen.add(creator)
+                seen.add(platform)
         selected.extend(x for x in group if x not in selected)
         output.extend(selected if limit is None else selected[:limit])
     return output
@@ -55,7 +67,6 @@ def describe(event: Event, links: list[dict], config: dict) -> str:
     labels = {
         "live": "观看直播",
         "watch_along": "同步解说（无比赛画面）",
-        "video": "相关视频",
     }
     access = {
         "unknown": "观看条件未验证",
@@ -66,26 +77,12 @@ def describe(event: Event, links: list[dict], config: dict) -> str:
     }
     delivered = delivery_links(links)
     for kind, label in labels.items():
-        group = [
-            x
-            for x in delivered
-            if x["kind"] == kind or (kind == "video" and x["kind"] in {"preview", "recap"})
-        ]
+        group = [x for x in delivered if x["kind"] == kind]
         if not group:
             continue
         lines.append(label)
         for link in group:
-            if kind == "video":
-                content_labels = link.get("content_labels") or (
-                    ["🔎赛前内容"]
-                    if link["kind"] == "preview"
-                    else ["🎬赛后内容"]
-                    if link["kind"] == "recap"
-                    else ["🔗相关视频"]
-                )
-                lines.append(" · ".join(content_labels[:3]))
-            else:
-                lines.append(f"{link['creator'] or link['platform']} · {link['title']}")
+            lines.append(f"{link['platform']} · {link['title']}")
             if kind in {"live", "watch_along"}:
                 if link.get("broadcast"):
                     info = link["broadcast"]
@@ -182,7 +179,6 @@ def select_candidates(events, config, existing, instant=None):
     instant = instant or datetime.now(timezone.utc)
     lower = (instant - timedelta(days=90)).date().isoformat()
     upper = (instant + timedelta(days=180)).date().isoformat()
-    overrides = {x["event_key"]: x["state"] for x in config.get("event_overrides", [])}
     accepts = inclusion_filter(config)
     selected = []
     for event in events:
@@ -192,7 +188,6 @@ def select_candidates(events, config, existing, instant=None):
             prior
             and not prior.removed
             and event_is_past(event, instant)
-            and overrides.get(event.source_key) != "exclude"
         )
         if (accepts(event) or retain_history) and lower <= date_key <= upper:
             selected.append(event)

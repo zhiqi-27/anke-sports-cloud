@@ -14,6 +14,19 @@ from app.source_rules import source_logo_url
 
 PROVIDERS = frozenset({"jolpica", "balldontlie", "football-data"})
 PROVIDER_REFRESH = timedelta(hours=6)
+F1_TEAM_SHORT_NAMES = {
+    "alpine": "ALP",
+    "aston_martin": "AMR",
+    "audi": "AUD",
+    "cadillac": "CAD",
+    "ferrari": "FER",
+    "haas": "HAS",
+    "mclaren": "MCL",
+    "mercedes": "MER",
+    "racing_bulls": "RB",
+    "red_bull": "RBR",
+    "williams": "WIL",
+}
 
 
 def get_json(client, path, **kwargs):
@@ -29,7 +42,6 @@ def provider_key(name, cfg=None):
     field = {
         "BALLDONTLIE_API_KEY": "balldontlie_api_key",
         "FOOTBALL_DATA_API_KEY": "football_data_api_key",
-        "YOUTUBE_API_KEY": "youtube_api_key",
     }[name]
     return getattr(cfg or settings(), field).get_secret_value()
 
@@ -100,6 +112,27 @@ def fetch_schedule(provider, *, request_json=None, key_reader=None, instant=None
             if len({r["Circuit"]["circuitId"] for r in races}) != len(races):
                 raise ValueError("AMBIGUOUS_CIRCUIT_IDENTITY")
             source("jolpica:f1", "F1 世界锦标赛", "F1", "racing", "competition", provider, "#ec7972")
+            constructor_data = request(
+                client,
+                f"https://api.jolpi.ca/ergast/f1/{year}/constructors/",
+                params={"limit": 100},
+            )["MRData"]
+            constructors = constructor_data["ConstructorTable"]["Constructors"]
+            if len(constructors) != int(constructor_data["total"]) or not constructors:
+                raise ValueError("INCOMPLETE_CONSTRUCTOR_CATALOG")
+            if len({row["constructorId"] for row in constructors}) != len(constructors):
+                raise ValueError("AMBIGUOUS_CONSTRUCTOR_IDENTITY")
+            participants = [
+                source(
+                    f"jolpica:constructor:{row['constructorId']}",
+                    row["name"],
+                    F1_TEAM_SHORT_NAMES.get(row["constructorId"], row["constructorId"][:3].upper()),
+                    "racing",
+                    "team",
+                    provider,
+                )
+                for row in constructors
+            ]
             for race in races:
                 sessions = {
                     "race": {"date": race["date"], "time": race.get("time")},
@@ -139,7 +172,7 @@ def fetch_schedule(provider, *, request_json=None, key_reader=None, instant=None
                         time_precision="exact" if start else "date_only",
                         duration=120 if session == "race" else 60,
                         venue=race["Circuit"]["circuitName"],
-                        participants=[],
+                        participants=participants,
                         provider=provider,
                         source_url="https://www.formula1.com/en/racing/" + str(year),
                         demo=False,

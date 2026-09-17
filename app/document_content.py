@@ -1,8 +1,8 @@
-"""Personal links, explicit event selection and configuration import commands."""
+"""Personal broadcast links and configuration import commands."""
 
 from types import SimpleNamespace
 
-from app.config_rules import confirm_import, event_override, import_configuration, link_override
+from app.config_rules import confirm_import, import_configuration, link_override
 from app.document_accounts import Change, document, now, owner_partition
 from app.document_store import StoreError, Write, partition_items
 from app.link_rules import selected_links
@@ -75,8 +75,6 @@ class Content:
                     "url_hash": digest(url),
                     "title": f"{platform} 原链接",
                     "platform": platform,
-                    "creator": "",
-                    "channel_id": "",
                     "access": "unknown",
                     "regions": [],
                     "created_at": now(),
@@ -118,35 +116,9 @@ class Content:
                 link = self.owned_link(user_id, ident)["payload"]
             event = self.event(link["event_id"])
             config = link_override(previous["config"], event.source_key, link["url"], state)
-            writes = []
-            if state == "block" and link.get("origin") == "discovery" and link.get("channel_id"):
-                pk = owner_partition(user_id)
-                feedback_id = "feedback:" + digest(
-                    link["channel_id"] + ":" + link["id"] + ":" + event.id
-                )[:32]
-                old_feedback = self.store.get("state", pk, feedback_id)
-                feedback = document(
-                    pk,
-                    feedback_id,
-                    "channel_feedback",
-                    channel_id=link["channel_id"],
-                    video_id=link["url"].rsplit("=", 1)[-1],
-                    event_id=event.id,
-                    action="removed",
-                    created_at=now(),
-                )
-                writes.append(
-                    Write(
-                        "replace" if old_feedback else "create",
-                        feedback_id,
-                        feedback,
-                        old_feedback["_etag"] if old_feedback else None,
-                    )
-                )
             return Change(
                 {**previous, "config": config, "revision": previous["revision"] + 1},
                 {"blocked" if state == "block" else "pinned": True},
-                writes,
             )
 
         return self.accounts.command(
@@ -155,16 +127,6 @@ class Content:
             {"link_id": ident},
             perform,
             key=key,
-        )
-
-    def selection(self, user_id, event_id, data):
-        event = self.event(event_id)
-        return self.accounts.save_config(
-            user_id,
-            None,
-            data.expected_revision,
-            prepare=lambda previous: event_override(previous["config"], event.source_key, data.state),
-            response=lambda updated: self.runtime.event_view(event, updated),
         )
 
     def preview_import(self, previous, data):
@@ -179,7 +141,6 @@ class Content:
             self.runtime.cfg.cipher(),
             source_exists=sources.__contains__,
             event_exists=events.__contains__,
-            creator_exists=self.runtime.creators.exists,
         )
         snapshot.assert_current()
         return config, preview

@@ -27,7 +27,7 @@ def test_reclaimed_worker_cannot_commit_data_jobs_or_error_over_new_owner(
     disk_stack, monkeypatch, late_error
 ):
     sessions, event_id = disk_stack
-    job_id = job(sessions, "fixture", {"event_id": event_id})
+    job_id = job(sessions, "provider", {"provider": "jolpica", "event_id": event_id})
     entered, release = Signal(), Signal()
 
     def execute(db, claim):
@@ -60,7 +60,7 @@ def test_reclaimed_worker_cannot_commit_data_jobs_or_error_over_new_owner(
 
 def test_crashes_exhaust_attempt_budget_without_running_a_sixth_attempt(stack, monkeypatch):
     _, sessions = stack
-    job_id = job(sessions, "fixture")
+    job_id = job(sessions, "provider")
     instant = datetime.now(timezone.utc) + timedelta(seconds=1)
     for attempt in range(1, 6):
         monkeypatch.setattr(jobs, "now", lambda: instant.isoformat())
@@ -236,7 +236,7 @@ def test_deleted_owner_cannot_be_replayed_and_cancelled_running_job_cannot_commi
         db.commit()
         with pytest.raises(ValueError, match="OWNER_UNAVAILABLE"):
             jobs.replay_job(db, original, 0, "不得恢复已删除账号", True)
-    running = job(sessions, "fixture", {"event_id": event_id})
+    running = job(sessions, "provider", {"provider": "jolpica", "event_id": event_id})
     entered, release = Signal(), Signal()
 
     def execute(db, claim):
@@ -267,7 +267,7 @@ def test_projection_refreshes_cached_config_after_acquiring_owner_lock(disk_stac
             save_config(
                 current,
                 owner,
-                {**owner.config, "event_overrides": [{"event_key": "test:a", "state": "exclude"}]},
+                {**owner.config, "manual_events": []},
                 owner.revision,
             )
             current.commit()
@@ -280,7 +280,7 @@ def test_projection_refreshes_cached_config_after_acquiring_owner_lock(disk_stac
 
 
 def test_broken_maintenance_does_not_starve_persisted_jobs(stack, monkeypatch, caplog):
-    from app import broadcasts, oauth, websub
+    from app import broadcasts, oauth, public_feeds
 
     _, sessions = stack
     pending = job(sessions, "projection", {"user_id": "local-reviewer"})
@@ -289,7 +289,7 @@ def test_broken_maintenance_does_not_starve_persisted_jobs(stack, monkeypatch, c
     def broken():
         raise RuntimeError("do-not-log-private-details")
 
-    monkeypatch.setattr(websub, "schedule_content", broken)
+    monkeypatch.setattr(public_feeds, "schedule_public_feeds", broken)
     monkeypatch.setattr(oauth, "clean_expired_connections", lambda: completed.append("oauth"))
     monkeypatch.setattr(broadcasts, "schedule_broadcasts", lambda: completed.append("broadcasts"))
     assert worker.main(["--once"]) == 1
@@ -299,7 +299,7 @@ def test_broken_maintenance_does_not_starve_persisted_jobs(stack, monkeypatch, c
     assert "MAINTENANCE_FAILED" in caplog.text and "do-not-log-private-details" not in caplog.text
 
 
-def test_provider_keys_load_from_local_env_file_without_entering_settings_repr(tmp_path, monkeypatch):
+def test_provider_keys_load_from_local_env_file_without_retired_video_key(tmp_path, monkeypatch):
     from app.config import Settings
     from app import providers
 
@@ -313,7 +313,8 @@ def test_provider_keys_load_from_local_env_file_without_entering_settings_repr(t
     monkeypatch.setattr(providers, "settings", lambda: config)
     assert providers.provider_key("BALLDONTLIE_API_KEY") == "fixture-nba-key"
     assert providers.provider_key("FOOTBALL_DATA_API_KEY") == "fixture-football-key"
-    assert providers.provider_key("YOUTUBE_API_KEY") == "fixture-youtube-key"
+    with pytest.raises(KeyError):
+        providers.provider_key("YOUTUBE_API_KEY")
     assert "fixture-nba-key" not in repr(config) and "fixture-nba-key" not in config.model_dump_json()
     monkeypatch.setenv("BALLDONTLIE_API_KEY", "")
     assert providers.provider_key("BALLDONTLIE_API_KEY") == ""

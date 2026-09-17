@@ -39,10 +39,32 @@ def f1_payload():
     }
 
 
+def f1_constructors_payload():
+    return {
+        "MRData": {
+            "total": "2",
+            "ConstructorTable": {
+                "Constructors": [
+                    {"constructorId": "ferrari", "name": "Ferrari"},
+                    {"constructorId": "mclaren", "name": "McLaren"},
+                ]
+            },
+        }
+    }
+
+
+def f1_response(schedule, path):
+    return f1_constructors_payload() if "/constructors/" in path else schedule
+
+
 @pytest.fixture
 def fetched(monkeypatch):
     payload = f1_payload()
-    monkeypatch.setattr(provider_adapters, "get_json", lambda *a, **kw: deepcopy(payload))
+    monkeypatch.setattr(
+        provider_adapters,
+        "get_json",
+        lambda _client, path, **_kwargs: deepcopy(f1_response(payload, path)),
+    )
     return payload
 
 
@@ -82,7 +104,12 @@ def test_http_provider_refresh_follow_unchanged_reschedule_and_partial_failure(d
     drain(runtime)
     status = client.get("/api/v1/status").json()["providers"][0]
     assert status["enabled"] and status["last_success"] and status["activity"] == "idle"
-    assert client.get("/api/v1/sources?dataset=real").json()["items"][0]["id"] == "jolpica:f1"
+    source_items = client.get("/api/v1/sources?dataset=real").json()["items"]
+    assert {row["id"] for row in source_items} == {
+        "jolpica:f1",
+        "jolpica:constructor:ferrari",
+        "jolpica:constructor:mclaren",
+    }
     start = datetime.now(timezone.utc)
     schedule_range = {
         "from": (start - timedelta(days=1)).isoformat(),
@@ -95,11 +122,24 @@ def test_http_provider_refresh_follow_unchanged_reschedule_and_partial_failure(d
         )
         == 3
     )
+    ferrari_events = client.get(
+        "/api/v1/events",
+        params={**schedule_range, "source_id": "jolpica:constructor:ferrari"},
+    ).json()["items"]
+    mclaren_events = client.get(
+        "/api/v1/events",
+        params={**schedule_range, "source_id": "jolpica:constructor:mclaren"},
+    ).json()["items"]
+    assert [row["id"] for row in ferrari_events] == [row["id"] for row in mclaren_events]
+    assert all(len(row["participants"]) == 2 for row in ferrari_events)
     assert (
         client.get("/api/v1/events", params={**schedule_range, "source_id": "missing:team"}).json()["items"]
         == []
     )
-    data = {"expected_revision": 0, "follows": [{"type": "competition", "source_key": "jolpica:f1"}]}
+    data = {
+        "expected_revision": 0,
+        "follows": [{"type": "team", "source_key": "jolpica:constructor:ferrari"}],
+    }
     preview = client.post("/api/v1/me/follows/preview", json=data).json()
     client.put(
         "/api/v1/me/follows", json={**data, "confirmation": preview["confirmation"]}
@@ -315,7 +355,9 @@ def test_three_failures_open_circuit_recovery_resets_and_failure_commit_is_atomi
     monkeypatch.setattr(
         runtime.providers,
         "fetch",
-        lambda _: provider_adapters.fetch_schedule("jolpica", request_json=lambda *a, **k: payload),
+        lambda _: provider_adapters.fetch_schedule(
+            "jolpica", request_json=lambda _client, path, **_kwargs: f1_response(payload, path)
+        ),
     )
     run_job(runtime, ready(runtime))
     assert runtime.providers.state("jolpica")["payload"]["consecutive_failures"] == 0
@@ -484,7 +526,9 @@ def test_fetch_deadline_and_duplicate_identity_reject_whole_batch(monkeypatch):
     payload["MRData"]["RaceTable"]["Races"] *= 2
     payload["MRData"]["total"] = "2"
     with pytest.raises(ValueError, match="AMBIGUOUS_CIRCUIT"):
-        provider_adapters.fetch_schedule("jolpica", request_json=lambda *a, **k: payload)
+        provider_adapters.fetch_schedule(
+            "jolpica", request_json=lambda _client, path, **_kwargs: f1_response(payload, path)
+        )
 
 
 def test_configured_provider_can_bootstrap_without_local_http(document_stack, fetched):

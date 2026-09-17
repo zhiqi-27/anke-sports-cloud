@@ -44,7 +44,7 @@ def fixtures(sessions):
         seed_demo(db)
         db.commit()
         event = db.scalar(select(Event).where(Event.demo.is_(True)))
-        return event.id, event.source_key
+        return event.id, "demo:lakers"
 
 
 def test_public_mcp_and_http_auth_boundary(stack):
@@ -90,7 +90,6 @@ def test_private_mcp_shared_writes_receipts_blocks_and_import(stack):
                 "get_event",
                 "get_my_calendar",
                 "update_follows",
-                "add_creator",
                 "attach_event_link",
                 "remove_event_link",
                 "export_config",
@@ -99,7 +98,7 @@ def test_private_mcp_shared_writes_receipts_blocks_and_import(stack):
             }
             calendar = (await session.call_tool("get_my_calendar")).structuredContent
             args = {
-                "add": [{"type": "event", "source_key": source_key}],
+                "add": [{"type": "team", "source_key": source_key}],
                 "remove": [],
                 "expected_revision": calendar["revision"],
                 "idempotency_key": "follow-command-01",
@@ -113,9 +112,9 @@ def test_private_mcp_shared_writes_receipts_blocks_and_import(stack):
             denied = await session.call_tool("get_calendar_feed")
             assert denied.isError and "feed:read" in denied.content[0].text
             data = {
-                "url": "https://www.youtube.com/watch?v=LocalVideo1",
+                "url": "https://www.nba.com/game/local-fixture",
                 "title": "合成测试链接",
-                "kind": "preview",
+                "kind": "live",
             }
             attached = await session.call_tool(
                 "attach_event_link",
@@ -206,7 +205,7 @@ def test_mcp_scope_revocation_owner_and_redacted_failure(stack, monkeypatch, cap
                 "attach_event_link",
                 {
                     "event_id": event_id,
-                    "data": {"url": "https://youtu.be/LocalVideo1", "kind": "preview"},
+                    "data": {"url": "https://www.nba.com/game/failed-fixture", "kind": "live"},
                     "idempotency_key": "failed-command-01",
                 },
             )
@@ -259,9 +258,9 @@ def test_mcp_actor_cannot_read_or_remove_another_owners_link(stack):
     link = client.post(
         f"/api/v1/events/{event_id}/links",
         json={
-            "url": "https://youtu.be/LocalVideo1",
+            "url": "https://www.nba.com/game/mcp-private",
             "title": "仅原用户可见",
-            "kind": "preview",
+            "kind": "live",
         },
     ).json()
     other_token = grant(client)
@@ -287,7 +286,7 @@ def test_mcp_actor_cannot_read_or_remove_another_owners_link(stack):
             result = await session.call_tool(
                 "update_follows",
                 {
-                    "add": [{"type": "event", "source_key": source_key}],
+                    "add": [{"type": "team", "source_key": source_key}],
                     "remove": [],
                     "expected_revision": 0,
                     "idempotency_key": "other-owner-follow",

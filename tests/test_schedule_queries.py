@@ -150,7 +150,7 @@ def test_only_page_events_are_hydrated_and_link_queries_do_not_scale_with_schedu
         sql_event.remove(Event, "load", loaded)
 
 
-def test_follow_union_explicit_include_exclude_and_stale_cursor(stack):
+def test_manual_event_union_and_stale_cursor(stack):
     _, sessions = stack
     with sessions() as db:
         for i in range(5):
@@ -158,11 +158,8 @@ def test_follow_union_explicit_include_exclude_and_stale_cursor(stack):
         user = db.get(User, "local-reviewer")
         user.config = {
             **user.config,
-            "follows": [{"type": "competition", "source_key": "query:league"}],
-            "event_overrides": [
-                {"event_key": "query:1", "state": "exclude"},
-                {"event_key": "query:4", "state": "include"},
-            ],
+            "follows": [],
+            "manual_events": [{"event_id": "0"}, {"event_id": "2"}, {"event_id": "4"}],
         }
         db.commit()
         first = query(db, followed=True, user=user, limit=1)
@@ -186,7 +183,7 @@ def test_page_links_keep_public_review_blocks_pins_regions_and_owner_boundary(st
             ("public", "unreviewed", "official"),
             ("local-reviewer", "pinned", "automatic"),
         ]:
-            url = "https://www.youtube.com/watch?v=" + key.ljust(11, "_")
+            url = "https://www.nba.com/game/" + key
             db.add(
                 Link(
                     id=key,
@@ -195,8 +192,8 @@ def test_page_links_keep_public_review_blocks_pins_regions_and_owner_boundary(st
                     url=url,
                     url_hash=digest(url),
                     title="合成链接",
-                    platform="YouTube",
-                    kind="preview",
+                    platform="Archived",
+                    kind="archived",
                     origin=origin,
                 )
             )
@@ -208,7 +205,7 @@ def test_page_links_keep_public_review_blocks_pins_regions_and_owner_boundary(st
                 {"event_key": event.source_key, "url": record["draft"]["url"], "state": "block"},
                 {
                     "event_key": event.source_key,
-                    "url": "https://www.youtube.com/watch?v=pinned_____",
+                    "url": "https://www.nba.com/game/pinned",
                     "state": "pin",
                 },
             ],
@@ -217,8 +214,7 @@ def test_page_links_keep_public_review_blocks_pins_regions_and_owner_boundary(st
         start = datetime.fromisoformat(event.starts_at)
         args = dict(from_=start.isoformat(), to=(start + timedelta(days=1)).isoformat())
         private = query(db, user=user, **args)["items"][0]
-        assert [link["id"] for link in private["links"]] == ["pinned"]
-        assert private["links"][0]["pinned"]
+        assert private["links"] == []
         public = query(db, **args)["items"][0]
         assert [link["id"] for link in public["links"]] == [record["id"]]
         assert public["links"][0]["broadcast"]["access_label"] == "需要订阅"

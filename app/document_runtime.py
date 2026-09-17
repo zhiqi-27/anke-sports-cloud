@@ -3,12 +3,12 @@
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
-from app.calendar_rules import describe, included, select_candidates
+from app.calendar_rules import calendar_membership, describe, included, select_candidates
 from app.document_accounts import Accounts, owner_partition
 from app.document_catalog import Catalog
 from app.document_feeds import FeedPublisher
 from app.document_store import StoreError, partition_items
-from app.follow_rules import direct_follow_allowed, follow_impact, reconcile_creator_scopes
+from app.follow_rules import direct_follow_allowed, follow_impact
 from app.schedule_rules import schedule_page, schedule_range
 from app.schemas import Config
 from app.security import problem
@@ -22,12 +22,6 @@ class Runtime:
     def __init__(self, store, cfg):
         from app.document_content import Content
         from app.document_providers import Providers
-        from app.document_youtube_budget import Budget
-        from app.document_channels import Channels
-        from app.document_creators import Creators
-        from app.document_matches import Matches
-        from app.document_discovery import Discovery
-        from app.document_websub import WebSub
 
         self.store, self.cfg = store, cfg
         self.accounts = Accounts(store, cfg.cipher())
@@ -35,12 +29,6 @@ class Runtime:
         self.publisher = FeedPublisher(store, cfg.cipher())
         self.content = Content(self)
         self.providers = Providers(self)
-        self.youtube_budget = Budget(store, cfg)
-        self.channels = Channels(self)
-        self.creators = Creators(self)
-        self.matches = Matches(self)
-        self.discovery = Discovery(self)
-        self.websub = WebSub(self)
         from app.document_privacy import Privacy
 
         self.privacy = Privacy(self)
@@ -54,22 +42,8 @@ class Runtime:
 
         self.broadcasts = Broadcasts(self)
 
-    def youtube_request(self, endpoint, params):
-        from app.provider_adapters import provider_key
-        from app.youtube_transport import request
-
-        return request(
-            endpoint, params, key=provider_key("YOUTUBE_API_KEY", self.cfg), budget=self.youtube_budget
-        )
-
-    def resolve_creator(self, value):
-        from app.youtube_transport import resolve_creator
-
-        return resolve_creator(value, self.youtube_request)
-
     def calendar_supported(self, payload):
-        # Never silently publish an imported configuration with missing content.
-        self.creators.validate(payload)
+        Config.model_validate(payload["config"])
 
     def activity(self, pk):
         pending, last = False, None
@@ -96,7 +70,6 @@ class Runtime:
             "is_maintainer": payload["user_id"] in self.cfg.maintainer_ids,
             "revision": payload["revision"],
             "config": payload["config"],
-            "creators": self.creators.views(payload),
             "feed": {
                 "revision": feed["revision"],
                 "updated_at": feed["updated_at"],
@@ -121,6 +94,7 @@ class Runtime:
         return {
             **vars(event),
             "included": selected,
+            "calendar": calendar_membership(event, config) if payload else None,
             "links": links,
             "description": describe(event, links, config),
             "description_in_feed": selected,
@@ -171,18 +145,15 @@ class Runtime:
         snapshot = self.catalog.capture()
         sources = {row.id: row for row in snapshot.sources()}
         events = {row.id: row for row in snapshot.events()}
-        by_key = {row.source_key: row for row in events.values()}
         for follow in data.follows:
             source = sources.get(follow.source_key)
             valid_source = source and source.kind == follow.type
-            if not valid_source and not (follow.type == "event" and follow.source_key in by_key):
+            if not valid_source:
                 problem("SOURCE_NOT_FOUND", "该关注对象或类型尚未接入")
             if valid_source and not direct_follow_allowed(source):
                 problem("FOLLOW_SCOPE_NOT_ALLOWED", "英超和 NBA 等联赛请按球队关注")
         unique = {row.source_key: row.model_dump() for row in data.follows}
-        config = reconcile_creator_scopes(
-            payload["config"], [unique[key] for key in sorted(unique)]
-        )
+        config = {**payload["config"], "follows": [unique[key] for key in sorted(unique)]}
         if preview or data.confirmation:
             pk = owner_partition(payload["user_id"])
             feed = self.store.get("state", pk, "feed")["payload"]
@@ -200,15 +171,9 @@ class Runtime:
                 upper,
                 instant,
                 source_for_key=sources.get,
-                event_for_key=by_key.get,
                 event_by_id=events.get,
                 all_events=events.values(),
                 publication_pending=self.activity(pk)[0],
-                creator_name_for_id=lambda ident: (
-                    self.channels.get(ident)["payload"]["name"]
-                    if self.channels.get(ident)
-                    else ident
-                ),
             )
             if not preview and impact["confirmation"] != data.confirmation:
                 problem("FOLLOWS_PREVIEW_CHANGED", "赛程或订阅内容已变化，请重新预览后保存", 409)

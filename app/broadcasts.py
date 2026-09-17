@@ -106,8 +106,8 @@ def publish_event_change(db, event_id):
     )
     for user in db.scalars(select(User).where(User.deleted.is_(False))):
         follows = {x["source_key"] for x in user.config.get("follows", [])}
-        overrides = {x["event_key"] for x in user.config.get("event_overrides", [])}
-        if user.id in historical_owners or event_keys(event) & follows or event.source_key in overrides:
+        manual = {x["event_id"] for x in user.config.get("manual_events", [])}
+        if user.id in historical_owners or event_keys(event) & follows or event.id in manual:
             enqueue(db, "projection", {"user_id": user.id})
 
 

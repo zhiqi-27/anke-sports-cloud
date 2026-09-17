@@ -1,14 +1,18 @@
 # 独立开发云环境
 
+> 当前 A 候选（2026-09-17）：YouTube、AI、创作者和微信均不是运行时能力或配置前置。本文后续旧接入、Key 与部署段落保留为历史记录，不能作为当前部署配方；当前模板以 `infra/main.bicep` 和 `.env.example` 为准。
+
 ## 当前补充 · 2026-09-11
 
 用户已确定桌面地址为 https://sports.anke-ai.com。Cloudflare 区域 anke-ai.com 为 active，sports 精确名称无 DNS 记录（API 只读核验）。infra/dev.bicepparam 已写入该 origin；下一步需建立前端托管目标，再绑定域名和补入 Firebase authorizedDomains。此记录不代表 DNS、TLS 或登录已上线。
 
-Azure CLI 只读核验：当前 Azure subscription 1 为 Enabled，名称含 anke-sports 的资源组列表为空。本次未创建资源或部署。真实视频到本地文档模式 ICS 已通过，见[记录](../evidence/document-real-content-2026-09-11.md)，下文 2026-09-10 的未附链记录为历史实验结果。
+Azure CLI 只读核验：当前 Azure subscription 1 为 Enabled，名称含 anke-sports 的资源组列表为空。本次未创建资源或部署。真实赛程到本地文档模式 ICS 的旧证据仍保留；下文 2026-09-10 的内容实验均为历史记录。
 
-模板现补齐 YouTube 项目 ID、Key Vault 的 youtube-api-key 引用与开发单日 20 单位限制。部署时必须安全写入该专用密钥；引用字符串不代表密钥已存在。云运行与本地预览不得以两个独立账本同时消耗同一项目而声称全局预算，切换时应停止本地真实轮询并核对当天已有用量。20 是开发限制，不是 Google 剩余额度。
+当前模板已移除 YouTube 项目、AI 匹配和内容预算配置；赛程 Provider、Firebase 与 Feed 加密配置按现行模板单独管理。历史内容实验不再作为当前候选的部署前置。
 
-部署仍缺确认的桌面 HTTPS origin、独立资源创建及三个 Key Vault 值（feed-encryption-key、firebase-credentials、youtube-api-key），并需真实 Cosmos/Functions/身份验收。当前仅完成本地模板编译和源码包准备，不标为云端验收通过。
+部署仍需独立目标、Firebase/Feed/Provider 配置及真实 Cosmos/Functions/身份验收。当前仅完成本地模板编译和源码包准备，不标为云端验收通过。
+
+## 历史实施记录（不属于当前候选配置）
 
 更新于2026-09-10。用户授权托管Chrome创建配置独立资源；再次确认后端使用Azure Functions。身份、计算与业务存储的边界保持不变。
 

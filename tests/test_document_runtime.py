@@ -69,6 +69,15 @@ def samples():
             "kind": "team",
             "demo": True,
         },
+        {
+            "id": "fixture:racing-team",
+            "name": "演示车队",
+            "short_name": "RACE",
+            "color": "#777777",
+            "sport": "racing",
+            "kind": "team",
+            "demo": True,
+        },
     ]
     return rows, sources
 
@@ -168,7 +177,7 @@ def test_http_follow_worker_feed_rotation_and_exact_idempotent_response(document
     assert client.get("/api/v1/me/calendar").status_code == 401
 
 
-def test_http_follow_rejects_whole_team_league_but_allows_racing_series(document_stack):
+def test_http_follow_rejects_competitions_and_allows_racing_team(document_stack):
     client, _, _, _ = document_stack
     client.post("/api/v1/auth/local").raise_for_status()
     rejected = client.post(
@@ -178,16 +187,23 @@ def test_http_follow_rejects_whole_team_league_but_allows_racing_series(document
             "follows": [{"type": "competition", "source_key": "fixture:nba"}],
         },
     )
-    assert rejected.status_code == 400
-    assert rejected.json()["error"]["code"] == "FOLLOW_SCOPE_NOT_ALLOWED"
-    allowed = client.post(
+    assert rejected.status_code == 422
+    racing_competition = client.post(
         "/api/v1/me/follows/preview",
         json={
             "expected_revision": 0,
             "follows": [{"type": "competition", "source_key": "fixture:f1"}],
         },
     )
-    assert allowed.status_code == 200
+    assert racing_competition.status_code == 422
+    racing_team = client.post(
+        "/api/v1/me/follows/preview",
+        json={
+            "expected_revision": 0,
+            "follows": [{"type": "team", "source_key": "fixture:racing-team"}],
+        },
+    )
+    assert racing_team.status_code == 200
 
 
 def test_preview_staleness_cursors_pause_and_current_scope(document_stack):

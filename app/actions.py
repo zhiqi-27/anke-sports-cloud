@@ -211,21 +211,6 @@ def block_link(db, user, link_id):
     return {"blocked": True}
 
 
-def add_creator(db, user, data, details):
-    from app.content import save_creator
-
-    save_creator(db, user, details, data.scope_keys, data.preview, data.recap, True, data.expected_revision)
-    return user_view(db, user)
-
-
-def validate_creator_scope_membership(user, scope_keys):
-    followed = {row["source_key"] for row in user.config.get("follows", [])}
-    if not scope_keys:
-        problem("CREATOR_SCOPE_REQUIRED", "请至少选择一个已关注对象")
-    if any(key not in followed for key in scope_keys):
-        problem("CREATOR_SCOPE_NOT_FOLLOWED", "创作者只能关联当前已关注的对象", 409)
-
-
 def import_config(db, user, data):
     if data.expected_revision != user.revision:
         problem("REVISION_CONFLICT", "配置已更新，请重新预览", 409)

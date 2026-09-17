@@ -101,24 +101,24 @@ def test_sources_and_personal_links_are_isolated_with_distinct_uids(stack):
     assert len(entries(client.get(info(client, "test:team")["url"]))) == 1
     with sessions() as db:
         user, event = db.get(User, "local-reviewer"), db.get(Event, ident)
-        attach_link(db, user, event, "https://youtu.be/abcdefghijk", "PRIVATE_CREATOR", "preview")
+        attach_link(db, user, event, "https://www.nba.com/game/private-fixture", "PRIVATE_LINK", "live")
         # Legacy/unreviewed public rows are not publication authority.
         db.add(
             Link(
                 owner_id="public",
                 event_id=ident,
-                url="https://youtu.be/zyxwvutsrqp",
+                url="https://www.nba.com/game/unreviewed-fixture",
                 url_hash=digest("unreviewed"),
                 title="UNREVIEWED",
                 kind="live",
-                platform="YouTube",
+                platform="NBA",
             )
         )
         public_feeds.enqueue_public_feeds(db, force=True)
         db.commit()
     drain()
     assert client.get(view["url"]).content == public.content
-    assert "PRIVATE_CREATOR" not in public.text and "UNREVIEWED" not in public.text
+    assert "PRIVATE_LINK" not in public.text and "UNREVIEWED" not in public.text
     assert "演示赛程" in str(entries(public)[0]["DESCRIPTION"])
 
 
@@ -170,7 +170,7 @@ def test_broadcast_publishes_and_withdraws_from_public_original_event(stack, mon
     published.raise_for_status()
     drain()
     event = entries(client.get(view["url"]))[0]
-    assert "abcdefghijk" in str(event["DESCRIPTION"]) and "仅限 US" in str(event["DESCRIPTION"])
+    assert "www.nba.com/game/fixture" in str(event["DESCRIPTION"]) and "仅限 US" in str(event["DESCRIPTION"])
     assert str(event["UID"]) == str(entries(before)[0]["UID"])
     assert int(event["SEQUENCE"]) == int(entries(before)[0]["SEQUENCE"]) + 1
     with sessions() as db:
@@ -193,7 +193,7 @@ def test_broadcast_publishes_and_withdraws_from_public_original_event(stack, mon
         public_feeds.enqueue_public_feeds(db, force=True)
         db.commit()
     drain()
-    assert "abcdefghijk" in str(entries(client.get(view["url"]))[0]["DESCRIPTION"])
+    assert "www.nba.com/game/fixture" in str(entries(client.get(view["url"]))[0]["DESCRIPTION"])
     response = client.post(
         f"/api/v1/maintenance/broadcasts/{record['id']}/suspend",
         json={"expected_revision": published.json()["revision"], "reason": "合成公共订阅撤回验收"},
@@ -201,7 +201,7 @@ def test_broadcast_publishes_and_withdraws_from_public_original_event(stack, mon
     response.raise_for_status()
     drain()
     after = entries(client.get(view["url"]))[0]
-    assert "abcdefghijk" not in str(after["DESCRIPTION"])
+    assert "www.nba.com/game/fixture" not in str(after["DESCRIPTION"])
     assert str(after["UID"]) == str(event["UID"]) and str(after["STATUS"]) == "CONFIRMED"
 
 
@@ -289,7 +289,18 @@ def test_provider_change_and_outbox_commit_together(stack, monkeypatch):
         "Circuit": {"circuitId": "synthetic", "circuitName": "合成赛道"},
     }
     response = {"MRData": {"total": "1", "RaceTable": {"Races": [race]}}}
-    monkeypatch.setattr("app.providers.get_json", lambda *args, **kwargs: response)
+    constructors = {
+        "MRData": {
+            "total": "1",
+            "ConstructorTable": {
+                "Constructors": [{"constructorId": "ferrari", "name": "Ferrari"}]
+            },
+        }
+    }
+    monkeypatch.setattr(
+        "app.providers.get_json",
+        lambda _client, path, **_kwargs: constructors if "/constructors/" in path else response,
+    )
     with sessions() as db:
         sync_provider(db, "jolpica")
         assert db.scalar(select(Job.id).where(Job.kind == "public_projection"))

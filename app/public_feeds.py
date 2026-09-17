@@ -87,7 +87,7 @@ def rebuild_public_feed(db, ident):
     links, broadcasts = load_links(db, events, None)
     for event in events:
         wanted.add(event.id)
-        # Never pass an actor: personal creator links, blocks, regions and pins stay private.
+        # Never pass an actor: personal links, blocks, regions and pins stay private.
         data = projection_data(db, event, None, config, link_rows=links[event.id], broadcasts=broadcasts)
         update_projection(db, feed, event, data, existing)
     name = f"{'[演示] ' if source.demo else ''}Anke Sports · {source.name}"

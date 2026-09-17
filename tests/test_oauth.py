@@ -278,9 +278,9 @@ def test_chrome_origin_is_bound_to_registered_callback_and_owner(stack):
         "Idempotency-Key": "chrome-fixture-save",
     }
     payload = {
-        "url": "https://www.youtube.com/watch?v=abcdefghijk",
+        "url": "https://www.nba.com/game/oauth-fixture",
         "title": "隔离扩展合成测试",
-        "kind": "preview",
+        "kind": "live",
     }
     path = f"/api/v1/events/{ident}/links"
     wrong = client.post(path, headers={**headers, "Origin": "chrome-extension://" + "b" * 32}, json=payload)

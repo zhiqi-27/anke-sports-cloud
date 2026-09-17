@@ -1,10 +1,13 @@
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
+import pytest
 from sqlalchemy import select
+from pydantic import ValidationError
 
 from app.calendar import event_is_past, rebuild_feed
-from app.db import Base, Creator, Event, Feed, Projection, Source, User
+from app.db import Base, Event, Feed, Projection, Source, User
+from app.schemas import Config
 from app.service import ensure_user, save_config
 from tests.test_calendar_flow import drain, feed_snapshot
 
@@ -41,7 +44,6 @@ def setup_schedule(sessions):
             ("b", 4, ["b"]),
             ("past", -2, ["a"]),
             ("pinned", 5, ["a"]),
-            ("excluded", 6, ["a"]),
         ]:
             start = instant + timedelta(days=days)
             event = Event(
@@ -65,10 +67,7 @@ def setup_schedule(sessions):
             {
                 **user.config,
                 "follows": [follow("a"), follow("b")],
-                "event_overrides": [
-                    {"event_key": "test:event:pinned", "state": "include"},
-                    {"event_key": "test:event:excluded", "state": "exclude"},
-                ],
+                "manual_events": [{"event_id": ids["pinned"]}],
             },
             user.revision,
         )
@@ -125,42 +124,19 @@ def test_preview_is_read_only_and_matches_published_removal_with_overlap_and_his
         assert old_uids - current_uids == {f"{removed.id}@calendar.anke-sports"}
 
 
-def test_follow_removal_prunes_creator_scopes_and_removes_only_orphaned_creator(stack):
+def test_follow_changes_reject_retired_creator_settings(stack):
     client, sessions = stack
     setup_schedule(sessions)
     with sessions() as db:
         user = db.get(User, "local-reviewer")
-        db.add_all(
-            [
-                Creator(channel_id="creator-a", name="Only A"),
-                Creator(channel_id="creator-both", name="A and B"),
-                Creator(channel_id="creator-legacy", name="Legacy all"),
-            ]
-        )
-        save_config(
-            db,
-            user,
-            {
-                **user.config,
-                "creators": [
-                    {"channel_id": "creator-a", "scope_keys": ["test:a"]},
-                    {"channel_id": "creator-both", "scope_keys": ["test:a", "test:b"]},
-                    {"channel_id": "creator-legacy", "scope_keys": []},
-                ],
-            },
-            user.revision,
-        )
-        db.commit()
-    body = payload(client, [follow("b")])
-    preview = client.post("/api/v1/me/follows/preview", json=body).json()
-    assert preview["removed_creators"] == [{"channel_id": "creator-a", "name": "Only A"}]
-    saved = client.put(
-        "/api/v1/me/follows", json={**body, "confirmation": preview["confirmation"]}
-    )
-    assert saved.status_code == 200
-    assert {
-        row["channel_id"]: row["scope_keys"] for row in saved.json()["config"]["creators"]
-    } == {"creator-both": ["test:b"], "creator-legacy": ["test:b"]}
+        with pytest.raises(ValidationError):
+            Config.model_validate(
+                {
+                    **user.config,
+                    "creators": [{"channel_id": "creator-a", "scope_keys": ["test:a"]}],
+                }
+            )
+        assert "creators" not in user.config
 
 
 def test_preview_addition_counts_unknown_dates_and_limits_examples_after_hashing(stack):
@@ -250,7 +226,7 @@ def test_preview_is_personal_and_requires_authentication(stack):
     setup_schedule(sessions)
     with sessions() as db:
         other = ensure_user(db, "other-user")
-        save_config(db, other, {**other.config, "follows": [follow("league", "competition")]}, other.revision)
+        save_config(db, other, {**other.config, "follows": [follow("a")]}, other.revision)
         rebuild_feed(db, other.id)
         db.commit()
     body = payload(client, [])

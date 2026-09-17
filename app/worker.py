@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from app.calendar import rebuild_feed
-from app.db import ProviderState, SessionLocal, User, Video, now
+from app.db import ProviderState, SessionLocal, User, now
 from app.jobs import PROVIDERS, LeaseLost, claim_job, complete_job, error_code, fail_job
 from app.providers import enqueue_provider, provider_due, sync_provider
 from app.service import enqueue
@@ -37,23 +37,6 @@ def execute_claim(db, claim):
         from app.broadcasts import check_record
 
         check_record(db, payload["link_id"], payload["url_hash"])
-    elif kind.startswith("youtube_"):
-        from app.content import match_video, poll_channel, refresh_channel_metadata, refresh_videos
-        from app.websub import request_subscription
-
-        if kind == "youtube_poll":
-            poll_channel(db, payload)
-        elif kind == "youtube_videos":
-            refresh_videos(db, payload["channel_id"], payload["video_ids"])
-        elif kind == "youtube_channel_metadata":
-            refresh_channel_metadata(db, payload["channel_id"])
-        elif kind == "youtube_rematch":
-            for video in db.scalars(select(Video).where(Video.channel_id == payload["channel_id"])):
-                match_video(db, video, only_user=payload["user_id"])
-        elif kind == "youtube_subscribe":
-            request_subscription(payload["channel_id"], claim)
-        else:
-            raise ValueError("UNKNOWN_JOB")
     else:
         raise ValueError("UNKNOWN_JOB")
 
@@ -103,7 +86,6 @@ def schedule_providers():
 
 
 def run_maintenance():
-    from app.websub import schedule_content
     from app.oauth import clean_expired_connections
     from app.broadcasts import schedule_broadcasts
 
@@ -111,7 +93,6 @@ def run_maintenance():
 
     healthy = True
     for operation in (
-        schedule_content,
         clean_expired_connections,
         schedule_broadcasts,
         schedule_public_feeds,
@@ -129,11 +110,11 @@ def main(argv=None):
     parser.add_argument("--once", action="store_true")
     args = parser.parse_args(argv)
     next_schedule = 0
-    next_content = 0
+    next_maintenance = 0
     while True:
         healthy = True
-        if time.monotonic() >= next_content:
-            next_content = time.monotonic() + 60
+        if time.monotonic() >= next_maintenance:
+            next_maintenance = time.monotonic() + 60
             healthy = run_maintenance()
         if time.monotonic() >= next_schedule:
             try:
