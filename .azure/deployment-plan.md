@@ -3,7 +3,7 @@
 Status: Validated
 Recipe: bicep
 
-> 当前 A 候选（2026-09-17）不需要微信、YouTube、AI 或创作者配置；以下历史部署段落仅保留为已发生操作的证据，不是当前发布前置。A 本轮未部署。
+> 当前 A 候选（2026-09-17）不需要微信、YouTube、AI 或创作者配置；以下历史部署段落仅保留为已发生操作的证据，不是当前发布前置。A 已完成开发环境代码发布与线上回读。
 
 本文件只记录当前部署执行与验证，不替代工作区实施计划或任务表。沿用用户已授权的独立资源创建配置、Azure Functions、Cosmos Serverless + Periodic 及 sports.anke-ai.com；不是生产环境授权。既有仓库使用 standalone Bicep，不初始化 azd。
 
@@ -54,6 +54,18 @@ Key Vault 中准备当前模板声明的 feed-encryption-key、firebase-credenti
 2026-09-17 A 候选复核：Azure CLI 当前订阅为 `Azure subscription 1` / `a1187bf2-2e2f-4e05-aaea-407163a009f5`，资源组 `anke-sports-dev` 位于 East Asia 且状态 `Succeeded`；目标 Function App 为 `anke-sports-dev-mtcflttk`。Bicep 编译通过，subscription what-if 仅报告现有 21 项 `Deploy`、无 `Delete`，本次只发布代码包，不应用基础设施 what-if。
 
 服务端全量回归 `239 passed, 2 skipped`，Ruff、compileall、`git diff --check` 通过；客户端 `npm run typecheck`、`npm run build`、Worker 测试 `3/3` 和 `git diff --check` 通过。OpenAPI/config schema 已重新导出，客户端类型已重新生成。静态 RBAC 仍为数据库级 Cosmos Data Contributor、Storage 数据角色和 Key Vault Secrets User，无新增权限。活跃契约扫描未发现旧 selection、creator、YouTube/AI 配置或公开路径。
+
+### A 部署与线上回读 · 2026-09-17
+
+- [x] 后端提交 `5db5283` 已推送到 `anke-sports-cloud/main`；确定性 Functions 包 `data/anke-sports-a-20260917.zip` 的 SHA-256 为 `64f47c69f0fab235b8193d7b887910063933bcb762364ca3e9140f3ae2ab356d`，187845 字节。
+- [x] 通过 `az functionapp deployment source config-zip --build-remote true` 发布到现有 `anke-sports-dev-mtcflttk`；Azure CLI 返回 `Deployment was successful.`，未应用 Bicep what-if。
+- [x] 线上注册 5 个现行 Functions：`advance_calendar_window`、`dispatch_outbox`、`http_app_func`、`process_job`、`update_schedules`；内容 Timer 已退休，不再计入当前运行面。
+- [x] 已删除开发 App Settings 中 7 个退休配置：YouTube 项目/预算/WebSub、matching AI 开关/模型、`YOUTUBE_API_KEY`、`GEMINI_API_KEY`；Firebase、Cosmos、Storage、Queue、Provider、广播检查配置保留。
+- [x] Azure 直连 `/api/v1/health` 与 `/api/v1/status` 回读成功：`ok`、`staging`、`cosmos`，Firebase 已配置，现行 Provider 状态正常。
+- [x] Web 提交 `dc15b05` 已推送到 `anke-sports/main`；Worker `anke-sports-web` 已发布到 `sports.anke-ai.com`，版本 `1910dc1e-75f0-4498-8028-2d942a59ef7a`。
+- [x] Cloudflare 公网 `/`、`/connect`、`/api/v1/health`、`/api/v1/status` 均回读成功；本次未执行 B/C 手动增删、设备 ICS/播放、全新账号生命周期或正式发布验收。
+
+部署证据详见 `evidence/a-scope-deployment-2026-09-17.md` 与客户端 `worker/a-scope-deployment-2026-09-17.md`。本次未删除资源、历史表、历史模块或用户数据；生产发布仍未授权。
 
 2026-09-11 standalone Bicep validate-deployment.sh：CLI/auth/build/target validate/what-if 全部 PASS，OVERALL PASS。最终 helper 按格式化文本的 + 行统计为22、~ 行0、- 行0；该计数包含输出格式影响，不作为精确资源数，精确资源列表以前一次 ResourceIdOnly 的21项为准。session 98448 正常退出。
 
