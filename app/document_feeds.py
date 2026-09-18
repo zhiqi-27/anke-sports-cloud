@@ -6,7 +6,12 @@ import json
 from types import SimpleNamespace
 from uuid import uuid4
 
-from app.calendar_rules import projection_from_links, select_candidates, serialize_personal
+from app.calendar_rules import (
+    projection_from_links,
+    select_candidates,
+    serialize_personal,
+    spoiler_hidden_event_ids,
+)
 from app.document_accounts import Accounts, Outbox, document, owner_partition
 from app.document_store import StoreError, Write, clean, encode
 from app.security import digest, problem
@@ -124,10 +129,16 @@ class FeedPublisher:
         before = self.generations.load(pk, feed["payload"]["generation"])
         existing = {value["event_id"]: SimpleNamespace(**deepcopy(value)) for value in before["projections"]}
         selected, lower, _ = select_candidates(events, config, existing, instant)
+        hidden_result_ids = spoiler_hidden_event_ids(events, config)
         wanted = set()
         for event in selected:
             wanted.add(event.id)
-            data = projection_from_links(event, links_for_event(event), config)
+            data = projection_from_links(
+                event,
+                links_for_event(event),
+                config,
+                hidden_result_ids=hidden_result_ids,
+            )
             # Keep the existing SQL hash algorithm and any imported projection IDs.
             content_hash = digest(json.dumps(data, sort_keys=True, ensure_ascii=False))
             projection = existing.get(event.id)

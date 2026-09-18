@@ -1581,21 +1581,12 @@
             "maxLength": 300,
             "title": "Title",
             "default": ""
-          },
-          "kind": {
-            "type": "string",
-            "enum": [
-              "live",
-              "watch_along"
-            ],
-            "title": "Kind"
           }
         },
         "additionalProperties": false,
         "type": "object",
         "required": [
-          "url",
-          "kind"
+          "url"
         ],
         "title": "AddLink"
       },
@@ -1898,7 +1889,14 @@
             "title": "Reviewed At"
           },
           "valid_until": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Valid Until"
           },
           "network_status": {
@@ -2527,6 +2525,38 @@
         ],
         "title": "EventList"
       },
+      "EventResult": {
+        "properties": {
+          "away_score": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Away Score"
+          },
+          "home_score": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Home Score"
+          },
+          "winner": {
+            "type": "string",
+            "enum": [
+              "away",
+              "home",
+              "draw"
+            ],
+            "title": "Winner"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "away_score",
+          "home_score",
+          "winner"
+        ],
+        "title": "EventResult",
+        "description": "A completed two-sided result in participant/title order."
+      },
       "EventView": {
         "properties": {
           "id": {
@@ -2597,6 +2627,16 @@
             },
             "type": "array",
             "title": "Participants"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EventResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "provider": {
             "type": "string",
@@ -3202,6 +3242,17 @@
           "color": {
             "type": "string",
             "title": "Color"
+          },
+          "logo_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logo Url"
           }
         },
         "type": "object",

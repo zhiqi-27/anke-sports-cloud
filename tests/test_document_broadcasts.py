@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta, timezone
+from types import SimpleNamespace
 from app.broadcast_schemas import BroadcastDraft, BroadcastDecision, BroadcastAction
+from app.schemas import AddLink
 from tests.test_document_runtime import document_stack as document_stack, drain, follow
 
 
@@ -174,3 +176,60 @@ def test_expiry_is_withdrawn_even_when_network_checks_disabled(document_stack):
     assert rt.broadcasts.get(record["id"])["payload"]["status"] == "expired"
     address = client.get("/api/v1/public-feed", params={"source_key": "fixture:league"}).json()["url"]
     assert "miguvideo" not in client.get(address).text
+
+
+def test_document_calendar_uses_selected_product_and_manual_link_overrides_it(document_stack):
+    client, rt, events, _ = document_stack
+    source_event = rt.catalog.capture().event(events[0]["id"])
+    event = SimpleNamespace(
+        id=source_event.id,
+        source_key=source_event.source_key,
+        competition_id="balldontlie:nba",
+        status="scheduled",
+    )
+    payload = {
+        "user_id": "local-reviewer",
+        "config": {
+            "preferences": {
+                "watch_region": "US",
+                "broadcast_platforms": {"US:balldontlie:nba": "peacock"},
+            },
+            "link_overrides": [],
+        },
+    }
+    automatic = rt.broadcasts.selected(event, payload)
+    assert automatic[0]["url"] == "https://www.peacocktv.com/sports/nba"
+    assert automatic[0]["broadcast"]["content_label"] == "官方直播产品"
+
+    manual = SimpleNamespace(
+        id="manual-link",
+        event_id=event.id,
+        owner_id="local-reviewer",
+        url="https://www.nba.com/game/manual-link",
+        title="我的直播入口",
+        kind="live",
+        platform="nba.com",
+        origin="manual",
+        access="unknown",
+        regions=[],
+        available=True,
+        created_at="2026-09-18T00:00:00+00:00",
+    )
+    selected = rt.content.selected(event, payload, rows=[manual])
+    assert [(link["origin"], link["url"]) for link in selected] == [
+        ("manual", "https://www.nba.com/game/manual-link")
+    ]
+
+    client.post("/api/v1/auth/local").raise_for_status()
+    foreign_url = "https://community.example/live/fixture"
+    attached = rt.content.attach(
+        "local-reviewer",
+        event.id,
+        AddLink(url=foreign_url, title="社区直播入口"),
+        "document-foreign-platform",
+    )
+    assert attached["event"]["links"][0]["url"] == foreign_url
+    assert attached["event"]["links"][0]["kind"] == "live"
+    rt.accounts.ensure("other-user")
+    other = rt.accounts.active("other-user")["payload"]
+    assert foreign_url not in {link["url"] for link in rt.content.selected(event, other)}

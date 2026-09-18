@@ -411,6 +411,8 @@ def test_basketball_pagination_date_precision_and_metadata_failure():
             "date": "2026-09-12",
             "datetime": "2026-09-12T10:00:00Z" if i else None,
             "status": "Final" if i else "TBD",
+            "visitor_team_score": 98 if i else None,
+            "home_team_score": 101 if i else None,
             "visitor_team": team(1),
             "home_team": team(2),
         }
@@ -442,6 +444,7 @@ def test_basketball_pagination_date_precision_and_metadata_failure():
         "balldontlie:team:3",
     }
     assert events[0]["participants"][1]["id"] == "balldontlie:team:2"
+    assert events[1]["result"] == {"away_score": 98, "home_score": 101, "winner": "home"}
     assert provider_adapters.source_logo_url("balldontlie:team:14", "LAL") == (
         "https://cdn.nba.com/logos/nba/1610612747/primary/L/logo.svg"
     )
@@ -464,21 +467,23 @@ def test_basketball_pagination_date_precision_and_metadata_failure():
 
 
 def test_football_count_status_and_unknown_time_are_preserved():
-    def match(index, status, time):
+    def match(index, status, time, score=None):
         return {
             "id": index,
             "status": status,
             "utcDate": time,
             "awayTeam": {"id": 1, "name": "Away"},
             "homeTeam": {"id": 2, "name": "Home"},
+            "score": score or {},
         }
 
     matches = [
         match(1, "SCHEDULED", "2026-09-12T00:00:00Z"),
         match(2, "POSTPONED", None),
         match(3, "CANCELLED", "2026-09-12T12:00:00Z"),
+        match(4, "FINISHED", "2026-09-12T14:00:00Z", {"fullTime": {"away": 1, "home": 2}}),
     ]
-    payload = {"matches": matches, "resultSet": {"count": 3}}
+    payload = {"matches": matches, "resultSet": {"count": 4}}
 
     def request(client, url, **kwargs):
         if url.endswith("/teams"):
@@ -506,12 +511,91 @@ def test_football_count_status_and_unknown_time_are_preserved():
         ("date_only", "scheduled"),
         ("unknown", "postponed"),
         ("exact", "cancelled"),
+        ("exact", "finished"),
     ]
-    payload["resultSet"]["count"] = 4
+    assert events[3]["result"] == {"away_score": 1, "home_score": 2, "winner": "home"}
+    payload["resultSet"]["count"] = 5
     with pytest.raises(ValueError, match="INCOMPLETE"):
         provider_adapters.fetch_schedule(
             "football-data", request_json=request, key_reader=lambda _: "fixture-key"
         )
+
+
+def test_football_team_schedules_add_other_competitions_without_duplicate_uids():
+    def team(team_id, name, tla):
+        return {
+            "id": team_id,
+            "name": name,
+            "tla": tla,
+            "crest": f"https://crests.football-data.org/{team_id}.png",
+        }
+
+    def match(match_id, competition, away, home):
+        return {
+            "id": match_id,
+            "status": "SCHEDULED",
+            "utcDate": "2026-10-10T15:00:00Z",
+            "competition": competition,
+            "awayTeam": away,
+            "homeTeam": home,
+        }
+
+    liverpool = team(1, "Liverpool FC", "LIV")
+    arsenal = team(2, "Arsenal FC", "ARS")
+    porto = team(9, "FC Porto", "FCP")
+    pl = {"code": "PL", "name": "Premier League"}
+    cl = {
+        "code": "CL",
+        "name": "UEFA Champions League",
+        "emblem": "https://example.invalid/cl.svg",
+    }
+    fac = {"code": "FAC", "name": "FA Cup"}
+    premier_match = match(100, pl, arsenal, liverpool)
+    champions_match = match(200, cl, porto, liverpool)
+    cup_match = match(300, fac, liverpool, arsenal)
+    calls = []
+
+    def request(client, url, **kwargs):
+        calls.append((url, kwargs.get("params")))
+        assert kwargs.get("params") in (None, {"season": "2026"})
+        if url.endswith("/competitions/PL/teams"):
+            return {
+                "season": {"startDate": "2026-08-01"},
+                "count": 2,
+                "teams": [liverpool, arsenal],
+            }
+        if url.endswith("/competitions/PL/matches"):
+            return {"matches": [premier_match], "resultSet": {"count": 1}}
+        if url.endswith("/teams/1/matches"):
+            return {"matches": [premier_match, champions_match], "resultSet": {"count": 2}}
+        if url.endswith("/teams/2/matches"):
+            return {"matches": [premier_match, cup_match], "resultSet": {"count": 2}}
+        raise AssertionError(url)
+
+    events, sources = provider_adapters.fetch_schedule(
+        "football-data", request_json=request, key_reader=lambda _: "fixture-key"
+    )
+
+    assert {event["source_key"] for event in events} == {
+        "football-data:match:100",
+        "football-data:match:200",
+        "football-data:match:300",
+    }
+    assert {event["competition_id"] for event in events} == {
+        "football-data:PL",
+        "football-data:CL",
+        "football-data:FAC",
+    }
+    assert {source["id"] for source in sources} == {
+        "football-data:team:1",
+        "football-data:team:2",
+        "football-data:PL",
+        "football-data:CL",
+        "football-data:FAC",
+    }
+    champions = next(event for event in events if event["source_key"].endswith(":200"))
+    assert champions["participants"][0]["logo_url"] == "https://crests.football-data.org/9.png"
+    assert sum("/teams/" in url for url, _ in calls) == 2
 
 
 def test_fetch_deadline_and_duplicate_identity_reject_whole_batch(monkeypatch):

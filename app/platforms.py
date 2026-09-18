@@ -469,6 +469,64 @@ RIGHTS = [
     },
 ]
 
+# These are the provider products that the calendar can open when a user has
+# not attached a personal link for the event.  They intentionally point at a
+# provider's sport/league product page rather than a guessed media stream or
+# a short-lived per-game URL.  Rights still decide whether a product can be
+# selected for a competition and region.
+PRODUCTS = {
+    ("jolpica:f1", "apple-tv"): {
+        "url": "https://tv.apple.com/us/info/watch-f1",
+        "title": "Apple TV · Formula 1",
+    },
+    ("jolpica:f1", "tencent-sports"): {
+        "url": "https://sports.qq.com/kbsweb/#100360",
+        "title": "腾讯体育 · Formula 1",
+    },
+    ("jolpica:f1", "fod"): {
+        "url": "https://fod.fujitv.co.jp/title/91di/",
+        "title": "FOD · Formula 1",
+    },
+    ("balldontlie:nba", "nba"): {
+        "url": "https://www.nba.com/watch/featured",
+        "title": "NBA · Watch",
+    },
+    ("balldontlie:nba", "espn"): {
+        "url": "https://www.espn.com/watch/",
+        "title": "ESPN · Watch",
+    },
+    ("balldontlie:nba", "peacock"): {
+        "url": "https://www.peacocktv.com/sports/nba",
+        "title": "Peacock · NBA",
+    },
+    ("balldontlie:nba", "prime-video"): {
+        "url": "https://www.primevideo.com/-/en_US/sports",
+        "title": "Prime Video · Sports",
+    },
+    ("balldontlie:nba", "tencent-sports"): {
+        "url": "https://sports.qq.com/kbsweb/index.htm#nba",
+        "title": "腾讯体育 · NBA",
+    },
+    ("balldontlie:nba", "migu"): {
+        "url": "https://www.miguvideo.com/p/home/3cd6ba04967742879aaa40bee02a99a6",
+        "title": "咪咕视频 · NBA",
+    },
+    ("football-data:PL", "nbc-sports"): {
+        "url": "https://www.nbcsports.com/watch/soccer",
+        "title": "NBC Sports · Premier League",
+    },
+    ("football-data:PL", "peacock"): {
+        "url": "https://www.peacocktv.com/sports/premier-league",
+        "title": "Peacock · Premier League",
+    },
+    ("football-data:PL", "migu"): {
+        "url": "https://www.miguvideo.com/mgs/website/prd/sportsHomePage.html?pageId=0c40bbc85fa345bbba20f8e5fd11a922",
+        "title": "咪咕视频 · Premier League",
+    },
+}
+
+RIGHTS_REVIEWED_AT = "2026-09-18T00:00:00+00:00"
+
 
 def registry():
     return [
@@ -476,10 +534,83 @@ def registry():
             **rule,
             "verification": "candidate_only",
             "mobile_opening": "verified_https_app_link" if rule.get("app_paths") else "web_handoff",
-            "rights": [right for right in RIGHTS if right["platform_id"] == rule["id"]],
+            "rights": [
+                {
+                    **right,
+                    "product_url": PRODUCTS.get((right["competition_id"], right["platform_id"]), {}).get("url"),
+                    "product_title": PRODUCTS.get((right["competition_id"], right["platform_id"]), {}).get(
+                        "title"
+                    ),
+                }
+                for right in RIGHTS
+                if right["platform_id"] == rule["id"]
+            ],
         }
         for rule in RULES
     ]
+
+
+def selected_product(event, config):
+    """Select the configured official product for one event.
+
+    This is deliberately a product-directory lookup, not per-event discovery.
+    The user's regional preference narrows the rights matrix; an explicit
+    platform preference wins within that matrix, otherwise the first
+    configured product wins.  A personal link is applied later by
+    ``selected_links`` and can hide this result for that user.
+    """
+
+    competition_id = event.competition_id
+    preferences = (config or {}).get("preferences", {})
+    region = preferences.get("watch_region")
+    platform_preferences = preferences.get("broadcast_platforms", {})
+    preferred_platform = platform_preferences.get(
+        f"{region}:{competition_id}" if region else competition_id
+    )
+    candidates = [
+        right
+        for right in RIGHTS
+        if right["competition_id"] == competition_id
+        and (not region or region in right["regions"])
+        and (competition_id, right["platform_id"]) in PRODUCTS
+    ]
+    if preferred_platform:
+        preferred = [right for right in candidates if right["platform_id"] == preferred_platform]
+        if preferred:
+            candidates = preferred
+    if not candidates:
+        return None
+
+    right = candidates[0]
+    product = PRODUCTS[(competition_id, right["platform_id"])]
+    opening = mobile_opening(product["url"])
+    valid_until = (
+        f"{right['valid_through']}T23:59:59+00:00" if right.get("valid_through") else None
+    )
+    return {
+        "id": f"product:{event.id}:{right['platform_id']}",
+        "url": product["url"],
+        "title": product["title"],
+        "kind": "live",
+        "platform": opening["platform_id"],
+        "origin": "official",
+        "access": "unknown",
+        "regions": right["regions"] if region else [],
+        "created_at": RIGHTS_REVIEWED_AT,
+        "metadata": {
+            **opening,
+            "content_type": "official_match",
+            "content_label": "官方直播产品",
+            "access_label": "观看条件未验证",
+            "region_label": f"{region} 地区版权方" if region else "按候选版权方自动选择",
+            "evidence_url": right["evidence"],
+            "reviewed_at": RIGHTS_REVIEWED_AT,
+            "valid_until": valid_until,
+            "network_status": "configured",
+            "network_checked_at": None,
+            "device_tests": [],
+        },
+    }
 
 
 def platform_rule(value: str):

@@ -1,14 +1,16 @@
 import argparse
 import time
 import logging
+from datetime import datetime
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from app.calendar import rebuild_feed
-from app.db import ProviderState, SessionLocal, User, now
+from app.db import Event, ProviderState, SessionLocal, User, now
 from app.jobs import PROVIDERS, LeaseLost, claim_job, complete_job, error_code, fail_job
-from app.providers import enqueue_provider, provider_due, sync_provider
+from app.provider_adapters import provider_refresh_interval
+from app.providers import enqueue_provider, sync_provider
 from app.service import enqueue
 
 
@@ -71,16 +73,21 @@ def run_one(job_id: str | None = None) -> bool:
 
 def schedule_providers():
     instant = now()
+    instant_dt = datetime.fromisoformat(instant)
     with SessionLocal() as db:
         identifiers = db.scalars(
             select(ProviderState.id)
-            .where(ProviderState.id.in_(PROVIDERS), *provider_due(instant))
+            .where(ProviderState.id.in_(PROVIDERS), ProviderState.enabled.is_(True))
             .order_by(ProviderState.id)
         ).all()
+        events = list(db.scalars(select(Event).where(Event.provider.in_(PROVIDERS))))
     queued = 0
     for ident in identifiers:
+        refresh_after = provider_refresh_interval(ident, events, instant_dt)
         with SessionLocal() as db:
-            queued += enqueue_provider(db, ident, scheduled=True, instant=instant)
+            queued += enqueue_provider(
+                db, ident, scheduled=True, instant=instant, refresh_after=refresh_after
+            )
             db.commit()
     return queued
 

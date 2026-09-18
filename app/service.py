@@ -5,7 +5,7 @@ from sqlalchemy import func, or_, select, update
 from app.config import settings
 from app.db import Event, Feed, Job, Link, Projection, Source, User
 from app.schemas import Config, ImportInput
-from app.security import canonical_url, digest, problem
+from app.security import digest, personal_url, problem
 
 
 def ensure_user(db, user_id: str) -> User:
@@ -137,10 +137,8 @@ def user_view(db, user: User) -> dict:
     }
 
 
-def attach_link(db, user: User, event: Event, url: str, title: str, kind: str):
-    if kind not in {"live", "watch_along"}:
-        problem("LINK_KIND_UNSUPPORTED", "只支持比赛直播或同步解说入口")
-    canonical, platform = canonical_url(url)
+def attach_link(db, user: User, event: Event, url: str, title: str):
+    canonical, platform = personal_url(url)
     user = lock_user(db, user.id)
     if not user or user.deleted:
         problem("NOT_FOUND", "账号已不可用", 404)
@@ -157,11 +155,11 @@ def attach_link(db, user: User, event: Event, url: str, title: str, kind: str):
             url_hash=digest(canonical),
             title=title.strip() or f"{platform} 原链接",
             platform=platform,
-            kind=kind,
+            kind="live",
         )
         db.add(link)
     else:
-        link.title, link.kind = title.strip() or link.title, kind
+        link.title, link.kind = title.strip() or link.title, "live"
     link.origin = "manual"
     link.available = True
     blocked = any(

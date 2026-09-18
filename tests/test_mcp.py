@@ -114,7 +114,6 @@ def test_private_mcp_shared_writes_receipts_blocks_and_import(stack):
             data = {
                 "url": "https://www.nba.com/game/local-fixture",
                 "title": "合成测试链接",
-                "kind": "live",
             }
             attached = await session.call_tool(
                 "attach_event_link",
@@ -205,7 +204,7 @@ def test_mcp_scope_revocation_owner_and_redacted_failure(stack, monkeypatch, cap
                 "attach_event_link",
                 {
                     "event_id": event_id,
-                    "data": {"url": "https://www.nba.com/game/failed-fixture", "kind": "live"},
+                    "data": {"url": "https://www.nba.com/game/failed-fixture"},
                     "idempotency_key": "failed-command-01",
                 },
             )
@@ -260,7 +259,6 @@ def test_mcp_actor_cannot_read_or_remove_another_owners_link(stack):
         json={
             "url": "https://www.nba.com/game/mcp-private",
             "title": "仅原用户可见",
-            "kind": "live",
         },
     ).json()
     other_token = grant(client)

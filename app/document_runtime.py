@@ -3,7 +3,14 @@
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
-from app.calendar_rules import calendar_membership, describe, included, select_candidates
+from app.calendar_rules import (
+    calendar_membership,
+    calendar_title,
+    describe,
+    included,
+    select_candidates,
+    spoiler_hidden_event_ids,
+)
 from app.calendar_commands import add_manual_source, remove_manual_source, validate_manual_event
 from app.document_accounts import Accounts, Change, owner_partition
 from app.document_catalog import Catalog
@@ -86,14 +93,37 @@ class Runtime:
             },
         }
 
-    def event_view(self, event, payload=None, *, link_rows=None, content_validated=False):
+    def event_view(
+        self,
+        event,
+        payload=None,
+        *,
+        link_rows=None,
+        content_validated=False,
+        hidden_result_ids=None,
+    ):
         if payload and not content_validated:
             self.calendar_supported(payload)
         config = payload["config"] if payload else Config().model_dump()
         selected = included(event, config) if payload else False
+        if payload and hidden_result_ids is None:
+            hidden_result_ids = spoiler_hidden_event_ids(self.catalog.capture().events(), config)
+        hidden_result_ids = hidden_result_ids or set()
+        personal_result = getattr(event, "result", None) if selected and event.id not in hidden_result_ids else None
         links = self.content.selected(event, payload, rows=link_rows)
         return {
             **vars(event),
+            "title": calendar_title(
+                event,
+                config,
+                personal=selected,
+                hidden_result_ids=hidden_result_ids,
+            ),
+            "participants": [
+                {**participant, "logo_url": participant.get("logo_url")}
+                for participant in event.participants
+            ],
+            "result": personal_result,
             "included": selected,
             "calendar": calendar_membership(event, config) if payload else None,
             "links": links,
@@ -109,6 +139,9 @@ class Runtime:
         first = min(earliest[:7], lower.date().isoformat()[:7])
         last = max((latest or "9999-12")[:7], upper.date().isoformat()[:7])
         snapshot = self.catalog.capture()
+        hidden_result_ids = (
+            spoiler_hidden_event_ids(snapshot.events(), payload["config"]) if payload else set()
+        )
         months = {key for root in snapshot.roots for key in root["payload"]["months"] if first <= key <= last}
         page, next_cursor = schedule_page(
             snapshot.events(months=months),
@@ -125,7 +158,14 @@ class Runtime:
         link_rows = self.content.rows(payload["user_id"]) if payload else []
         result = {
             "items": [
-                self.event_view(row, payload, link_rows=link_rows, content_validated=True) for row in page
+                self.event_view(
+                    row,
+                    payload,
+                    link_rows=link_rows,
+                    content_validated=True,
+                    hidden_result_ids=hidden_result_ids,
+                )
+                for row in page
             ],
             "next_cursor": next_cursor,
             "coverage": {

@@ -29,12 +29,14 @@ def link(kind, url, *, ident):
     )
 
 
-def test_video_kinds_are_rejected_but_live_links_remain_supported():
-    for kind in ("video", "preview", "recap"):
+def test_manual_link_has_no_user_selectable_content_kind():
+    for kind in ("video", "preview", "recap", "live", "watch_along"):
         with pytest.raises(ValidationError):
             AddLink(url="https://www.youtube.com/watch?v=abcdefghijk", kind=kind)
-    assert AddLink(url="https://www.nba.com/game/example", kind="live").kind == "live"
-    assert AddLink(url="https://www.nba.com/game/commentary", kind="watch_along").kind == "watch_along"
+    assert AddLink(url="https://www.nba.com/game/example").model_dump() == {
+        "url": "https://www.nba.com/game/example",
+        "title": "",
+    }
 
 
 def test_legacy_video_search_setting_is_rejected_by_the_current_contract():

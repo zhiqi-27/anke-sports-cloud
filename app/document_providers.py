@@ -6,7 +6,13 @@ from app.document_accounts import Outbox, document, now, projection_job
 from app.document_catalog import Snapshot, provider_partition
 from app.document_store import Conflict, StoreError, Write, clean
 from app.job_rules import error_code, retry_seconds
-from app.provider_adapters import PROVIDERS, PROVIDER_REFRESH, fetch_schedule, provider_key
+from app.provider_adapters import (
+    PROVIDERS,
+    PROVIDER_REFRESH,
+    fetch_schedule,
+    provider_key,
+    provider_refresh_interval,
+)
 from app.security import digest
 
 
@@ -27,9 +33,17 @@ class Providers:
             raise StoreError("UNKNOWN_PROVIDER")
         return self.store.get("state", provider_partition(provider), "sync")
 
-    def enqueue(self, provider, *, scheduled=False, configured=False, instant=None):
+    def enqueue(
+        self,
+        provider,
+        *,
+        scheduled=False,
+        configured=False,
+        instant=None,
+        refresh_after=PROVIDER_REFRESH,
+    ):
         instant = instant or datetime.now(timezone.utc)
-        stamp, cutoff = instant.isoformat(), (instant - PROVIDER_REFRESH).isoformat()
+        stamp, cutoff = instant.isoformat(), (instant - refresh_after).isoformat()
         old = self.state(provider)
         pk = provider_partition(provider)
         value = (
@@ -87,9 +101,18 @@ class Providers:
         return True
 
     def schedule(self, *, instant=None):
+        instant = instant or datetime.now(timezone.utc)
         configured = set(self.runtime.cfg.enabled_sports_providers)
+        snapshot = self.runtime.catalog.capture()
+        events = list(snapshot.events())
         return sum(
-            self.enqueue(provider, scheduled=True, configured=provider in configured, instant=instant)
+            self.enqueue(
+                provider,
+                scheduled=True,
+                configured=provider in configured,
+                instant=instant,
+                refresh_after=provider_refresh_interval(provider, events, instant),
+            )
             for provider in sorted(PROVIDERS)
             if self.runtime.cfg.env == "local" or provider in configured
         )

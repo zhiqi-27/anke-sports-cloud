@@ -101,7 +101,7 @@ def test_sources_and_personal_links_are_isolated_with_distinct_uids(stack):
     assert len(entries(client.get(info(client, "test:team")["url"]))) == 1
     with sessions() as db:
         user, event = db.get(User, "local-reviewer"), db.get(Event, ident)
-        attach_link(db, user, event, "https://www.nba.com/game/private-fixture", "PRIVATE_LINK", "live")
+        attach_link(db, user, event, "https://www.nba.com/game/private-fixture", "PRIVATE_LINK")
         # Legacy/unreviewed public rows are not publication authority.
         db.add(
             Link(
@@ -170,7 +170,10 @@ def test_broadcast_publishes_and_withdraws_from_public_original_event(stack, mon
     published.raise_for_status()
     drain()
     event = entries(client.get(view["url"]))[0]
-    assert "www.nba.com/game/fixture" in str(event["DESCRIPTION"]) and "仅限 US" in str(event["DESCRIPTION"])
+    description = str(event["DESCRIPTION"])
+    assert "www.nba.com/game/fixture" in description
+    assert "仅限 US" not in description
+    assert "官方来源核验" not in description
     assert str(event["UID"]) == str(entries(before)[0]["UID"])
     assert int(event["SEQUENCE"]) == int(entries(before)[0]["SEQUENCE"]) + 1
     with sessions() as db:

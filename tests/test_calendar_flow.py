@@ -71,7 +71,6 @@ def test_reschedule_content_and_rotation_keep_uid(stack):
     assert second.headers["etag"] != first.headers["etag"]
     payload = {
         "url": "https://www.nba.com/game/test-event",
-        "kind": "live",
         "title": "手动直播链接测试",
     }
     added = client.post(f"/api/v1/events/{ident}/links", json=payload)
@@ -109,20 +108,20 @@ def test_link_block_survives_repeated_discovery_and_owner_isolation(stack):
     ident = insert_event(sessions)
     link = client.post(
         f"/api/v1/events/{ident}/links",
-        json={"url": "https://www.nba.com/game/test-event", "kind": "live"},
+        json={"url": "https://www.nba.com/game/test-event"},
     ).json()["id"]
     assert client.post(f"/api/v1/me/links/{link}/block").status_code == 200
     with sessions() as db:
         other = ensure_user(db, "another-user")
         secret = attach_link(
-            db, other, db.get(Event, ident), "https://www.nba.com/game/other-owner", "private title", "live"
+            db, other, db.get(Event, ident), "https://www.nba.com/game/other-owner", "private title"
         )
         other_id = secret.id
         db.commit()
     assert client.post(f"/api/v1/me/links/{other_id}/block").status_code == 404
     client.post(
         f"/api/v1/events/{ident}/links",
-        json={"url": "https://www.nba.com/game/test-event", "kind": "live"},
+        json={"url": "https://www.nba.com/game/test-event"},
     )
     drain()
     assert client.get(f"/api/v1/events/{ident}").json()["links"] == []

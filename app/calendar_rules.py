@@ -68,13 +68,6 @@ def describe(event: Event, links: list[dict], config: dict) -> str:
         "live": "观看直播",
         "watch_along": "同步解说（无比赛画面）",
     }
-    access = {
-        "unknown": "观看条件未验证",
-        "subscription": "需要订阅",
-        "free": "免费",
-        "login": "需要登录",
-        "pay_per_view": "单次付费",
-    }
     delivered = delivery_links(links)
     for kind, label in labels.items():
         group = [x for x in delivered if x["kind"] == kind]
@@ -82,26 +75,12 @@ def describe(event: Event, links: list[dict], config: dict) -> str:
             continue
         lines.append(label)
         for link in group:
-            lines.append(f"{link['platform']} · {link['title']}")
-            if kind in {"live", "watch_along"}:
-                if link.get("broadcast"):
-                    info = link["broadcast"]
-                    lines += [
-                        info["content_label"],
-                        info["access_label"],
-                        info["region_label"],
-                        f"官方来源核验：{info['reviewed_at'][:10]}",
-                        info["evidence_url"],
-                    ]
-                else:
-                    lines += [access.get(link["access"], "观看条件未验证"), "地区限制未验证"]
+            lines.append(link["title"] or link["platform"])
             lines += [link["url"]]
         lines.append("")
     if not links:
         lines += ["暂无已确认的观看链接。", ""]
     lines += [f"预计时长 {event.duration} 分钟；开始时间以官方为准。", f"赛程来源：{event.provider}"]
-    if event.source_url:
-        lines.append(event.source_url)
     return "\n".join(lines)
 
 
@@ -194,17 +173,96 @@ def select_candidates(events, config, existing, instant=None):
     return selected, lower, upper
 
 
-def projection_from_links(event, links, config):
+def _result_value(event):
+    result = getattr(event, "result", None)
+    if hasattr(result, "model_dump"):
+        result = result.model_dump()
+    return result if isinstance(result, dict) else None
+
+
+def _event_recency_key(event):
+    return (
+        getattr(event, "starts_at", None) or getattr(event, "local_date", None) or "",
+        getattr(event, "id", ""),
+    )
+
+
+def spoiler_hidden_event_ids(events, config):
+    """Return the latest finished event for each followed team.
+
+    Spoiler protection is personal and deliberately narrow: it does not hide
+    older results, unfollowed events, or manual-only events.
+    """
+    preferences = config.get("preferences", {})
+    if not preferences.get("spoiler_free", True):
+        return set()
+    follow_keys = {
+        row.get("source_key")
+        for row in config.get("follows", [])
+        if row.get("type") == "team" and row.get("source_key")
+    }
+    if not follow_keys:
+        return set()
+
+    latest = {}
+    for event in events:
+        if getattr(event, "status", None) != "finished":
+            continue
+        for follow_key in event_keys(event) & follow_keys:
+            prior = latest.get(follow_key)
+            if prior is None or _event_recency_key(event) > _event_recency_key(prior):
+                latest[follow_key] = event
+    return {event.id for event in latest.values()}
+
+
+def calendar_title(event, config, *, personal=True, hidden_result_ids=None):
+    """Keep canonical titles neutral; hide only scoped personal spoilers."""
+    title = event.title
+    preferences = config.get("preferences", {})
+    hide_result = hidden_result_ids is None or event.id in hidden_result_ids
+    if (
+        not personal
+        or (preferences.get("spoiler_free", True) and hide_result)
+        or event.status != "finished"
+    ):
+        return title
+    result = _result_value(event)
+    if not result:
+        return title
+    away, home = result.get("away_score"), result.get("home_score")
+    if not all(isinstance(score, int) and not isinstance(score, bool) and score >= 0 for score in (away, home)):
+        return title
+    winner = result.get("winner")
+    labels = {
+        "zh-CN": {"away": "客胜", "home": "主胜", "draw": "平"},
+        "en": {"away": "Away win", "home": "Home win", "draw": "Draw"},
+    }
+    label = labels.get(preferences.get("locale", "zh-CN"), labels["zh-CN"]).get(winner)
+    if not label:
+        return title
+    return f"{title} · {label} {away}–{home}"
+
+
+def projection_from_links(event, links, config, *, personal=True, hidden_result_ids=None):
     target = next(
         (
             x["url"]
-            for x in links
-            if x.get("broadcast") and x["broadcast"]["content_type"] in {"official_match", "reservation"}
+            for x in delivery_links(links)
+            if (
+                x.get("broadcast")
+                and x["broadcast"]["content_type"] in {"official_match", "reservation"}
+            )
+            or x.get("origin") == "manual"
         ),
         event.source_url,
     )
     return {
-        "title": event.title,
+        "title": calendar_title(
+            event,
+            config,
+            personal=personal,
+            hidden_result_ids=hidden_result_ids,
+        ),
         "starts_at": event.starts_at,
         "local_date": event.local_date,
         "time_precision": event.time_precision,

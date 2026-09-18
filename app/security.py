@@ -118,7 +118,7 @@ def local_session(db) -> str:
     return token
 
 
-def canonical_url(value: str) -> tuple[str, str]:
+def _canonical_url(value: str, *, require_known_platform: bool) -> tuple[str, str]:
     if any(ord(c) < 32 for c in value) or "\\" in value:
         problem("INVALID_URL", "请输入有效的比赛直播入口链接")
     parsed = urlsplit(value.strip())
@@ -136,11 +136,12 @@ def canonical_url(value: str) -> tuple[str, str]:
         problem("INVALID_URL", "请使用平台的域名链接")
     except ValueError:
         pass
-    from app.platforms import RULES
+    if require_known_platform:
+        from app.platforms import RULES
 
-    allowed = {domain for rule in RULES for domain in rule["hosts"]}
-    if host not in allowed:
-        problem("UNSUPPORTED_PLATFORM", "暂不支持此平台，请使用已支持的比赛直播入口")
+        allowed = {domain for rule in RULES for domain in rule["hosts"]}
+        if host not in allowed:
+            problem("UNSUPPORTED_PLATFORM", "暂不支持此平台，请使用已支持的比赛直播入口")
     from urllib.parse import unquote
 
     decoded_path = unquote(unquote(parsed.path)).lower()
@@ -185,6 +186,18 @@ def canonical_url(value: str) -> tuple[str, str]:
     return urlunsplit(("https", host, parsed.path, urlencode(query, doseq=True), "")), host.removeprefix(
         "www."
     )
+
+
+def canonical_url(value: str) -> tuple[str, str]:
+    """Canonicalize a URL used by the maintained official platform contract."""
+
+    return _canonical_url(value, require_known_platform=True)
+
+
+def personal_url(value: str) -> tuple[str, str]:
+    """Canonicalize a user-owned link without applying the official platform allowlist."""
+
+    return _canonical_url(value, require_known_platform=False)
 
 
 def check_origin(request: Request):

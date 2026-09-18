@@ -116,7 +116,6 @@ class CalendarEventChange(StrictModel):
 class AddLink(StrictModel):
     url: str = Field(min_length=8, max_length=2000)
     title: str = Field(default="", max_length=300)
-    kind: Literal["live", "watch_along"]
 
 
 class ImportInput(StrictModel):
@@ -149,6 +148,15 @@ class ParticipantView(BaseModel):
     name: str
     short_name: str
     color: str
+    logo_url: str | None = None
+
+
+class EventResult(StrictModel):
+    """A completed two-sided result in participant/title order."""
+
+    away_score: int = Field(ge=0)
+    home_score: int = Field(ge=0)
+    winner: Literal["away", "home", "draw"]
 
 
 class SourceView(ParticipantView):
@@ -201,6 +209,7 @@ class EventView(BaseModel):
     venue: str
     status: str
     participants: list[ParticipantView]
+    result: EventResult | None = None
     provider: str
     source_url: str
     updated_at: str

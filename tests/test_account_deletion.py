@@ -58,7 +58,6 @@ def test_http_deletion_revokes_feed_tokens_connections_and_only_the_owner(stack)
             db.get(Event, event_id),
             "https://www.nba.com/game/other-owner",
             "Other owner",
-            "live",
         )
         db.add(
             CommandReceipt(

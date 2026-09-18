@@ -5,12 +5,23 @@ def selected_links(event, config, links, published_info, owner_id=None):
     overrides = {
         x["url"]: x["state"] for x in config.get("link_overrides", []) if x["event_key"] == event.source_key
     }
+    manual_override = any(
+        link.owner_id == owner_id
+        and getattr(link, "origin", None) == "manual"
+        and link.available
+        and link.kind in {"live", "watch_along"}
+        and overrides.get(link.url) != "block"
+        for link in links
+    )
     result = []
     for link in links:
+        display_kind = "live" if link.origin == "manual" and link.kind in {"live", "watch_along"} else link.kind
         broadcast = None
-        if link.kind not in {"live", "watch_along"}:
+        if display_kind not in {"live", "watch_along"}:
             continue
         if link.owner_id not in {owner_id, "public"} or not link.available:
+            continue
+        if manual_override and link.owner_id == "public":
             continue
         if link.owner_id == "public":
             broadcast = published_info(link)
@@ -30,7 +41,7 @@ def selected_links(event, config, links, published_info, owner_id=None):
                 "broadcast": broadcast,
                 "url": link.url,
                 "title": link.title,
-                "kind": link.kind,
+                "kind": display_kind,
                 "platform": link.platform,
                 "origin": link.origin,
                 "access": link.access,

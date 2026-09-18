@@ -67,6 +67,7 @@ class Event(Base):
     venue: Mapped[str] = mapped_column(String(240), default="")
     status: Mapped[str] = mapped_column(String(24), default="scheduled")
     participants: Mapped[list] = mapped_column(JSON, default=list)
+    result: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     provider: Mapped[str] = mapped_column(String(40))
     source_url: Mapped[str] = mapped_column(Text, default="")
     updated_at: Mapped[str] = mapped_column(String(40), default=now)

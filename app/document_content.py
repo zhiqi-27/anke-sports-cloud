@@ -6,7 +6,7 @@ from app.config_rules import confirm_import, import_configuration, link_override
 from app.document_accounts import Change, document, now, owner_partition
 from app.document_store import StoreError, Write, partition_items
 from app.link_rules import selected_links
-from app.security import canonical_url, digest, problem
+from app.security import digest, personal_url, problem
 
 
 class Content:
@@ -25,13 +25,17 @@ class Content:
         if payload is None:
             return public
         rows = self.rows(payload["user_id"]) if rows is None else rows
-        return public + selected_links(
+        personal = selected_links(
             event,
             payload["config"],
             [row for row in rows if row.event_id == event.id],
             lambda _: None,
             payload["user_id"],
         )
+        # A personal URL is an explicit per-event override.
+        # The public product link remains available to users without a manual
+        # link, but must not be shown alongside the user's replacement.
+        return personal or public
 
     def event(self, ident):
         event = self.runtime.catalog.capture().event(ident)
@@ -50,7 +54,7 @@ class Content:
     def attach(self, user_id, event_id, data, key):
         def perform(previous):
             event = self.event(event_id)
-            url, platform = canonical_url(data.url)
+            url, platform = personal_url(data.url)
             pk = owner_partition(user_id)
             ident = digest(user_id + ":" + event_id + ":" + url)[:32]
             row_id = "link:" + ident
@@ -80,9 +84,7 @@ class Content:
                     "created_at": now(),
                 }
             )
-            value.update(
-                title=data.title.strip() or value["title"], kind=data.kind, origin="manual", available=True
-            )
+            value.update(title=data.title.strip() or value["title"], kind="live", origin="manual", available=True)
             blocked = any(
                 row["event_key"] == event.source_key and row["url"] == url and row["state"] == "block"
                 for row in previous["config"]["link_overrides"]

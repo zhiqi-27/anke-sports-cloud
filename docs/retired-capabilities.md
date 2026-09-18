@@ -7,7 +7,7 @@
 - 关注只接受具体球队或车队，配置形状为 `Follow { type: "team", source_key }`。
 - 独立手动来源使用 `Config.manual_events[{ event_id }]`。它不要求球队关注；重复 `event_id` 在配置契约中拒绝，接口层的幂等增删由后续 B/C 实现。
 - 私有事件视图可返回 `calendar.sources` 与 `calendar.can_remove`：来源区分 `follow` 和 `manual`；只有存在手动来源且没有关注覆盖时才可单独移除。公共事件视图不返回个人来源。
-- 链接写入只接受 `live` 与 `watch_along`，且仍经过现行 HTTPS、平台和凭据安全校验。直播入口与个人日历来源是两套独立概念。
+- 人工链接写入不再暴露 `live`/`watch_along` 类型，服务端统一按 `live` 个人观看入口保存；公共维护记录仍可保留同步解说等内容类型。人工链接使用独立的 HTTPS、公开域名和凭据安全校验，不要求命中官方平台目录。直播入口与个人日历来源是两套独立概念。
 - 当前 OpenAPI 从 SQL 基线导出，客户端通过 `npm run contracts` 生成；文档模式不另行维护一套公开契约。
 
 ## 已退出的入口、接口、工具与任务

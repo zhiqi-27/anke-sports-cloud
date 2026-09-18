@@ -5,10 +5,11 @@ from fastapi import HTTPException
 from sqlalchemy import select
 
 from app import broadcast_rules, broadcasts, platforms
+from app.calendar import event_view
 from app.config import settings
-from app.db import BroadcastAudit, BroadcastRecord, User
-from app.security import canonical_url, digest
-from app.service import save_config
+from app.db import BroadcastAudit, BroadcastRecord, Event, User
+from app.security import canonical_url, digest, personal_url
+from app.service import ensure_user, save_config
 from tests.test_calendar_flow import drain, feed_snapshot, insert_event
 from tests.test_oauth import authorize, exchange, register
 from app.oauth import resource
@@ -71,7 +72,12 @@ def test_draft_is_private_publication_updates_original_feed_and_suspend_removes_
     _, published, entries = feed_snapshot(client)
     assert str(entries[0]["UID"]) == uid and int(entries[0]["SEQUENCE"]) == sequence + 1
     description = str(entries[0]["DESCRIPTION"])
-    assert "需要订阅" in description and "仅限 US" in description and "官方来源核验" in description
+    assert "观看直播" in description
+    assert "合成比赛官方入口（隔离测试）" in description
+    assert "https://www.nba.com/game/fixture" in description
+    assert "需要订阅" not in description
+    assert "官方来源核验" not in description
+    assert "https://www.nba.com/game/fixture-evidence" not in description
     assert str(entries[0]["URL"]) == record["draft"]["url"]
     stale = client.post(
         f"/api/v1/maintenance/broadcasts/{record['id']}/suspend",
@@ -413,7 +419,7 @@ def test_pinned_tls_connection_uses_literal_ip_and_original_hostname(monkeypatch
     connection.close()
 
 
-def test_programme_is_not_primary_live_url_and_shared_manual_duplicates_deliver_once(stack, monkeypatch):
+def test_programme_is_not_primary_live_url_but_manual_override_delivers_once(stack, monkeypatch):
     client, _ = stack
     ident, record = setup_record(
         stack, monkeypatch, content_type="programme", url="https://www.nba.com/watch/featured"
@@ -421,10 +427,40 @@ def test_programme_is_not_primary_live_url_and_shared_manual_duplicates_deliver_
     publish(client, record).raise_for_status()
     client.post(
         f"/api/v1/events/{ident}/links",
-        json={"url": record["draft"]["url"], "title": "合成私人补充", "kind": "live"},
+        json={"url": record["draft"]["url"], "title": "合成私人补充"},
     ).raise_for_status()
     drain()
     assert len(client.get(f"/api/v1/events/{ident}").json()["links"]) == 1
     _, _, entries = feed_snapshot(client)
-    assert "URL" not in entries[0]
-    assert "查看官方播出信息" in str(entries[0]["DESCRIPTION"])
+    assert entries[0]["URL"] == "https://www.nba.com/watch/featured"
+    assert "合成私人补充" in str(entries[0]["DESCRIPTION"])
+
+
+def test_personal_url_accepts_unknown_platform_but_keeps_safety_checks():
+    assert personal_url("https://community.example/live/fixture?utm_source=calendar") == (
+        "https://community.example/live/fixture",
+        "community.example",
+    )
+    with pytest.raises(HTTPException):
+        personal_url("https://community.example/live/fixture?redirect=https://other.example/live")
+
+
+def test_manual_link_accepts_unknown_platform_and_is_private_to_owner(stack, monkeypatch):
+    client, sessions = stack
+    ident, record = setup_record(stack, monkeypatch)
+    publish(client, record).raise_for_status()
+    manual_url = "https://community.example/live/fixture"
+    response = client.post(
+        f"/api/v1/events/{ident}/links",
+        json={"url": manual_url, "title": "社区直播入口"},
+    )
+    assert response.status_code == 200, response.text
+    with sessions() as db:
+        ensure_user(db, "other-reviewer")
+        db.commit()
+        event = db.get(Event, ident)
+        owner_view = event_view(db, event, db.get(User, "local-reviewer"))
+        other_view = event_view(db, event, db.get(User, "other-reviewer"))
+    assert owner_view["links"][0]["url"] == manual_url
+    assert owner_view["links"][0]["kind"] == "live"
+    assert manual_url not in {link["url"] for link in other_view["links"]}

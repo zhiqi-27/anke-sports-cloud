@@ -5,14 +5,81 @@ import json
 
 from pydantic import ValidationError
 
-from app.schemas import Config
-from app.security import canonical_url, digest, problem
+from app.schemas import Config, Follow, LinkOverride, ManualEventSource, Preferences
+from app.security import digest, personal_url, problem
 
 
 def link_override(config, event_key, url, state):
     rows = [row for row in config["link_overrides"] if (row["event_key"], row["url"]) != (event_key, url)]
     rows.append({"event_key": event_key, "url": url, "state": state})
     return {**config, "link_overrides": rows}
+
+
+def normalize_stored_config(value):
+    """Project an older persisted config into the current public contract.
+
+    This is deliberately a read-time boundary, not an import or migration path:
+    retired video fields and unsupported follow types never re-enter the current
+    API, while the original document remains untouched until the user performs a
+    current configuration mutation.
+    """
+    if not isinstance(value, dict):
+        return Config().model_dump()
+
+    defaults = Preferences().model_dump()
+    stored_preferences = value.get("preferences")
+    if isinstance(stored_preferences, dict):
+        preferences = {key: stored_preferences[key] for key in defaults if key in stored_preferences}
+        try:
+            preferences = Preferences.model_validate({**defaults, **preferences}).model_dump()
+        except ValidationError:
+            preferences = defaults
+    else:
+        preferences = defaults
+
+    follows, follow_keys = [], set()
+    for raw in value.get("follows", []):
+        try:
+            follow = Follow.model_validate(raw)
+        except ValidationError:
+            continue
+        if follow.source_key in follow_keys:
+            continue
+        follow_keys.add(follow.source_key)
+        follows.append(follow.model_dump())
+
+    manual_events, manual_keys = [], set()
+    for raw in value.get("manual_events", []):
+        try:
+            event = ManualEventSource.model_validate(raw)
+        except ValidationError:
+            continue
+        if event.event_id in manual_keys:
+            continue
+        manual_keys.add(event.event_id)
+        manual_events.append(event.model_dump())
+
+    link_overrides, link_keys = [], set()
+    for raw in value.get("link_overrides", []):
+        try:
+            link = LinkOverride.model_validate(raw)
+        except ValidationError:
+            continue
+        key = (link.event_key, link.url)
+        if key in link_keys:
+            continue
+        link_keys.add(key)
+        link_overrides.append(link.model_dump())
+
+    return Config.model_validate(
+        {
+            "schema_version": 1,
+            "follows": follows,
+            "preferences": preferences,
+            "manual_events": manual_events,
+            "link_overrides": link_overrides,
+        }
+    ).model_dump()
 
 
 def import_configuration(user, data, cipher, *, source_exists, event_exists):
@@ -53,7 +120,7 @@ def import_configuration(user, data, cipher, *, source_exists, event_exists):
         if not event_exists(item["event_key"]):
             unresolved.append(item["event_key"])
     for item in config["link_overrides"]:
-        item["url"], _ = canonical_url(item["url"])
+        item["url"], _ = personal_url(item["url"])
     try:
         config = Config.model_validate(config).model_dump()
     except ValidationError:

@@ -1,16 +1,19 @@
 import json
 from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
+from types import SimpleNamespace
 
 from sqlalchemy import and_, false, func, or_, select, update
 
 from app.db import BroadcastRecord, Event, Feed, Link, Projection, User, now
 from app.schemas import Config
 from app.link_rules import selected_links
+from app.platforms import selected_product
 from app.security import digest
 from app.calendar_rules import (
     select_candidates,
     projection_from_links,
+    calendar_title,
     calendar_membership,
     event_keys as event_keys,
     inclusion_filter as inclusion_filter,
@@ -20,6 +23,7 @@ from app.calendar_rules import (
     serialize as serialize,
     serialize_personal as serialize_personal,
     event_is_past as event_is_past,
+    spoiler_hidden_event_ids as spoiler_hidden_event_ids,
 )
 
 
@@ -62,6 +66,9 @@ def chosen_links(db, event: Event, user: User | None, *, rows=None, broadcasts=N
     )
 
     def published_info(link):
+        generated = getattr(link, "broadcast_metadata", None)
+        if generated is not None:
+            return generated
         record = broadcasts.get(link.id) if broadcasts is not None else db.get(BroadcastRecord, link.id)
         if not record or record.status != "published" or not record.published:
             return None
@@ -74,18 +81,64 @@ def chosen_links(db, event: Event, user: User | None, *, rows=None, broadcasts=N
 
         return public_metadata(record)
 
+    product = selected_product(event, config)
+    if product:
+        published_platforms = {
+            info["platform_id"]
+            for link in links
+            if link.owner_id == "public"
+            for info in [published_info(link)]
+            if info is not None
+        }
+        if product["metadata"]["platform_id"] not in published_platforms:
+            links = [
+                SimpleNamespace(
+                    id=product["id"],
+                    owner_id="public",
+                    event_id=event.id,
+                    url=product["url"],
+                    title=product["title"],
+                    kind=product["kind"],
+                    platform=product["platform"],
+                    origin=product["origin"],
+                    access=product["access"],
+                    regions=product["regions"],
+                    available=True,
+                    created_at=product["created_at"],
+                    broadcast_metadata=product["metadata"],
+                ),
+                *links,
+            ]
     return selected_links(event, config, links, published_info, user.id if user else None)
 
 
-def event_view(db, event: Event, user: User | None = None, *, link_rows=None, broadcasts=None) -> dict:
+def event_view(
+    db,
+    event: Event,
+    user: User | None = None,
+    *,
+    link_rows=None,
+    broadcasts=None,
+    hidden_result_ids=None,
+) -> dict:
     links = chosen_links(db, event, user, rows=link_rows, broadcasts=broadcasts)
     config = user.config if user else Config().model_dump()
+    selected = included(event, config) if user else False
+    if user and hidden_result_ids is None:
+        hidden_result_ids = personal_hidden_result_ids(db, config)
+    hidden_result_ids = hidden_result_ids or set()
+    personal_result = event.result if selected and event.id not in hidden_result_ids else None
     return {
         "id": event.id,
         "source_key": event.source_key,
         "competition_id": event.competition_id,
         "sport": event.sport,
-        "title": event.title,
+        "title": calendar_title(
+            event,
+            config,
+            personal=selected,
+            hidden_result_ids=hidden_result_ids,
+        ),
         "starts_at": event.starts_at,
         "local_date": event.local_date,
         "time_precision": event.time_precision,
@@ -93,22 +146,43 @@ def event_view(db, event: Event, user: User | None = None, *, link_rows=None, br
         "duration": event.duration,
         "venue": event.venue,
         "status": event.status,
-        "participants": event.participants,
+        "participants": [
+            {**participant, "logo_url": participant.get("logo_url")}
+            for participant in event.participants
+        ],
+        "result": personal_result,
         "provider": event.provider,
         "source_url": event.source_url,
         "updated_at": event.updated_at,
         "demo": event.demo,
-        "included": included(event, config) if user else False,
+        "included": selected,
         "calendar": calendar_membership(event, config) if user else None,
         "links": links,
         "description": describe(event, links, config),
-        "description_in_feed": included(event, config) if user else False,
+        "description_in_feed": selected,
     }
 
 
-def projection_data(db, event, user, config, *, link_rows=None, broadcasts=None):
+def projection_data(
+    db,
+    event,
+    user,
+    config,
+    *,
+    link_rows=None,
+    broadcasts=None,
+    hidden_result_ids=None,
+):
     links = chosen_links(db, event, user, rows=link_rows, broadcasts=broadcasts)
-    return projection_from_links(event, links, config)
+    if user and hidden_result_ids is None:
+        hidden_result_ids = personal_hidden_result_ids(db, config)
+    return projection_from_links(
+        event,
+        links,
+        config,
+        personal=user is not None,
+        hidden_result_ids=hidden_result_ids or set(),
+    )
 
 
 def update_projection(db, feed, event, data, existing):
@@ -194,6 +268,20 @@ def select_feed_events(db, config, existing, instant=None):
     return select_candidates(candidates, config, existing, instant)
 
 
+def personal_hidden_result_ids(db, config):
+    if not config.get("preferences", {}).get("spoiler_free", True):
+        return set()
+    if not any(
+        row.get("type") == "team" and row.get("source_key")
+        for row in config.get("follows", [])
+    ):
+        return set()
+    candidates = db.scalars(
+        select(Event).where(Event.status == "finished", source_candidates(db, config, {}))
+    ).all()
+    return spoiler_hidden_event_ids(candidates, config)
+
+
 def rebuild_feed(db, owner_id: str):
     # Acquire the owner's write lock before taking the configuration snapshot.
     # A no-op UPDATE also serializes local SQLite, where FOR UPDATE is ignored.
@@ -208,10 +296,19 @@ def rebuild_feed(db, owner_id: str):
     existing = {p.event_id: p for p in db.scalars(select(Projection).where(Projection.feed_id == feed.id))}
     events, lower, _ = select_feed_events(db, config, existing)
     links, broadcasts = load_links(db, events, user)
+    hidden_result_ids = personal_hidden_result_ids(db, config)
     wanted = set()
     for event in events:
         wanted.add(event.id)
-        data = projection_data(db, event, user, config, link_rows=links[event.id], broadcasts=broadcasts)
+        data = projection_data(
+            db,
+            event,
+            user,
+            config,
+            link_rows=links[event.id],
+            broadcasts=broadcasts,
+            hidden_result_ids=hidden_result_ids,
+        )
         update_projection(db, feed, event, data, existing)
     publish_snapshot(db, feed, existing, wanted, lower, hide_removed=True)
 

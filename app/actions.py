@@ -6,7 +6,7 @@ import time
 
 from sqlalchemy import and_, or_, select
 
-from app.calendar import event_view, load_links
+from app.calendar import event_view, load_links, personal_hidden_result_ids
 from app.calendar_commands import add_manual_source, remove_manual_source, validate_manual_event
 from app.schedule_rules import schedule_page, schedule_range
 from app.config import settings
@@ -107,9 +107,18 @@ def get_schedule(
         problem("CURSOR_EXPIRED", "赛程或查询已变化，请重新查询第一页", 409)
     events = [current[event.id] for event in page]
     links, broadcasts = load_links(db, events, user)
+    hidden_result_ids = personal_hidden_result_ids(db, user.config) if user else set()
     return {
         "items": [
-            event_view(db, event, user, link_rows=links[event.id], broadcasts=broadcasts) for event in events
+            event_view(
+                db,
+                event,
+                user,
+                link_rows=links[event.id],
+                broadcasts=broadcasts,
+                hidden_result_ids=hidden_result_ids,
+            )
+            for event in events
         ],
         "next_cursor": next_cursor,
         "coverage": {
@@ -217,7 +226,7 @@ def remove_calendar_event(db, user, event_id, expected_revision):
 
 def add_link(db, user, event_id, data):
     event = find_event(db, event_id)
-    link = attach_link(db, user, event, data.url, data.title, data.kind)
+    link = attach_link(db, user, event, data.url, data.title)
     return {"id": link.id, "event": event_view(db, event, user)}
 
 

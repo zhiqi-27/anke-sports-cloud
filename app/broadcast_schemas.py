@@ -99,7 +99,7 @@ class BroadcastPublicView(BaseModel):
     region_label: str
     evidence_url: str
     reviewed_at: str
-    valid_until: str
+    valid_until: str | None
     network_status: str
     network_checked_at: str | None
     device_tests: list[dict]

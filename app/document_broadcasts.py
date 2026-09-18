@@ -8,7 +8,7 @@ from app.broadcast_rules import normalized, public_metadata, validate_rights
 from app.document_accounts import Outbox, document, now, projection_job
 from app.document_store import Write, clean, partition_items
 from app.link_rules import selected_links
-from app.platforms import candidate_url, head_probe
+from app.platforms import candidate_url, head_probe, selected_product
 from app.schemas import Config
 from app.security import digest, problem
 
@@ -179,6 +179,27 @@ class Broadcasts:
                     access=pub["access"],
                     regions=pub["regions"] if pub["region_mode"] == "include" else [],
                     created_at=pub["reviewed_at"],
+                )
+            )
+        product = selected_product(event, config)
+        if product and product["metadata"]["platform_id"] not in {
+            value["platform_id"] for value in metadata.values()
+        }:
+            metadata[product["id"]] = product["metadata"]
+            links.append(
+                SimpleNamespace(
+                    id=product["id"],
+                    owner_id="public",
+                    available=True,
+                    url=product["url"],
+                    title=product["title"],
+                    kind=product["kind"],
+                    platform=product["platform"],
+                    creator="",
+                    origin=product["origin"],
+                    access=product["access"],
+                    regions=product["regions"],
+                    created_at=product["created_at"],
                 )
             )
         return selected_links(

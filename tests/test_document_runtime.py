@@ -177,6 +177,43 @@ def test_http_follow_worker_feed_rotation_and_exact_idempotent_response(document
     assert client.get("/api/v1/me/calendar").status_code == 401
 
 
+def test_legacy_stored_config_is_read_as_the_current_contract(document_stack):
+    client, runtime, _, _ = document_stack
+    client.post("/api/v1/auth/local").raise_for_status()
+    account = runtime.store.get("state", owner_partition("local-reviewer"), "account")
+    raw = clean(account)
+    raw["payload"]["config"] = {
+        "schema_version": 1,
+        "follows": [
+            {"type": "competition", "source_key": "fixture:league"},
+            {"type": "team", "source_key": "fixture:team"},
+        ],
+        "creators": [{"channel_id": "legacy-creator", "preview": True}],
+        "preferences": {
+            "timezone": "Asia/Shanghai",
+            "locale": "zh-CN",
+            "spoiler_free": True,
+            "transparent": True,
+            "content_search_windows": ["before_24h"],
+        },
+        "event_overrides": [{"event_key": "fixture:event-0", "state": "exclude"}],
+        "link_overrides": [],
+    }
+    runtime.store.batch(
+        "state",
+        account["pk"],
+        [Write("replace", "account", raw, account["_etag"])],
+    )
+
+    response = client.get("/api/v1/me/calendar")
+    assert response.status_code == 200, response.text
+    config = response.json()["config"]
+    assert config["follows"] == [{"type": "team", "source_key": "fixture:team"}]
+    assert config["manual_events"] == []
+    assert "creators" not in config and "event_overrides" not in config
+    assert "content_search_windows" not in config["preferences"]
+
+
 def test_http_follow_rejects_competitions_and_allows_racing_team(document_stack):
     client, _, _, _ = document_stack
     client.post("/api/v1/auth/local").raise_for_status()

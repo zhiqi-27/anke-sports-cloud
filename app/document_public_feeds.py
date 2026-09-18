@@ -105,7 +105,7 @@ class PublicFeeds:
         for event in selected:
             wanted.add(event.id)
             links = rt.broadcasts.selected(event, None) if hasattr(rt, "broadcasts") else []
-            data = projection_from_links(event, links, config)
+            data = projection_from_links(event, links, config, personal=False)
             hashed = digest(json.dumps(data, sort_keys=True, ensure_ascii=False))
             projection = existing.get(event.id)
             if not projection:

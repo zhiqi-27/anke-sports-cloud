@@ -11,8 +11,8 @@ from app.config import settings
 PROVIDER_REFRESH = timedelta(hours=6)
 
 
-def provider_due(instant):
-    cutoff = (datetime.fromisoformat(instant) - PROVIDER_REFRESH).isoformat()
+def provider_due(instant, refresh_after=PROVIDER_REFRESH):
+    cutoff = (datetime.fromisoformat(instant) - refresh_after).isoformat()
     return (
         ProviderState.enabled.is_(True),
         or_(ProviderState.last_success.is_(None), ProviderState.last_success <= cutoff),
@@ -21,7 +21,7 @@ def provider_due(instant):
     )
 
 
-def enqueue_provider(db, provider, *, scheduled=False, instant=None):
+def enqueue_provider(db, provider, *, scheduled=False, instant=None, refresh_after=PROVIDER_REFRESH):
     from app.service import enqueue
 
     instant = instant or now()
@@ -36,7 +36,10 @@ def enqueue_provider(db, provider, *, scheduled=False, instant=None):
     db.execute(update(ProviderState).where(ProviderState.id == provider).values(error=ProviderState.error))
     row = db.scalar(
         select(ProviderState)
-        .where(ProviderState.id == provider, *(provider_due(instant) if scheduled else ()))
+        .where(
+            ProviderState.id == provider,
+            *(provider_due(instant, refresh_after) if scheduled else ()),
+        )
         .with_for_update()
         .execution_options(populate_existing=True)
     )

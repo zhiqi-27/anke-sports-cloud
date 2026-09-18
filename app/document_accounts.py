@@ -10,6 +10,7 @@ from uuid import uuid4
 
 from pydantic import ValidationError
 
+from app.config_rules import normalize_stored_config
 from app.document_store import Conflict, StoreError, Write, clean, encode
 from app.schemas import Config
 from app.document_values import Values
@@ -63,8 +64,13 @@ class Accounts:
         if "config_ref" in row["payload"]:
             raw = clean(row)
             payload = {key: value for key, value in row["payload"].items() if key != "config_ref"}
-            payload["config"] = self.values.unpack(row["pk"], "config", row["payload"])
+            payload["config"] = normalize_stored_config(
+                self.values.unpack(row["pk"], "config", row["payload"])
+            )
             row = {**row, "payload": payload, "_raw": raw}
+        else:
+            payload = {**row["payload"], "config": normalize_stored_config(row["payload"].get("config"))}
+            row = {**row, "payload": payload}
         return row
 
     def guard(self, row):
