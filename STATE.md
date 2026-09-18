@@ -4,7 +4,7 @@
 
 更新：2026-09-18。上一轮 A 从 `8a26fba` 继续修改，已提交为`5db5283`并推送、部署到现有开发 Function App；B 与本轮直播产品候选均已在该基线上完成实现、回归并以代码包部署到同一开发 Function App（本轮未 push Git）。以[工作区STATE](../STATE.md)及[实施计划](<../anke-sports 文档/Anke_Sports_实施计划.md>)为当前入口。
 
-2026-09-18 赛果标题逻辑已在本地实现，尚未部署：足球/篮球供应商在完赛且比分完整时写入独立 `Event.result`；防剧透开启时，个人事件读取、Feed 与 ICS 按关注球队分别隐藏最近一场已结束比赛的结果，更早比赛仍显示，关闭后所有完整赛果显示；公共日历与未纳入个人日历的事件保持中性标题。开赛前 2 小时至开赛后 4 小时刷新频率提高到 15 分钟，其余供应商仍为 6 小时。服务端全量 `258 passed / 2 skipped`、Ruff、OpenAPI 与客户端类型检查通过；见[日历赛果标题规则](docs/calendar-result-titles.md)。
+2026-09-18 赛果标题逻辑已推送并部署到开发 Function App：足球/篮球供应商在完赛且比分完整时写入独立 `Event.result`；防剧透开启时，个人事件读取、Feed 与 ICS 按关注球队分别隐藏最近一场已结束比赛的结果，更早比赛仍显示，关闭后所有完整赛果显示；公共日历与未纳入个人日历的事件保持中性标题。开赛前 2 小时至开赛后 4 小时刷新频率提高到 15 分钟，其余供应商仍为 6 小时。提交 `7172088`，运行包 SHA-256 `f1dee03d619cc80db5b2756adfddc2b176375bbfcaba42e68be7ddec292f300a`，OneDeploy `d9700541-b3a9-4ae6-898f-36d3807e716b`；服务端全量 `258 passed / 2 skipped`、Ruff、OpenAPI 与客户端类型检查通过。见[日历赛果标题规则](docs/calendar-result-titles.md)和[开发部署记录](evidence/spoiler-result-deployment-2026-09-18.md)。
 
 2026-09-18 球队跨赛事赛程已部署开发 Function App：football-data 适配器在英超球队目录基础上读取每支球队的赛程接口，接入上游返回的其他赛事并按 `football-data:match:<id>` 去重；来源与参与者契约补充可选 `logo_url`，SQL/文档事件视图保持两端序列化一致。服务端全量 `253 passed / 2 skipped`、Ruff 和 diff 检查通过；运行包 SHA-256 `8322f65ad0f12cab721822c532d13206f591d205513f859ea07a6616f0048102`，OneDeploy `11ded782-5f09-4000-810c-9feda6569c0d`，health/status、OpenAPI 和 5 个 Functions 回读通过。见[球队日历开发部署记录](evidence/team-calendar-deployment-2026-09-18.md)。
 
